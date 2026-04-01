@@ -1,23 +1,57 @@
+// entry/src/main/ets/pages/Index.ets
+import { HomePage } from './home/HomePage';
+import { LatestPage } from './latest/LatestPage';
+import { SearchPage } from './search/SearchPage';
+import { SettingPage } from './setting/SettingPage';
+
 @Entry
 @Component
 struct Index {
-  @State message: string = 'Hello World';
+  @State currentIndex: number = 0;
+  private tabsController: TabsController = new TabsController();
 
   build() {
-    RelativeContainer() {
-      Text(this.message)
-        .id('HelloWorld')
-        .fontSize($r('app.float.page_text_font_size'))
-        .fontWeight(FontWeight.Bold)
-        .alignRules({
-          center: { anchor: '__container__', align: VerticalAlign.Center },
-          middle: { anchor: '__container__', align: HorizontalAlign.Center }
-        })
-        .onClick(() => {
-          this.message = 'Welcome';
-        })
+    Tabs({
+      barPosition: BarPosition.End,
+      controller: this.tabsController
+    }) {
+      TabContent() {
+        HomePage()
+      }
+      .tabBar(this.TabBarBuilder('主页', 0))
+
+      TabContent() {
+        LatestPage()
+      }
+      .tabBar(this.TabBarBuilder('最新', 1))
+
+      TabContent() {
+        SearchPage()
+      }
+      .tabBar(this.TabBarBuilder('搜索', 2))
+
+      TabContent() {
+        SettingPage()
+      }
+      .tabBar(this.TabBarBuilder('我的', 3))
     }
-    .height('100%')
+    .vertical(false)
+    .scrollable(true)
+    .barHeight(56)
+    .onChange((index: number) => {
+      this.currentIndex = index;
+    })
+  }
+
+  @Builder
+  TabBarBuilder(title: string, index: number) {
+    Column() {
+      Text(title)
+        .fontSize(14)
+        .fontColor(this.currentIndex === index ? $r('app.color.tab_selected') : $r('app.color.tab_normal'))
+    }
     .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
   }
 }

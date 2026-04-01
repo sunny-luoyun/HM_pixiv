@@ -1,6 +1,18 @@
 {
   "color": [
     {
+      "name": "page_background",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "tab_normal",
+      "value": "#999999"
+    },
+    {
+      "name": "tab_selected",
+      "value": "#007AFF"
+    },
+    {
       "name": "start_window_background",
       "value": "#FFFFFF"
     }
