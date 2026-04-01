@@ -57,9 +57,11 @@ export struct SettingPage {
             Text('登录 Pixiv 账号')
               .fontSize(18)
               .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.user_name'))
             Text('登录后可同步收藏、推荐作品')
               .fontSize(14)
               .fontColor($r('app.color.text_secondary'))
+              .fontColor($r('app.color.user_name'))
           }
           .alignItems(HorizontalAlign.Start)
           .margin({ left: 12 })
@@ -71,7 +73,7 @@ export struct SettingPage {
         }
         .width('100%')
         .padding(16)
-        .backgroundColor(Color.White)
+        .backgroundColor($r('app.color.loading_card'))
         .borderRadius(12)
       }
     }
