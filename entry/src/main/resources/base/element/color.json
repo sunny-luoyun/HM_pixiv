@@ -2,7 +2,7 @@
   "color": [
     {
       "name": "page_background",
-      "value": "#FFFFFF"
+      "value": "#FFFFFFFF"
     },
     {
       "name": "tab_normal",
@@ -14,11 +14,35 @@
     },
     {
       "name": "start_window_background",
-      "value": "#FFFFFF"
+      "value": "#66ccff"
     },
     {
       "name": "text_secondary",
-      "value": "#FFFFFF"
+      "value": "#FF000000"
+    },
+    {
+      "name": "surface_secondary",
+      "value": "#FFF5F5F5"
+    },
+    {
+      "name": "error",
+      "value": "#FFFF0000"
+    },
+    {
+      "name": "error_light",
+      "value": "#FFFF0000"
+    },
+    {
+      "name": "background",
+      "value": "#FFFF0000"
+    },
+    {
+      "name": "loading_card",
+      "value": "#FFE3E1E1"
+    },
+    {
+      "name": "user_name",
+      "value": "#FF000000"
     }
   ]
 }

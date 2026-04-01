@@ -11,6 +11,18 @@
     {
       "name": "tab_selected",
       "value": "#0A84FF"
+    },
+    {
+      "name": "text_secondary",
+      "value": "#FF000000"
+    },
+    {
+      "name": "loading_card",
+      "value": "#FFBEBEBE"
+    },
+    {
+      "name": "user_name",
+      "value": "#FF000000"
     }
   ]
 }

@@ -30,6 +30,7 @@ export struct SettingPage {
             Text(this.appState.userName || '已登录用户')
               .fontSize(18)
               .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.user_name'))
             Text('已登录')
               .fontSize(14)
               .fontColor($r('app.color.text_secondary'))
@@ -44,7 +45,7 @@ export struct SettingPage {
         }
         .width('100%')
         .padding(16)
-        .backgroundColor(Color.White)
+        .backgroundColor($r('app.color.loading_card'))
         .borderRadius(12)
       } else {
         Row() {
