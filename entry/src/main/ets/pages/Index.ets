@@ -3,12 +3,19 @@ import { HomePage } from './home/HomePage';
 import { LatestPage } from './latest/LatestPage';
 import { SearchPage } from './search/SearchPage';
 import { SettingPage } from './setting/SettingPage';
+import { appState } from '../store/AppState';
 
 @Entry
 @Component
 struct Index {
   @State currentIndex: number = 0;
   private tabsController: TabsController = new TabsController();
+  async aboutToAppear() {
+    // 应用启动时检查登录状态
+    await appState.checkLoginStatus();
+    console.info(`🔄 检查登录状态: ${appState.isLoggedIn ? '已登录' : '未登录'}`);
+    console.info(`👤 用户: ${appState.userName || '未知用户'} (${appState.userId || '无ID'})`);
+  }
 
   build() {
     Tabs({

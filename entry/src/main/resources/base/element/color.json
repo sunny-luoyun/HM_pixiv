@@ -15,6 +15,10 @@
     {
       "name": "start_window_background",
       "value": "#FFFFFF"
+    },
+    {
+      "name": "text_secondary",
+      "value": "#FFFFFF"
     }
   ]
 }
