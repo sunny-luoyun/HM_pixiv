@@ -26,7 +26,7 @@ export class LoginService {
       const cookieStr = await CookieManager.collectLoginCookies();
       if (cookieStr) {
         await CookieManager.saveLoginCookie(cookieStr);
-        await appState.setLoginInfo(cookieStr);
+        await appState.setLoginInfo(cookieStr, true);  // 跳过验证
         console.info('✅ Cookie 已保存');
       }
     } catch (err) {

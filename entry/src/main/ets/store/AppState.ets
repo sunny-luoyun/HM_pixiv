@@ -20,45 +20,42 @@ export class AppState {
     return AppState.instance;
   }
 
-  async checkLoginStatus() {
+  async checkLoginStatus(skipVerify: boolean = false) {
     try {
       const cookieStr = await CookieManager.getFullCookie();
       this.isLoggedIn = cookieStr !== '';
 
       if (this.isLoggedIn) {
-        // 1. 读取本地用户信息
+        // 读取用户信息（优先本地，其次 Cookie 解析）
         const savedUserId = await CookieManager.getUserId();
         const savedUserName = await CookieManager.getUserName();
-
         if (savedUserId && savedUserName) {
           this.userId = savedUserId;
           this.userName = savedUserName;
-          console.info(`✅ 从本地存储加载用户信息: ${this.userName} (${this.userId})`);
         } else {
-          // 兼容旧数据（从Cookie解析）
           const cookieMap = CookieManager.parseCookie(cookieStr);
           this.userId = cookieMap.get('user_id') || '';
           this.userName = cookieMap.get('user_name') || '用户';
         }
 
-        // 2. 🆕 验证Cookie有效性
-        try {
-          const isValid = await this.verifyCookieWithUserId();
-          if (!isValid) {
-            console.warn('⚠️ Cookie验证失败，自动登出');
-            await this.logout();
-          } else {
-            // 异步刷新用户名（保持最新）
-            try {
-              await this.refreshUserInfo();
-            } catch (err) {
-              console.warn('刷新用户信息失败，保留原有用户名:', err);
+        // 仅当 skipVerify 为 false 时验证
+        if (!skipVerify) {
+          try {
+            const isValid = await this.verifyCookieWithUserId();
+            if (!isValid) {
+              console.warn('⚠️ Cookie验证失败，自动登出');
+              await this.logout();
+            } else {
+              // 异步刷新用户名
+              try {
+                await this.refreshUserInfo();
+              } catch (err) {
+                console.warn('刷新用户信息失败，保留原有用户名:', err);
+              }
             }
+          } catch (networkErr) {
+            console.error('🌐 网络异常，Cookie验证跳过，保持登录状态:', networkErr);
           }
-        } catch (networkErr) {
-          // 网络问题：保留登录状态，不登出，只是提醒
-          console.error('🌐 网络异常，Cookie验证跳过，保持登录状态:', networkErr);
-          // 可选：设置一个标志位供UI提示“网络异常，登录状态待确认”
         }
       } else {
         this.userId = '';
@@ -142,9 +139,9 @@ export class AppState {
     }
   }
 
-  async setLoginInfo(cookieStr: string) {
+  async setLoginInfo(cookieStr: string, skipVerify: boolean = false) {
     await CookieManager.saveLoginCookie(cookieStr);
-    await this.checkLoginStatus();
+    await this.checkLoginStatus(skipVerify);
   }
 
   async logout() {
