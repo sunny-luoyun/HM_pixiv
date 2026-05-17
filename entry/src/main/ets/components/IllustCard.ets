@@ -1,3 +1,4 @@
+import router from '@ohos.router';
 import { PixivService, IllustBookmark } from '../services/PixivService';
 
 @Component
@@ -52,5 +53,11 @@ export struct IllustCard {
     .width('100%')
     .backgroundColor($r('app.color.loading_card'))
     .borderRadius(8)
+    .onClick(() => {
+      router.pushUrl({
+        url: 'pages/illust/IllustDetailPage',
+        params: { id: this.item.id }
+      });
+    })
   }
 }

@@ -2,8 +2,11 @@
 import http from '@ohos.net.http';
 import fileIo from '@ohos.file.fs';
 import common from '@ohos.app.ability.common';
+import request from '@ohos.request';
 import { CookieManager } from './CookieManager';
 import { PixivNovel, CacheStatus, PixivTag, PixivSeries } from '../models/PixivModels';
+import photoAccessHelper from '@ohos.file.photoAccessHelper';
+import { Context } from '@kit.AbilityKit';
 export interface UserInfoBody {
   userId?: string;
   name: string;
@@ -17,6 +20,54 @@ interface RequestHeaders {
   'Referer': string;
   'Accept': string;
   'X-Csrf-Token'?: string;
+}
+
+export interface IllustDetailUrls {
+  mini: string;
+  thumb: string;
+  small: string;
+  regular: string;
+  original: string;
+}
+
+export interface IllustTagTranslation {
+  en?: string;
+  zh?: string;
+}
+
+export interface IllustTag {
+  tag: string;
+  translation?: IllustTagTranslation;
+}
+
+export interface IllustDetailTags {
+  tags: IllustTag[];
+}
+
+export interface IllustDetailBody {
+  illustId: string;
+  illustTitle: string;
+  userId: string;
+  userName: string;
+  userAccount: string;
+  description: string;
+  urls: IllustDetailUrls;
+  tags: IllustDetailTags;
+  width: number;
+  height: number;
+  pageCount: number;
+  bookmarkCount: number;
+  likeCount: number;
+  viewCount: number;
+  createDate: string;
+  uploadDate: string;
+  profileImageUrl: string;
+}
+
+export interface IllustDetailResponse {
+  error: boolean;
+  message?: string;
+  body: IllustDetailBody;
 }
 
 export interface UserInfoResponse {
@@ -322,32 +373,32 @@ export class PixivService {
   }
 
   private static async doDownload(imageUrl: string, savePath: string): Promise<boolean> {
-    const httpRequest = http.createHttp();
+    const context = globalThis.appContext as common.UIAbilityContext;
+    if (!context) return false;
+    const cookie = await CookieManager.getFullCookie();
     try {
-      const cookie = await CookieManager.getFullCookie();
-      const response = await httpRequest.request(imageUrl, {
-        method: http.RequestMethod.GET,
+      const downloadTask = await request.downloadFile(context, {
+        url: imageUrl,
+        filePath: savePath,
         header: {
           'Referer': 'https://www.pixiv.net/',
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           'Cookie': cookie
-        },
-        expectDataType: http.HttpDataType.ARRAY_BUFFER
+        }
       });
-      if (response.responseCode === 200) {
-        const file = fileIo.openSync(savePath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY);
-        fileIo.writeSync(file.fd, response.result as ArrayBuffer);
-        fileIo.closeSync(file);
-        console.info('✅ 图片已缓存到:', savePath);
-        return true;
-      }
-      console.error('下载图片失败, 状态码:', response.responseCode);
-      return false;
+      return new Promise<boolean>((resolve) => {
+        downloadTask.on('complete', () => {
+          console.info('✅ 图片下载完成:', savePath);
+          resolve(true);
+        });
+        downloadTask.on('fail', (err: number) => {
+          console.error('下载图片失败:', err);
+          resolve(false);
+        });
+      });
     } catch (err) {
-      console.error('下载图片异常:', err);
+      console.error('下载图片启动失败:', err);
       return false;
-    } finally {
-      httpRequest.destroy();
     }
   }
 
@@ -594,6 +645,34 @@ export class PixivService {
       fullText:      b.content ?? undefined
     };
     return novel;
+  }
+
+  static async getIllustDetail(illustId: string): Promise<IllustDetailResponse> {
+    const path = `/ajax/illust/${illustId}`;
+    return PixivService.request<IllustDetailResponse>(path);
+  }
+
+  static async saveImageToGallery(context: Context, imageUrl: string, fileName: string): Promise<boolean> {
+    const cachePath = await PixivService.cacheImage(imageUrl, fileName);
+    if (!cachePath) return false;
+    const filePath = cachePath.replace('file://', '');
+    try {
+      const helper = photoAccessHelper.getPhotoAccessHelper(context);
+      const uri = await helper.createAsset(photoAccessHelper.PhotoType.IMAGE, 'jpg');
+      const dstFile = fileIo.openSync(uri, fileIo.OpenMode.WRITE_ONLY);
+      const srcFile = fileIo.openSync(filePath, fileIo.OpenMode.READ_ONLY);
+      const stat = fileIo.statSync(filePath);
+      const buf = new ArrayBuffer(stat.size);
+      fileIo.readSync(srcFile.fd, buf);
+      fileIo.writeSync(dstFile.fd, buf);
+      fileIo.closeSync(srcFile);
+      fileIo.closeSync(dstFile);
+      console.info('✅ 图片已保存到相册:', fileName);
+      return true;
+    } catch (err) {
+      console.error('保存到相册失败:', err);
+      return false;
+    }
   }
 
   // ---- 缓存管理 ----

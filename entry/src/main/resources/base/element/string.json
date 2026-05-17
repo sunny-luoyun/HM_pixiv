@@ -11,6 +11,10 @@
     {
       "name": "EntryAbility_label",
       "value": "HPixiv"
+    },
+    {
+      "name": "permission_write_imagevideo",
+      "value": "用于保存插画原图到相册"
     }
   ]
 }

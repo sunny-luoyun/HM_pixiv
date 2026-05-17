@@ -4,6 +4,7 @@
     "pages/login/LoginPage",
     "pages/favorites/FavoritesPage",
     "pages/novel/NovelReaderPage",
+    "pages/illust/IllustDetailPage",
     "pages/settings/SettingsPage",
     "pages/settings/CachedNovelsPage"
   ]
