@@ -186,15 +186,15 @@ export class AppState {
       return;
     } catch (_) {}
 
-    const success = await PixivService.downloadImage(webUrl, localPath);
+    const success = await PixivService.downloadImageDirect(webUrl, localPath);
     this.avatarUrl = success ? 'file://' + localPath : webUrl;
     await CookieManager.saveAvatarUrl(this.avatarUrl);
   }
 
   async refreshUserInfo() {
-    if (!this.isLoggedIn) return;
+    if (!this.isLoggedIn || !this.userId) return;
     try {
-      const userInfo: UserInfoResponse = await PixivService.getUserInfo();
+      const userInfo: UserInfoResponse = await PixivService.getUserProfile(this.userId);
       if (userInfo && !userInfo.error && userInfo.body?.name) {
         this.userName = userInfo.body.name;
         if (userInfo.body.image) {

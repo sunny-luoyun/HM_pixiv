@@ -1,9 +1,26 @@
 import router from '@ohos.router';
 import { AppState, appState } from '../../store/AppState';
+import fileIo from '@ohos.file.fs';
+import common from '@ohos.app.ability.common';
 
 @Component
 export struct SettingPage {
-  @StorageLink('appState') appState: AppState = appState; // 自动响应变化
+  @StorageLink('appState') appState: AppState = appState;
+
+  private getAvatarUrl(): string {
+    if (this.appState.isLoggedIn && this.appState.userId) {
+      const appContext = globalThis.appContext as common.UIAbilityContext;
+      if (appContext) {
+        const localPath = appContext.cacheDir + '/avatar_' + this.appState.userId + '.jpg';
+        try {
+          const file = fileIo.openSync(localPath, fileIo.OpenMode.READ_ONLY);
+          fileIo.closeSync(file);
+          return 'file://' + localPath;
+        } catch (_) {}
+      }
+    }
+    return '';
+  }
 
   build() {
     Column() {
@@ -87,7 +104,6 @@ export struct SettingPage {
             Text('登录后可同步收藏、推荐作品')
               .fontSize(14)
               .fontColor($r('app.color.text_secondary'))
-              .fontColor($r('app.color.user_name'))
           }
           .alignItems(HorizontalAlign.Start)
           .margin({ left: 12 })
@@ -108,8 +124,8 @@ export struct SettingPage {
 
   @Builder
   UserAvatar() {
-    if (this.appState.avatarUrl) {
-      Image(this.appState.avatarUrl)
+    if (this.getAvatarUrl()) {
+      Image(this.getAvatarUrl())
         .width(48)
         .height(48)
         .borderRadius(24)

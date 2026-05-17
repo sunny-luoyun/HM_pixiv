@@ -41,11 +41,19 @@ export class LoginPageViewModel {
       // 第四步：获取用户头像URL并下载缓存
       console.info('🖼️ 第四步：获取用户头像...');
       try {
-        const userInfo = await PixivService.getUserInfo();
-        if (userInfo?.body?.image) {
-          await CookieManager.saveAvatarUrl(userInfo.body.image);
+        // /ajax/user/me 已废弃，改用 /ajax/user/{userId}
+        const userInfo = await PixivService.getUserProfile(userData.userId);
+        const avatarUrl = userInfo?.body?.image || userInfo?.body?.imageBig || '';
+        if (avatarUrl) {
+          await CookieManager.saveAvatarUrl(avatarUrl);
           await appState.cacheAvatar();
           console.info('✅ 头像已缓存到本地');
+          // 写入AppStorage，SettingPage通过@StorageProp监听到变化
+          if (appState.avatarUrl) {
+            AppStorage.SetOrCreate('avatarUrl', appState.avatarUrl);
+          }
+        } else {
+          console.warn('⚠️ API未返回头像URL');
         }
       } catch (err) {
         console.warn('⚠️ 获取头像失败，后续可刷新:', err);

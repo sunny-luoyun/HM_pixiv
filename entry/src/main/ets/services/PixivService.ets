@@ -179,11 +179,13 @@ export class PixivService {
   private static async doDownload(imageUrl: string, savePath: string): Promise<boolean> {
     const httpRequest = http.createHttp();
     try {
+      const cookie = await CookieManager.getFullCookie();
       const response = await httpRequest.request(imageUrl, {
         method: http.RequestMethod.GET,
         header: {
           'Referer': 'https://www.pixiv.net/',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Cookie': cookie
         },
         expectDataType: http.HttpDataType.ARRAY_BUFFER
       });
@@ -250,6 +252,10 @@ export class PixivService {
     return PixivService.request<UserInfoResponse>('/ajax/user/me');
   }
 
+  static async getUserProfile(userId: string): Promise<UserInfoResponse> {
+    return PixivService.request<UserInfoResponse>(`/ajax/user/${userId}`);
+  }
+
   static async fetchUserName(): Promise<string> {
     const userInfo: UserInfoResponse = await PixivService.getUserInfo();
     if (userInfo && !userInfo.error && userInfo.body?.name) {
@@ -270,6 +276,10 @@ export class PixivService {
 
   static async downloadImage(imageUrl: string, savePath: string): Promise<boolean> {
     return PixivService.enqueueDownload(imageUrl, savePath);
+  }
+
+  static async downloadImageDirect(imageUrl: string, savePath: string): Promise<boolean> {
+    return PixivService.doDownload(imageUrl, savePath);
   }
 
   static async cacheImage(url: string, fileName: string): Promise<string> {
