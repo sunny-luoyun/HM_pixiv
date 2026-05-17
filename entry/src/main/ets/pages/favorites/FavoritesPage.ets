@@ -1,5 +1,6 @@
 import router from '@ohos.router';
 import { PixivService, IllustBookmark, NovelBookmark } from '../../services/PixivService';
+import { NovelCard } from '../../components/NovelCard';
 import { appState } from '../../store/AppState';
 
 @Entry
@@ -132,7 +133,7 @@ struct FavoritesPage {
             List() {
               ForEach(this.novelWorks, (item: NovelBookmark) => {
                 ListItem() {
-                  this.NovelCard(item)
+                  NovelCard({ item: item })
                 }
               }, (item: NovelBookmark) => item.id)
             }
@@ -183,33 +184,4 @@ struct FavoritesPage {
     .borderRadius(8)
   }
 
-  @Builder
-  NovelCard(item: NovelBookmark) {
-    Row() {
-      Column() {
-        Text(item.title)
-          .fontSize(15)
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Row() {
-          Text(item.userName)
-            .fontSize(12)
-            .fontColor($r('app.color.text_secondary'))
-          Blank()
-          Text(`${item.wordCount}字`)
-            .fontSize(11)
-            .fontColor($r('app.color.text_secondary'))
-        }
-        .width('100%')
-        .margin({ top: 6 })
-      }
-      .alignItems(HorizontalAlign.Start)
-      .layoutWeight(1)
-    }
-    .width('100%')
-    .padding(14)
-    .backgroundColor($r('app.color.loading_card'))
-    .borderRadius(8)
-    .margin({ bottom: 8 })
-  }
 }

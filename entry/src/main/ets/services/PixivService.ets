@@ -1,6 +1,7 @@
 // entry/src/main/ets/services/PixivService.ets
 import http from '@ohos.net.http';
 import fileIo from '@ohos.file.fs';
+import common from '@ohos.app.ability.common';
 import { CookieManager } from './CookieManager';
 export interface UserInfoBody {
   userId?: string;
@@ -54,6 +55,11 @@ export interface IllustBookmarkResponse {
   body: IllustBookmarkResponseBody;
 }
 
+export interface NovelSeries {
+  id: number;
+  title: string;
+}
+
 export interface NovelBookmark {
   id: string;
   title: string;
@@ -63,8 +69,31 @@ export interface NovelBookmark {
   bookmarkData: BookmarkData;
   profileImageUrl: string;
   createDate: string;
+  updateDate: string;
   textCount: number;
   wordCount: number;
+  characterCount: number;
+  readingTime: number;
+  useWordCount: boolean;
+  url: string;
+  description: string;
+  pageCount: number;
+  width: number;
+  height: number;
+  restrict: number;
+  xRestrict: number;
+  sl: number;
+  isBookmarkable: boolean;
+  isUnlisted: boolean;
+  isMasked: boolean;
+  bookmarkCount: number;
+  commentCount: number;
+  markerCount: number;
+  seriesId?: number;
+  seriesTitle?: string;
+  series?: NovelSeries;
+  originalWork: boolean;
+  aiType: number;
 }
 
 export interface NovelBookmarkResponseBody {
@@ -178,5 +207,21 @@ export class PixivService {
     } finally {
       httpRequest.destroy();
     }
+  }
+
+  static async cacheImage(url: string, fileName: string): Promise<string> {
+    const appContext = globalThis.appContext as common.UIAbilityContext;
+    if (!appContext) return '';
+    const cacheDir: string = appContext.cacheDir;
+    const localPath = cacheDir + '/' + fileName;
+
+    try {
+      const file = fileIo.openSync(localPath, fileIo.OpenMode.READ_ONLY);
+      fileIo.closeSync(file);
+      return 'file://' + localPath;
+    } catch (_) {}
+
+    const success = await PixivService.downloadImage(url, localPath);
+    return success ? 'file://' + localPath : '';
   }
 }
