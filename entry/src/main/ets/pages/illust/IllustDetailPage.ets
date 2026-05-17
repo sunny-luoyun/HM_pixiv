@@ -191,6 +191,7 @@ struct IllustDetailPage {
           .width('100%')
           .height('100%')
           .justifyContent(FlexAlign.SpaceBetween)
+          .hitTestBehavior(HitTestMode.Transparent)
         }
         .width('100%')
         .height('100%')
