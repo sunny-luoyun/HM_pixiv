@@ -3,6 +3,7 @@ import http from '@ohos.net.http';
 import fileIo from '@ohos.file.fs';
 import common from '@ohos.app.ability.common';
 import { CookieManager } from './CookieManager';
+import { PixivNovel, CacheStatus, PixivTag, PixivSeries } from '../models/PixivModels';
 export interface UserInfoBody {
   userId?: string;
   name: string;
@@ -106,6 +107,44 @@ export interface NovelBookmarkResponse {
   body: NovelBookmarkResponseBody;
 }
 
+interface NovelAjaxResponse<T> {
+  error: boolean;
+  message: string;
+  body: T;
+}
+
+interface TagTranslation {
+  en?: string;
+  zh?: string;
+}
+
+interface TagItem {
+  tag: string;
+  translation?: TagTranslation;
+}
+
+interface TagsWrapper {
+  tags: TagItem[];
+}
+
+interface NovelDetailBody {
+  id: string;
+  title: string;
+  content: string;
+  description: string;
+  userId: string;
+  userName: string;
+  tags: TagsWrapper;
+  createDate: string;
+  uploadDate: string;
+  bookmarkCount: number;
+  viewCount: number;
+  commentCount: number;
+  pageCount: number;
+  wordCount: number;
+  coverUrl: string;
+}
+
 export class PixivService {
   private static baseUrl = 'https://www.pixiv.net';
 
@@ -115,7 +154,6 @@ export class PixivService {
 
     const httpRequest = http.createHttp();
 
-    // 更精细的 headers
     const finalOptions: http.HttpRequestOptions = {
       method: options?.method || http.RequestMethod.GET,
       header: {
@@ -127,24 +165,18 @@ export class PixivService {
         'Accept-Language': 'zh-CN,zh;q=0.9',
         'Accept-Encoding': 'gzip, deflate'
       },
-      connectTimeout: 10000,  // 增加超时时间
+      connectTimeout: 10000,
       readTimeout: 10000,
       usingCache: true
     };
 
     try {
       console.info(`Pixiv API 请求: ${url}`);
-      console.info(`请求 Cookie 长度: ${cookie.length}`);  // 调试
-      console.info(`请求 Cookie 内容: ${cookie.substring(0, 100)}...`);  // 调试前100字符
 
       const response = await httpRequest.request(url, finalOptions);
 
-      console.info(`Pixiv API 响应状态: ${response.responseCode}`);
-      console.info(`Pixiv API 响应体: ${response.result}`);  // 完整响应用于调试
-
       if (response.responseCode === 200) {
         const result = JSON.parse(response.result as string) as T;
-        console.info(`解析后结果:`, result);
         return result;
       } else {
         console.error(`Pixiv API 错误 (${response.responseCode}):`, response.result);
@@ -152,7 +184,6 @@ export class PixivService {
       }
     } catch (err) {
       console.error('Pixiv API 请求异常: ', err);
-      console.error(`异常类型: ${typeof err}, 异常信息: ${String(err)}`);
       throw new Error(`Pixiv API 请求失败: ${String(err)}`);
     } finally {
       httpRequest.destroy();
@@ -223,5 +254,54 @@ export class PixivService {
 
     const success = await PixivService.downloadImage(url, localPath);
     return success ? 'file://' + localPath : '';
+  }
+
+  static async fetchNovelText(novelId: string): Promise<string> {
+    const path = `/ajax/novel/${novelId}`;
+    try {
+      const resp = await PixivService.request<NovelAjaxResponse<NovelDetailBody>>(path);
+      if (resp.error) {
+        throw new Error(resp.message || '获取小说正文失败');
+      }
+      const content = resp.body?.content ?? '';
+      if (!content) {
+        throw new Error('正文内容为空');
+      }
+      return content;
+    } catch (err) {
+      console.error(`获取小说正文失败 id=${novelId}:`, err);
+      throw err as Error;
+    }
+  }
+
+  static async fetchNovelDetail(novelId: string): Promise<PixivNovel> {
+    const path = `/ajax/novel/${novelId}`;
+    const resp = await PixivService.request<NovelAjaxResponse<NovelDetailBody>>(path);
+    if (resp.error) {
+      throw new Error(resp.message || '获取小说详情失败');
+    }
+    const b = resp.body;
+    const novel: PixivNovel = {
+      id:            b.id,
+      title:         b.title,
+      caption:       b.description ?? '',
+      author:        b.userName,
+      authorId:      b.userId,
+      coverUrl:      b.coverUrl ?? '',
+      tags:          (b.tags?.tags ?? []).map((t: TagItem): PixivTag => ({
+        name: t.tag,
+        translation: t.translation?.zh ?? t.translation?.en ?? undefined
+      })),
+      textLength:    b.wordCount ?? 0,
+      pageCount:     b.pageCount ?? 1,
+      createDate:    b.createDate ?? '',
+      updateDate:    b.uploadDate ?? '',
+      bookmarkCount: b.bookmarkCount ?? 0,
+      viewCount:     b.viewCount ?? 0,
+      commentCount:  b.commentCount ?? 0,
+      cacheStatus:   CacheStatus.NOT_CACHED,
+      fullText:      b.content ?? undefined
+    };
+    return novel;
   }
 }
