@@ -22,6 +22,61 @@ export interface UserInfoResponse {
   body?: UserInfoBody;
 }
 
+export interface BookmarkData {
+  id: string;
+  private: boolean;
+  userId: string;
+}
+
+export interface IllustBookmark {
+  id: string;
+  title: string;
+  illustType: number;
+  url: string;
+  tags: string[];
+  userId: string;
+  userName: string;
+  width: number;
+  height: number;
+  pageCount: number;
+  bookmarkData: BookmarkData;
+  profileImageUrl: string;
+  createDate: string;
+}
+
+export interface IllustBookmarkResponseBody {
+  works: IllustBookmark[];
+  total: number;
+}
+
+export interface IllustBookmarkResponse {
+  error: boolean;
+  body: IllustBookmarkResponseBody;
+}
+
+export interface NovelBookmark {
+  id: string;
+  title: string;
+  tags: string[];
+  userId: string;
+  userName: string;
+  bookmarkData: BookmarkData;
+  profileImageUrl: string;
+  createDate: string;
+  textCount: number;
+  wordCount: number;
+}
+
+export interface NovelBookmarkResponseBody {
+  works: NovelBookmark[];
+  total: number;
+}
+
+export interface NovelBookmarkResponse {
+  error: boolean;
+  body: NovelBookmarkResponseBody;
+}
+
 export class PixivService {
   private static baseUrl = 'https://www.pixiv.net';
 
@@ -85,6 +140,16 @@ export class PixivService {
       return userInfo.body.name;
     }
     throw new Error('无法获取用户名');
+  }
+
+  static async getIllustBookmarks(userId: string, offset: number = 0, limit: number = 30, tag: string = '', rest: string = 'show'): Promise<IllustBookmarkResponse> {
+    const path = `/ajax/user/${userId}/illusts/bookmarks?tag=${encodeURIComponent(tag)}&offset=${offset}&limit=${limit}&rest=${rest}`;
+    return PixivService.request<IllustBookmarkResponse>(path);
+  }
+
+  static async getNovelBookmarks(userId: string, offset: number = 0, limit: number = 30, tag: string = '', rest: string = 'show'): Promise<NovelBookmarkResponse> {
+    const path = `/ajax/user/${userId}/novels/bookmarks?tag=${encodeURIComponent(tag)}&offset=${offset}&limit=${limit}&rest=${rest}`;
+    return PixivService.request<NovelBookmarkResponse>(path);
   }
 
   static async downloadImage(imageUrl: string, savePath: string): Promise<boolean> {

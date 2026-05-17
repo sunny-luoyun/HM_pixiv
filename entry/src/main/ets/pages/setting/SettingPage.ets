@@ -1,5 +1,4 @@
 import router from '@ohos.router';
-import prompt from '@ohos.prompt';
 import { AppState, appState } from '../../store/AppState';
 
 @Component
@@ -19,15 +18,11 @@ export struct SettingPage {
   @Builder
   MenuSection() {
     Column() {
-      this.MenuItem('我的作品', () => {
-        prompt.showToast({ message: '我的作品', duration: 1500 })
-      })
+      this.MenuItem('我的作品', () => {})
       this.MenuItem('我的收藏', () => {
-        prompt.showToast({ message: '我的收藏', duration: 1500 })
+        router.pushUrl({ url: 'pages/favorites/FavoritesPage' });
       })
-      this.MenuItem('设置', () => {
-        prompt.showToast({ message: '设置', duration: 1500 })
-      })
+      this.MenuItem('设置', () => {})
     }
     .width('100%')
     .padding({ left: 16, right: 16 })
