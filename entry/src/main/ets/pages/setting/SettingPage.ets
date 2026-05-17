@@ -1,4 +1,5 @@
 import router from '@ohos.router';
+import prompt from '@ohos.prompt';
 import { AppState, appState } from '../../store/AppState';
 
 @Component
@@ -8,13 +9,49 @@ export struct SettingPage {
   build() {
     Column() {
       this.LoginCard()
-      Text('其他设置')
-        .fontSize(16)
-        .margin({ top: 20 })
+      this.MenuSection()
     }
     .width('100%')
     .height('100%')
     .backgroundColor($r('app.color.page_background'))
+  }
+
+  @Builder
+  MenuSection() {
+    Column() {
+      this.MenuItem('我的作品', () => {
+        prompt.showToast({ message: '我的作品', duration: 1500 })
+      })
+      this.MenuItem('我的收藏', () => {
+        prompt.showToast({ message: '我的收藏', duration: 1500 })
+      })
+      this.MenuItem('设置', () => {
+        prompt.showToast({ message: '设置', duration: 1500 })
+      })
+    }
+    .width('100%')
+    .padding({ left: 16, right: 16 })
+    .margin({ top: 20 })
+  }
+
+  @Builder
+  MenuItem(title: string, action: () => void) {
+    Row() {
+      Text(title)
+        .fontSize(16)
+        .fontColor($r('app.color.user_name'))
+      Blank()
+      Text('›')
+        .fontSize(20)
+        .fontColor($r('app.color.text_secondary'))
+    }
+    .width('100%')
+    .height(50)
+    .padding({ left: 16, right: 16 })
+    .backgroundColor($r('app.color.loading_card'))
+    .borderRadius(12)
+    .margin({ bottom: 10 })
+    .onClick(action)
   }
 
   @Builder
