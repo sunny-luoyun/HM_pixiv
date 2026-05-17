@@ -17,15 +17,11 @@ export struct LatestPage {
   @State illustPage: number = 1;
   @State illustPages: number = 0;
   @State isLoadingMoreIllust: boolean = false;
-  private illustContentHeight: number = 0;
-  private illustViewHeight: number = 0;
 
   // 小说分页
   @State novelPage: number = 1;
   @State novelPages: number = 0;
   @State isLoadingMoreNovel: boolean = false;
-  private novelContentHeight: number = 0;
-  private novelViewHeight: number = 0;
 
   async aboutToAppear() {
     if (!appState.isLoggedIn) {
@@ -169,11 +165,9 @@ export struct LatestPage {
               .padding(12)
               .width('100%')
 
-              // 加载更多指示器
               if (this.isLoadingMoreIllust) {
                 LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
               }
-              // 底部提示
               if (!this.isLoadingMoreIllust && this.illustPage >= this.illustPages && this.illustWorks.length > 0) {
                 Text('- 已显示全部作品 -')
                   .fontSize(12)
@@ -184,20 +178,11 @@ export struct LatestPage {
               }
             }
             .width('100%')
-            .onAreaChange((_, newValue) => {
-              this.illustContentHeight = Number(newValue.height);
-            })
           }
           .width('100%')
-          .onAreaChange((_, newValue) => {
-            this.illustViewHeight = Number(newValue.height);
-          })
-          .onScroll((x: number, y: number) => {
+          .onReachEnd(() => {
             if (!this.isLoadingMoreIllust && this.illustPage < this.illustPages) {
-              const remaining = this.illustContentHeight - this.illustViewHeight - y;
-              if (remaining < 400) {
-                this.loadMoreIllusts();
-              }
+              this.loadMoreIllusts();
             }
           })
         }
@@ -242,20 +227,11 @@ export struct LatestPage {
               }
             }
             .width('100%')
-            .onAreaChange((_, newValue) => {
-              this.novelContentHeight = Number(newValue.height);
-            })
           }
           .width('100%')
-          .onAreaChange((_, newValue) => {
-            this.novelViewHeight = Number(newValue.height);
-          })
-          .onScroll((x: number, y: number) => {
+          .onReachEnd(() => {
             if (!this.isLoadingMoreNovel && this.novelPage < this.novelPages) {
-              const remaining = this.novelContentHeight - this.novelViewHeight - y;
-              if (remaining < 400) {
-                this.loadMoreNovels();
-              }
+              this.loadMoreNovels();
             }
           })
         }

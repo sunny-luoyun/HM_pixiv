@@ -4,22 +4,35 @@ import { PixivService, IllustBookmark } from '../services/PixivService';
 export struct IllustCard {
   private item!: IllustBookmark;
   @State localUrl: string = '';
+  @State isCaching: boolean = true;
 
   async aboutToAppear() {
-    if (!this.item.url) return;
+    if (!this.item.url) {
+      this.isCaching = false;
+      return;
+    }
     const path = await PixivService.cacheImage(this.item.url, `illust_${this.item.id}.jpg`);
     if (path) {
       this.localUrl = path;
     }
+    this.isCaching = false;
   }
 
   build() {
     Column() {
-      Image(this.localUrl || this.item.url)
-        .width('100%')
-        .height(140)
-        .objectFit(ImageFit.Cover)
-        .borderRadius({ topLeft: 8, topRight: 8 })
+      if (this.localUrl) {
+        Image(this.localUrl)
+          .width('100%')
+          .height(140)
+          .objectFit(ImageFit.Cover)
+          .borderRadius({ topLeft: 8, topRight: 8 })
+      } else {
+        Column()
+          .width('100%')
+          .height(140)
+          .backgroundColor('#FFE8E8E8')
+          .borderRadius({ topLeft: 8, topRight: 8 })
+      }
       Column() {
         Text(this.item.title)
           .fontSize(12)

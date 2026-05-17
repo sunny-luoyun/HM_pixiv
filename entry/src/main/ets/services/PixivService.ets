@@ -183,6 +183,34 @@ export interface FollowLatestNovelResponse {
   body: FollowLatestNovelBody;
 }
 
+// ---- Discovery 发现页 ----
+
+interface DiscoveryThumbnailsIllust {
+  illust: IllustBookmark[];
+}
+
+interface DiscoveryIllustsBody {
+  thumbnails: DiscoveryThumbnailsIllust;
+}
+
+export interface DiscoveryIllustsResponse {
+  error: boolean;
+  body: DiscoveryIllustsBody;
+}
+
+interface DiscoveryThumbnailsNovel {
+  novel: NovelBookmark[];
+}
+
+interface DiscoveryNovelsBody {
+  thumbnails: DiscoveryThumbnailsNovel;
+}
+
+export interface DiscoveryNovelsResponse {
+  error: boolean;
+  body: DiscoveryNovelsBody;
+}
+
 interface ApiQueueTask {
   resolve: (value: object) => void;
   reject: (reason: object) => void;
@@ -384,6 +412,18 @@ export class PixivService {
   static async getFollowLatestNovels(page: number = 1, mode: string = 'all'): Promise<FollowLatestNovelResponse> {
     const path = `/ajax/follow_latest/novel?mode=${mode}&p=${page}`;
     return PixivService.request<FollowLatestNovelResponse>(path);
+  }
+
+  // ---- Discovery 发现页 ----
+
+  static async getDiscoveryIllusts(mode: string = 'all', limit: number = 60): Promise<DiscoveryIllustsResponse> {
+    const path = `/ajax/discovery/artworks?mode=${mode}&limit=${limit}&t=${Date.now()}`;
+    return PixivService.request<DiscoveryIllustsResponse>(path);
+  }
+
+  static async getDiscoveryNovels(mode: string = 'all', limit: number = 60): Promise<DiscoveryNovelsResponse> {
+    const path = `/ajax/discovery/novels?mode=${mode}&limit=${limit}&t=${Date.now()}`;
+    return PixivService.request<DiscoveryNovelsResponse>(path);
   }
 
   static async getIllustBookmarks(userId: string, offset: number = 0, limit: number = 30, tag: string = '', rest: string = 'show'): Promise<IllustBookmarkResponse> {
