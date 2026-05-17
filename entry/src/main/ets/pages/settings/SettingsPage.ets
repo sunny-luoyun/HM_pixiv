@@ -1,3 +1,4 @@
+import router from '@ohos.router';
 import { AppState, appState } from '../../store/AppState';
 import common from '@ohos.app.ability.common';
 import { PixivService } from '../../services/PixivService';
@@ -212,6 +213,13 @@ export struct SettingsPage {
           }
           .alignItems(HorizontalAlign.Start)
           Blank()
+          Text('查看详情')
+            .fontSize(13)
+            .fontColor('#4A90D9')
+            .margin({ right: 12 })
+            .onClick(() => {
+              router.pushUrl({ url: 'pages/settings/CachedNovelsPage' });
+            })
           Button('清除全部')
             .fontSize(13)
             .fontColor('#FF4D4F')

@@ -727,6 +727,18 @@ export class PixivService {
     return deletedCount;
   }
 
+  static async deleteSingleNovelCover(novelId: string): Promise<boolean> {
+    const cacheDir = PixivService.getCacheDir();
+    if (!cacheDir) return false;
+    const fileName = `novel_${novelId}.jpg`;
+    try {
+      fileIo.unlinkSync(`${cacheDir}/${fileName}`);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static async getAllImageCacheInfo(): Promise<AllImageCacheInfo> {
     const illust = await PixivService.getCategoryCacheInfo('illust_');
     const novel = await PixivService.getCategoryCacheInfo('novel_');

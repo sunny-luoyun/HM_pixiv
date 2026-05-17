@@ -1,6 +1,8 @@
+import router from '@ohos.router';
 import common from '@ohos.app.ability.common';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { PixivNovel } from '../../models/PixivModels';
+import { PixivService } from '../../services/PixivService';
 
 @Entry
 @Component
@@ -24,10 +26,11 @@ export struct CachedNovelsPage {
     this.isLoading = false;
   }
 
-  async deleteNovelCache(novelId: string) {
+  async deleteNovelCache(novel: PixivNovel) {
     try {
-      await pixivCacheDB.deleteNovelById(novelId);
-      this.cachedNovels = this.cachedNovels.filter(n => n.id !== novelId);
+      await pixivCacheDB.deleteNovelById(novel.id);
+      await PixivService.deleteSingleNovelCover(novel.id);
+      this.cachedNovels = this.cachedNovels.filter(n => n.id !== novel.id);
     } catch (err) {
       console.error('删除小说缓存失败:', err);
     }
@@ -46,7 +49,7 @@ export struct CachedNovelsPage {
         value: '删除',
         fontColor: '#FF4D4F',
         action: () => {
-          this.deleteNovelCache(novel.id);
+          this.deleteNovelCache(novel);
         }
       }
     });
@@ -55,14 +58,21 @@ export struct CachedNovelsPage {
   build() {
     Column() {
       Row() {
+        Text('‹')
+          .fontSize(28)
+          .onClick(() => router.back())
         Text('已缓存的小说')
           .fontSize(22)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.user_name'))
+          .margin({ left: 12 })
         Blank()
+        Text(`${this.cachedNovels.length}`)
+          .fontSize(14)
+          .fontColor($r('app.color.text_secondary'))
       }
       .width('100%')
-      .padding({ left: 24, right: 24, top: 16 })
+      .padding({ left: 16, right: 24, top: 16 })
 
       if (this.isLoading) {
         Text('正在加载...')
