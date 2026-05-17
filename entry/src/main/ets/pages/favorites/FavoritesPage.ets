@@ -1,6 +1,7 @@
 import router from '@ohos.router';
 import { PixivService, IllustBookmark, NovelBookmark } from '../../services/PixivService';
 import { NovelCard } from '../../components/NovelCard';
+import { IllustCard } from '../../components/IllustCard';
 import { appState } from '../../store/AppState';
 
 @Entry
@@ -109,7 +110,7 @@ struct FavoritesPage {
             Grid() {
               ForEach(this.illustWorks, (item: IllustBookmark) => {
                 GridItem() {
-                  this.IllustCard(item)
+                  IllustCard({ item: item })
                 }
               }, (item: IllustBookmark) => item.id)
             }
@@ -153,35 +154,6 @@ struct FavoritesPage {
     })
     .width('100%')
     .layoutWeight(1)
-  }
-
-  @Builder
-  IllustCard(item: IllustBookmark) {
-    Column() {
-      Image(item.url)
-        .width('100%')
-        .height(140)
-        .objectFit(ImageFit.Cover)
-        .borderRadius({ topLeft: 8, topRight: 8 })
-      Column() {
-        Text(item.title)
-          .fontSize(12)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text(item.userName)
-          .fontSize(10)
-          .fontColor($r('app.color.text_secondary'))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .margin({ top: 2 })
-      }
-      .width('100%')
-      .padding({ left: 6, right: 6, top: 4, bottom: 6 })
-      .alignItems(HorizontalAlign.Start)
-    }
-    .width('100%')
-    .backgroundColor($r('app.color.loading_card'))
-    .borderRadius(8)
   }
 
 }

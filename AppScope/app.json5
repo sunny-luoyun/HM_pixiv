@@ -1,6 +1,6 @@
 {
   "app": {
-    "bundleName": "com.example.hm_pixiv",
+    "bundleName": "com.example.hpixiv",
     "vendor": "example",
     "versionCode": 1000000,
     "versionName": "1.0.0",

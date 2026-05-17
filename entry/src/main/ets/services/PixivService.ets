@@ -145,8 +145,64 @@ interface NovelDetailBody {
   coverUrl: string;
 }
 
+interface DownloadTask {
+  resolve: (value: boolean) => void;
+  url: string;
+  savePath: string;
+}
+
 export class PixivService {
   private static baseUrl = 'https://www.pixiv.net';
+  private static maxConcurrentDownloads = 3;
+  private static activeDownloads = 0;
+  private static downloadQueue: Array<DownloadTask> = [];
+
+  private static async enqueueDownload(url: string, savePath: string): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+      PixivService.downloadQueue.push({ resolve, url, savePath });
+      PixivService.processQueue();
+    });
+  }
+
+  private static processQueue() {
+    while (PixivService.activeDownloads < PixivService.maxConcurrentDownloads && PixivService.downloadQueue.length > 0) {
+      const task = PixivService.downloadQueue.shift()!;
+      PixivService.activeDownloads++;
+      PixivService.doDownload(task.url, task.savePath).then((result) => {
+        task.resolve(result);
+        PixivService.activeDownloads--;
+        PixivService.processQueue();
+      });
+    }
+  }
+
+  private static async doDownload(imageUrl: string, savePath: string): Promise<boolean> {
+    const httpRequest = http.createHttp();
+    try {
+      const response = await httpRequest.request(imageUrl, {
+        method: http.RequestMethod.GET,
+        header: {
+          'Referer': 'https://www.pixiv.net/',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        expectDataType: http.HttpDataType.ARRAY_BUFFER
+      });
+      if (response.responseCode === 200) {
+        const file = fileIo.openSync(savePath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY);
+        fileIo.writeSync(file.fd, response.result as ArrayBuffer);
+        fileIo.closeSync(file);
+        console.info('✅ 图片已缓存到:', savePath);
+        return true;
+      }
+      console.error('下载图片失败, 状态码:', response.responseCode);
+      return false;
+    } catch (err) {
+      console.error('下载图片异常:', err);
+      return false;
+    } finally {
+      httpRequest.destroy();
+    }
+  }
 
   static async request<T>(path: string, options?: http.HttpRequestOptions): Promise<T> {
     const cookie = await CookieManager.getFullCookie();
@@ -213,31 +269,7 @@ export class PixivService {
   }
 
   static async downloadImage(imageUrl: string, savePath: string): Promise<boolean> {
-    const httpRequest = http.createHttp();
-    try {
-      const response = await httpRequest.request(imageUrl, {
-        method: http.RequestMethod.GET,
-        header: {
-          'Referer': 'https://www.pixiv.net/',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        },
-        expectDataType: http.HttpDataType.ARRAY_BUFFER
-      });
-      if (response.responseCode === 200) {
-        const file = fileIo.openSync(savePath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY);
-        fileIo.writeSync(file.fd, response.result as ArrayBuffer);
-        fileIo.closeSync(file);
-        console.info('✅ 图片已缓存到:', savePath);
-        return true;
-      }
-      console.error('下载图片失败, 状态码:', response.responseCode);
-      return false;
-    } catch (err) {
-      console.error('下载图片异常:', err);
-      return false;
-    } finally {
-      httpRequest.destroy();
-    }
+    return PixivService.enqueueDownload(imageUrl, savePath);
   }
 
   static async cacheImage(url: string, fileName: string): Promise<string> {
