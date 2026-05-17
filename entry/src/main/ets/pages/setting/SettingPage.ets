@@ -7,6 +7,9 @@ import common from '@ohos.app.ability.common';
 export struct SettingPage {
   @StorageLink('appState') appState: AppState = appState;
 
+  aboutToAppear() {
+  }
+
   private getAvatarUrl(): string {
     if (this.appState.isLoggedIn && this.appState.userId) {
       const appContext = globalThis.appContext as common.UIAbilityContext;
@@ -39,7 +42,9 @@ export struct SettingPage {
       this.MenuItem('我的收藏', () => {
         router.pushUrl({ url: 'pages/favorites/FavoritesPage' });
       })
-      this.MenuItem('设置', () => {})
+      this.MenuItem('设置', () => {
+        router.pushUrl({ url: 'pages/settings/SettingsPage' });
+      })
     }
     .width('100%')
     .padding({ left: 16, right: 16 })

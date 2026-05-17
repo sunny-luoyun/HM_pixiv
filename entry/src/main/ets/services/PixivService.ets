@@ -269,6 +269,17 @@ interface ApiQueueTask {
   execute: () => Promise<object>;
 }
 
+interface CacheCategoryInfo {
+  size: number;
+  count: number;
+}
+
+interface AllImageCacheInfo {
+  illust: CacheCategoryInfo;
+  novel: CacheCategoryInfo;
+  avatar: CacheCategoryInfo;
+}
+
 export class PixivService {
   private static baseUrl = 'https://www.pixiv.net';
 
@@ -579,5 +590,77 @@ export class PixivService {
       fullText:      b.content ?? undefined
     };
     return novel;
+  }
+
+  // ---- 缓存管理 ----
+
+  static getCacheDir(): string {
+    const appContext = globalThis.appContext as common.UIAbilityContext;
+    if (!appContext) return '';
+    return appContext.cacheDir;
+  }
+
+  static async getCategoryCacheInfo(prefix: string): Promise<CacheCategoryInfo> {
+    const cacheDir = PixivService.getCacheDir();
+    if (!cacheDir) return { size: 0, count: 0 };
+
+    let totalSize = 0;
+    let totalCount = 0;
+
+    try {
+      const files = fileIo.listFileSync(cacheDir);
+      for (const fileName of files) {
+        if (fileName.startsWith(prefix)) {
+          try {
+            const stat = fileIo.statSync(cacheDir + '/' + fileName);
+            totalSize += stat.size;
+            totalCount++;
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+
+    return { size: totalSize, count: totalCount };
+  }
+
+  static async clearCategoryCache(prefix: string): Promise<number> {
+    const cacheDir = PixivService.getCacheDir();
+    if (!cacheDir) return 0;
+
+    let deletedCount = 0;
+
+    try {
+      const files = fileIo.listFileSync(cacheDir);
+      for (const fileName of files) {
+        if (fileName.startsWith(prefix)) {
+          try {
+            fileIo.unlinkSync(cacheDir + '/' + fileName);
+            deletedCount++;
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+
+    return deletedCount;
+  }
+
+  static async getAllImageCacheInfo(): Promise<AllImageCacheInfo> {
+    const illust = await PixivService.getCategoryCacheInfo('illust_');
+    const novel = await PixivService.getCategoryCacheInfo('novel_');
+    const user = await PixivService.getCategoryCacheInfo('user_');
+    const avatar = await PixivService.getCategoryCacheInfo('avatar_');
+    const result: AllImageCacheInfo = {
+      illust,
+      novel,
+      avatar: { size: user.size + avatar.size, count: user.count + avatar.count }
+    };
+    return result;
+  }
+
+  static async clearAllImageCache(): Promise<void> {
+    await PixivService.clearCategoryCache('illust_');
+    await PixivService.clearCategoryCache('novel_');
+    await PixivService.clearCategoryCache('user_');
+    await PixivService.clearCategoryCache('avatar_');
   }
 }

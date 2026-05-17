@@ -3,6 +3,8 @@
     "pages/Index",
     "pages/login/LoginPage",
     "pages/favorites/FavoritesPage",
-    "pages/novel/NovelReaderPage"
+    "pages/novel/NovelReaderPage",
+    "pages/settings/SettingsPage",
+    "pages/settings/CachedNovelsPage"
   ]
 }

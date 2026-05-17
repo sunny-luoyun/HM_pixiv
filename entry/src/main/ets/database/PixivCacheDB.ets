@@ -230,6 +230,47 @@ export class PixivCacheDB {
     }
   }
 
+  async getCachedNovelCount(): Promise<number> {
+    if (!this.checkReady()) return 0;
+    const predicates = new relationalStore.RdbPredicates(TABLE_NOVELS);
+    predicates.equalTo(COL.CACHE_STATUS, CacheStatus.CACHED);
+    try {
+      const result = await this.rdbStore!.query(predicates, [COL.ID]);
+      const count = result.rowCount;
+      result.close();
+      return count;
+    } catch (err) {
+      console.error(`[PixivCacheDB] getCachedNovelCount 失败: ${JSON.stringify(err)}`);
+      return 0;
+    }
+  }
+
+  async deleteAllCachedNovels(): Promise<number> {
+    if (!this.checkReady()) return 0;
+    const predicates = new relationalStore.RdbPredicates(TABLE_NOVELS);
+    predicates.equalTo(COL.CACHE_STATUS, CacheStatus.CACHED);
+    try {
+      const rows = await this.rdbStore!.delete(predicates);
+      return rows;
+    } catch (err) {
+      console.error(`[PixivCacheDB] deleteAllCachedNovels 失败: ${JSON.stringify(err)}`);
+      return 0;
+    }
+  }
+
+  async deleteNovelById(novelId: string): Promise<boolean> {
+    if (!this.checkReady()) return false;
+    const predicates = new relationalStore.RdbPredicates(TABLE_NOVELS);
+    predicates.equalTo(COL.ID, novelId);
+    try {
+      const rows = await this.rdbStore!.delete(predicates);
+      return rows > 0;
+    } catch (err) {
+      console.error(`[PixivCacheDB] deleteNovelById 失败 id=${novelId}: ${JSON.stringify(err)}`);
+      return false;
+    }
+  }
+
   async getReadingProgress(novelId: string): Promise<number> {
     if (!this.checkReady() || !novelId) return 0;
     try {
