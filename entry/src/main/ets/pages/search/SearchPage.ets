@@ -1,14 +1,419 @@
-// entry/src/main/ets/pages/search/SearchPage.ets
+import { PixivService, IllustBookmark, NovelBookmark, UserSearchResult } from '../../services/PixivService';
+import { IllustCard } from '../../components/IllustCard';
+import { NovelCard } from '../../components/NovelCard';
+import { UserCard } from '../../components/UserCard';
+
 @Component
 export struct SearchPage {
+  @State keyword: string = '';
+  @State currentTab: number = 0;
+
+  // illust
+  @State illustWorks: IllustBookmark[] = [];
+  @State illustPage: number = 1;
+  @State illustPages: number = 0;
+  @State isLoadingIllust: boolean = false;
+  @State isLoadingMoreIllust: boolean = false;
+  @State illustError: string = '';
+
+  // novel
+  @State novelWorks: NovelBookmark[] = [];
+  @State novelPage: number = 1;
+  @State novelPages: number = 0;
+  @State isLoadingNovel: boolean = false;
+  @State isLoadingMoreNovel: boolean = false;
+  @State novelError: string = '';
+
+  // user
+  @State userWorks: UserSearchResult[] = [];
+  @State userPage: number = 1;
+  @State userPages: number = 0;
+  @State isLoadingUser: boolean = false;
+  @State isLoadingMoreUser: boolean = false;
+  @State userError: string = '';
+
+  @State hasSearched: boolean = false;
+
+  async searchIllusts(page: number, reset: boolean = false) {
+    if (!this.keyword.trim()) return;
+    if (reset) {
+      this.isLoadingIllust = true;
+      this.illustError = '';
+      this.illustWorks = [];
+    }
+    try {
+      const res = await PixivService.searchIllusts(this.keyword.trim(), page, 's_tag', 'illust_and_ugoira');
+      if (!res.error) {
+        const raw = res.body?.illust?.data ?? [];
+        const works: IllustBookmark[] = [];
+        for (let i = 0; i < raw.length; i++) {
+          const item = raw[i];
+          if (item && typeof item.id === 'string') {
+            works.push(item);
+          }
+        }
+        if (reset) {
+          this.illustWorks = works;
+        } else {
+          this.illustWorks = [...this.illustWorks, ...works];
+        }
+        const total = res.body?.illust?.total ?? 0;
+        this.illustPage = page;
+        this.illustPages = Math.ceil(total / 30) || 1;
+      } else {
+        if (reset) this.illustError = '搜索失败';
+      }
+    } catch (err) {
+      console.error('搜索插画失败:', err);
+      if (reset) this.illustError = '搜索失败';
+    }
+    this.isLoadingIllust = false;
+    this.isLoadingMoreIllust = false;
+  }
+
+  async searchNovels(page: number, reset: boolean = false) {
+    if (!this.keyword.trim()) return;
+    if (reset) {
+      this.isLoadingNovel = true;
+      this.novelError = '';
+      this.novelWorks = [];
+    }
+    try {
+      const res = await PixivService.searchNovels(this.keyword.trim(), page, 's_tag');
+      if (!res.error) {
+        const raw = res.body?.novel?.data ?? [];
+        const works: NovelBookmark[] = [];
+        for (let i = 0; i < raw.length; i++) {
+          const item = raw[i];
+          if (item && typeof item.id === 'string') {
+            works.push(item);
+          }
+        }
+        if (reset) {
+          this.novelWorks = works;
+        } else {
+          this.novelWorks = [...this.novelWorks, ...works];
+        }
+        const total = res.body?.novel?.total ?? 0;
+        this.novelPage = page;
+        this.novelPages = Math.ceil(total / 30) || 1;
+      } else {
+        if (reset) this.novelError = '搜索失败';
+      }
+    } catch (err) {
+      console.error('搜索小说失败:', err);
+      if (reset) this.novelError = '搜索失败';
+    }
+    this.isLoadingNovel = false;
+    this.isLoadingMoreNovel = false;
+  }
+
+  async searchUsers(page: number, reset: boolean = false) {
+    if (!this.keyword.trim()) return;
+    if (reset) {
+      this.isLoadingUser = true;
+      this.userError = '';
+      this.userWorks = [];
+    }
+    try {
+      const res = await PixivService.searchUsers(this.keyword.trim(), page);
+      if (!res.error) {
+        const raw = res.body?.users ?? [];
+        const users: UserSearchResult[] = [];
+        for (let i = 0; i < raw.length; i++) {
+          const item = raw[i];
+          if (item && typeof item.userId === 'string') {
+            users.push(item);
+          }
+        }
+        if (reset) {
+          this.userWorks = users;
+        } else {
+          this.userWorks = [...this.userWorks, ...users];
+        }
+        const total = res.body?.total ?? 0;
+        this.userPage = page;
+        this.userPages = Math.ceil(total / 30) || 1;
+      } else {
+        if (reset) this.userError = '搜索失败';
+      }
+    } catch (err) {
+      console.error('搜索用户失败:', err);
+      if (reset) this.userError = '搜索失败';
+    }
+    this.isLoadingUser = false;
+    this.isLoadingMoreUser = false;
+  }
+
+  async onSearch() {
+    if (!this.keyword.trim()) return;
+    this.hasSearched = true;
+    if (this.currentTab === 0) {
+      await this.searchIllusts(1, true);
+    } else if (this.currentTab === 1) {
+      await this.searchNovels(1, true);
+    } else {
+      await this.searchUsers(1, true);
+    }
+  }
+
+  async loadMoreIllusts() {
+    if (this.isLoadingMoreIllust || this.illustPage >= this.illustPages) return;
+    this.isLoadingMoreIllust = true;
+    await this.searchIllusts(this.illustPage + 1, false);
+  }
+
+  async loadMoreNovels() {
+    if (this.isLoadingMoreNovel || this.novelPage >= this.novelPages) return;
+    this.isLoadingMoreNovel = true;
+    await this.searchNovels(this.novelPage + 1, false);
+  }
+
+  async loadMoreUsers() {
+    if (this.isLoadingMoreUser || this.userPage >= this.userPages) return;
+    this.isLoadingMoreUser = true;
+    await this.searchUsers(this.userPage + 1, false);
+  }
+
+  handleTabChange(index: number) {
+    this.currentTab = index;
+    if (!this.hasSearched) return;
+    if (index === 0 && this.illustWorks.length === 0 && !this.isLoadingIllust) {
+      this.searchIllusts(1, true);
+    } else if (index === 1 && this.novelWorks.length === 0 && !this.isLoadingNovel) {
+      this.searchNovels(1, true);
+    } else if (index === 2 && this.userWorks.length === 0 && !this.isLoadingUser) {
+      this.searchUsers(1, true);
+    }
+  }
+
   build() {
     Column() {
-      Text('搜索页面内容')
-        .fontSize(20)
-        .margin({ top: 20 })
+      this.SearchBar()
+      if (this.hasSearched) {
+        this.TabsSection()
+      } else {
+        this.EmptyHint()
+      }
     }
     .width('100%')
     .height('100%')
     .backgroundColor($r('app.color.page_background'))
+  }
+
+  @Builder
+  SearchBar() {
+    Row() {
+      TextInput({ placeholder: '搜索插画/小说/用户...', text: this.keyword })
+        .layoutWeight(1)
+        .height(40)
+        .fontSize(14)
+        .borderRadius(20)
+        .backgroundColor('#FFF5F5F5')
+        .padding({ left: 16, right: 16 })
+        .onChange((val: string) => { this.keyword = val; })
+        .onSubmit(() => { this.onSearch(); })
+
+      Blank()
+        .width(8)
+
+      Button('搜索')
+        .fontSize(14)
+        .fontColor(Color.White)
+        .backgroundColor($r('app.color.tab_selected'))
+        .borderRadius(20)
+        .height(40)
+        .padding({ left: 20, right: 20 })
+        .onClick(() => { this.onSearch(); })
+    }
+    .width('100%')
+    .padding({ left: 12, right: 12, top: 8, bottom: 8 })
+    .backgroundColor(Color.White)
+  }
+
+  @Builder
+  EmptyHint() {
+    Column() {
+      Text('输入关键词搜索作品或用户')
+        .fontSize(14)
+        .fontColor($r('app.color.text_secondary'))
+        .margin({ top: 80 })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Center)
+  }
+
+  @Builder
+  TabsSection() {
+    Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
+      TabContent() {
+        this.IllustContent()
+      }
+      .tabBar('插画')
+
+      TabContent() {
+        this.NovelContent()
+      }
+      .tabBar('小说')
+
+      TabContent() {
+        this.UserContent()
+      }
+      .tabBar('用户')
+    }
+    .vertical(false)
+    .onChange((index: number) => { this.handleTabChange(index); })
+    .width('100%')
+    .layoutWeight(1)
+  }
+
+  @Builder
+  IllustContent() {
+    if (this.isLoadingIllust) {
+      LoadingProgress().width(40).height(40).margin({ top: 100 })
+    } else if (this.illustError) {
+      Column() {
+        Text(this.illustError).fontSize(14).fontColor($r('app.color.text_secondary'))
+        Button('重试').margin({ top: 12 }).onClick(() => this.searchIllusts(1, true))
+      }
+      .margin({ top: 80 })
+      .alignItems(HorizontalAlign.Center)
+    } else if (this.illustWorks.length === 0) {
+      Text('未找到相关插画').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
+    } else {
+      Scroll() {
+        Column() {
+          Grid() {
+            ForEach(this.illustWorks, (item: IllustBookmark) => {
+              GridItem() {
+                IllustCard({ item: item })
+              }
+            }, (item: IllustBookmark) => item.id)
+          }
+          .columnsTemplate('1fr 1fr')
+          .columnsGap(8)
+          .rowsGap(8)
+          .padding(12)
+          .width('100%')
+
+          if (this.isLoadingMoreIllust) {
+            LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
+          }
+          if (!this.isLoadingMoreIllust && this.illustPage >= this.illustPages && this.illustWorks.length > 0) {
+            Text('- 已显示全部作品 -')
+              .fontSize(12)
+              .fontColor('#999')
+              .width('100%')
+              .textAlign(TextAlign.Center)
+              .margin({ top: 8, bottom: 24 })
+          }
+        }
+        .width('100%')
+      }
+      .width('100%')
+      .onReachEnd(() => {
+        if (!this.isLoadingMoreIllust && this.illustPage < this.illustPages) {
+          this.loadMoreIllusts();
+        }
+      })
+    }
+  }
+
+  @Builder
+  NovelContent() {
+    if (this.isLoadingNovel) {
+      LoadingProgress().width(40).height(40).margin({ top: 100 })
+    } else if (this.novelError) {
+      Column() {
+        Text(this.novelError).fontSize(14).fontColor($r('app.color.text_secondary'))
+        Button('重试').margin({ top: 12 }).onClick(() => this.searchNovels(1, true))
+      }
+      .margin({ top: 80 })
+      .alignItems(HorizontalAlign.Center)
+    } else if (this.novelWorks.length === 0) {
+      Text('未找到相关小说').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
+    } else {
+      Scroll() {
+        Column() {
+          List() {
+            ForEach(this.novelWorks, (item: NovelBookmark) => {
+              ListItem() {
+                NovelCard({ item: item })
+              }
+            }, (item: NovelBookmark) => item.id)
+          }
+          .padding(12)
+          .width('100%')
+
+          if (this.isLoadingMoreNovel) {
+            LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
+          }
+          if (!this.isLoadingMoreNovel && this.novelPage >= this.novelPages && this.novelWorks.length > 0) {
+            Text('- 已显示全部作品 -')
+              .fontSize(12)
+              .fontColor('#999')
+              .width('100%')
+              .textAlign(TextAlign.Center)
+              .margin({ top: 8, bottom: 24 })
+          }
+        }
+        .width('100%')
+      }
+      .width('100%')
+      .onReachEnd(() => {
+        if (!this.isLoadingMoreNovel && this.novelPage < this.novelPages) {
+          this.loadMoreNovels();
+        }
+      })
+    }
+  }
+
+  @Builder
+  UserContent() {
+    if (this.isLoadingUser) {
+      LoadingProgress().width(40).height(40).margin({ top: 100 })
+    } else if (this.userError) {
+      Column() {
+        Text(this.userError).fontSize(14).fontColor($r('app.color.text_secondary'))
+        Button('重试').margin({ top: 12 }).onClick(() => this.searchUsers(1, true))
+      }
+      .margin({ top: 80 })
+      .alignItems(HorizontalAlign.Center)
+    } else if (this.userWorks.length === 0) {
+      Text('未找到相关用户').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
+    } else {
+      Scroll() {
+        Column() {
+          List() {
+            ForEach(this.userWorks, (item: UserSearchResult) => {
+              ListItem() {
+                UserCard({ item: item })
+              }
+            }, (item: UserSearchResult) => item.userId)
+          }
+          .padding(12)
+          .width('100%')
+
+          if (this.isLoadingMoreUser) {
+            LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
+          }
+          if (!this.isLoadingMoreUser && this.userPage >= this.userPages && this.userWorks.length > 0) {
+            Text('- 已显示全部用户 -')
+              .fontSize(12)
+              .fontColor('#999')
+              .width('100%')
+              .textAlign(TextAlign.Center)
+              .margin({ top: 8, bottom: 24 })
+          }
+        }
+        .width('100%')
+      }
+      .width('100%')
+      .onReachEnd(() => {
+        if (!this.isLoadingMoreUser && this.userPage < this.userPages) {
+          this.loadMoreUsers();
+        }
+      })
+    }
   }
 }

@@ -211,6 +211,58 @@ export interface DiscoveryNovelsResponse {
   body: DiscoveryNovelsBody;
 }
 
+// ---- Search ----
+
+export interface SearchIllustData {
+  data: IllustBookmark[];
+  total: number;
+}
+
+export interface SearchIllustBody {
+  illust: SearchIllustData;
+}
+
+export interface SearchIllustResponse {
+  error: boolean;
+  body: SearchIllustBody;
+}
+
+export interface SearchNovelData {
+  data: NovelBookmark[];
+  total: number;
+}
+
+export interface SearchNovelBody {
+  novel: SearchNovelData;
+}
+
+export interface SearchNovelResponse {
+  error: boolean;
+  body: SearchNovelBody;
+}
+
+export interface UserSearchResult {
+  userId: string;
+  userName: string;
+  profileImageUrl: string;
+  comment: string;
+  illustCount: number;
+  novelCount: number;
+  followerCount: number;
+}
+
+export interface SearchUserBody {
+  users: UserSearchResult[];
+  total: number;
+  page: number;
+  pages: number;
+}
+
+export interface SearchUserResponse {
+  error: boolean;
+  body: SearchUserBody;
+}
+
 interface ApiQueueTask {
   resolve: (value: object) => void;
   reject: (reason: object) => void;
@@ -476,6 +528,26 @@ export class PixivService {
       console.error(`获取小说正文失败 id=${novelId}:`, err);
       throw err as Error;
     }
+  }
+
+  // ---- Search ----
+
+  static async searchIllusts(keyword: string, page: number = 1, sMode: string = 's_tag', type: string = 'illust_and_ugoira'): Promise<SearchIllustResponse> {
+    const encoded = encodeURIComponent(keyword);
+    const path = `/ajax/search/illustrations/${encoded}?word=${encoded}&type=${type}&order=date_d&mode=all&s_mode=${sMode}&p=${page}`;
+    return PixivService.request<SearchIllustResponse>(path);
+  }
+
+  static async searchNovels(keyword: string, page: number = 1, sMode: string = 's_tag'): Promise<SearchNovelResponse> {
+    const encoded = encodeURIComponent(keyword);
+    const path = `/ajax/search/novels/${encoded}?word=${encoded}&order=date_d&mode=all&s_mode=${sMode}&include_translated_tags=1&p=${page}&type=novel&lang=zh`;
+    return PixivService.request<SearchNovelResponse>(path);
+  }
+
+  static async searchUsers(keyword: string, page: number = 1): Promise<SearchUserResponse> {
+    const encoded = encodeURIComponent(keyword);
+    const path = `/ajax/search/users/?nick=${encoded}&s_mode=s_usr&i=1&comment=&p=${page}`;
+    return PixivService.request<SearchUserResponse>(path);
   }
 
   static async fetchNovelDetail(novelId: string): Promise<PixivNovel> {
