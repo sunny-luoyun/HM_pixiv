@@ -1,4 +1,3 @@
-import router from '@ohos.router';
 import { AppState, appState } from '../../store/AppState';
 import common from '@ohos.app.ability.common';
 import { PixivService } from '../../services/PixivService';
@@ -77,29 +76,25 @@ export struct SettingsPage {
       secondaryButton: {
         value: '清除',
         fontColor: '#FF4D4F',
-        action: () => {
-          this.doClearImageCache(category);
+        action: async () => {
+          try {
+            if (category === 'illust') {
+              await PixivService.clearCategoryCache('illust_');
+            } else if (category === 'novel') {
+              await PixivService.clearCategoryCache('novel_');
+            } else if (category === 'avatar') {
+              await PixivService.clearCategoryCache('user_');
+              await PixivService.clearCategoryCache('avatar_');
+            } else if (category === 'all') {
+              await PixivService.clearAllImageCache();
+            }
+            await this.refreshCacheInfo();
+          } catch (err) {
+            console.error('清除缓存失败:', err);
+          }
         }
       }
     });
-  }
-
-  async doClearImageCache(category: string) {
-    try {
-      if (category === 'illust') {
-        await PixivService.clearCategoryCache('illust_');
-      } else if (category === 'novel') {
-        await PixivService.clearCategoryCache('novel_');
-      } else if (category === 'avatar') {
-        await PixivService.clearCategoryCache('user_');
-        await PixivService.clearCategoryCache('avatar_');
-      } else if (category === 'all') {
-        await PixivService.clearAllImageCache();
-      }
-      await this.refreshCacheInfo();
-    } catch (err) {
-      console.error('清除缓存失败:', err);
-    }
   }
 
   getCategoryLabel(category: string): string {
@@ -124,20 +119,16 @@ export struct SettingsPage {
       secondaryButton: {
         value: '清除',
         fontColor: '#FF4D4F',
-        action: () => {
-          this.doClearNovelCache();
+        action: async () => {
+          try {
+            await pixivCacheDB.deleteAllCachedNovels();
+            await this.refreshCacheInfo();
+          } catch (err) {
+            console.error('清除小说缓存失败:', err);
+          }
         }
       }
     });
-  }
-
-  async doClearNovelCache() {
-    try {
-      await pixivCacheDB.deleteAllCachedNovels();
-      await this.refreshCacheInfo();
-    } catch (err) {
-      console.error('清除小说缓存失败:', err);
-    }
   }
 
   get totalImageCacheSize(): number {
@@ -220,18 +211,7 @@ export struct SettingsPage {
             }
           }
           .alignItems(HorizontalAlign.Start)
-          .layoutWeight(1)
-          .onClick(() => {
-            router.pushUrl({ url: 'pages/settings/CachedNovelsPage' });
-          })
           Blank()
-          Text('›')
-            .fontSize(20)
-            .fontColor($r('app.color.text_secondary'))
-            .margin({ left: 8 })
-            .onClick(() => {
-              router.pushUrl({ url: 'pages/settings/CachedNovelsPage' });
-            })
           Button('清除全部')
             .fontSize(13)
             .fontColor('#FF4D4F')
@@ -239,7 +219,6 @@ export struct SettingsPage {
             .borderRadius(16)
             .height(32)
             .padding({ left: 16, right: 16 })
-            .margin({ left: 8 })
             .onClick(() => { this.clearNovelCache() })
         }
         .width('100%')

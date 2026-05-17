@@ -243,19 +243,23 @@ export interface SearchNovelResponse {
 
 export interface UserSearchResult {
   userId: string;
-  userName: string;
-  profileImageUrl: string;
+  name: string;
+  image: string;
+  imageBig: string;
   comment: string;
-  illustCount: number;
-  novelCount: number;
-  followerCount: number;
+  premium: boolean;
+  isFollowed: boolean;
+  following: number;
+}
+
+export interface SearchUserPage {
+  userIds: number[];
+  total: number;
 }
 
 export interface SearchUserBody {
   users: UserSearchResult[];
-  total: number;
-  page: number;
-  pages: number;
+  page: SearchUserPage;
 }
 
 export interface SearchUserResponse {
@@ -557,7 +561,7 @@ export class PixivService {
 
   static async searchUsers(keyword: string, page: number = 1): Promise<SearchUserResponse> {
     const encoded = encodeURIComponent(keyword);
-    const path = `/ajax/search/users/?nick=${encoded}&s_mode=s_usr&i=1&comment=&p=${page}`;
+    const path = `/ajax/search/users?nick=${encoded}&s_mode=s_usr&i=0&lang=en&p=${page}`;
     return PixivService.request<SearchUserResponse>(path);
   }
 

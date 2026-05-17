@@ -131,9 +131,9 @@ export struct SearchPage {
         } else {
           this.userWorks = [...this.userWorks, ...users];
         }
-        const total = res.body?.total ?? 0;
+        const total = res.body?.page?.total ?? 0;
         this.userPage = page;
-        this.userPages = Math.ceil(total / 30) || 1;
+        this.userPages = Math.ceil(total / 10) || 1;
       } else {
         if (reset) this.userError = '搜索失败';
       }
@@ -384,13 +384,16 @@ export struct SearchPage {
     } else {
       Scroll() {
         Column() {
-          List() {
+          Grid() {
             ForEach(this.userWorks, (item: UserSearchResult) => {
-              ListItem() {
+              GridItem() {
                 UserCard({ item: item })
               }
             }, (item: UserSearchResult) => item.userId)
           }
+          .columnsTemplate('1fr 1fr')
+          .columnsGap(8)
+          .rowsGap(8)
           .padding(12)
           .width('100%')
 
