@@ -151,11 +151,61 @@ interface DownloadTask {
   savePath: string;
 }
 
+interface FollowLatestIllustThumbnails {
+  illust: IllustBookmark[];
+}
+
+interface FollowLatestIllustBody {
+  thumbnails: FollowLatestIllustThumbnails;
+  total: number;
+  page: number;
+  pages: number;
+}
+
+export interface FollowLatestIllustResponse {
+  error: boolean;
+  body: FollowLatestIllustBody;
+}
+
+interface FollowLatestNovelThumbnails {
+  novel: NovelBookmark[];
+}
+
+interface FollowLatestNovelBody {
+  thumbnails: FollowLatestNovelThumbnails;
+  total: number;
+  page: number;
+  pages: number;
+}
+
+export interface FollowLatestNovelResponse {
+  error: boolean;
+  body: FollowLatestNovelBody;
+}
+
+interface ApiQueueTask {
+  resolve: (value: object) => void;
+  reject: (reason: object) => void;
+  execute: () => Promise<object>;
+}
+
 export class PixivService {
   private static baseUrl = 'https://www.pixiv.net';
+
+  // 下载并发队列（已有）
   private static maxConcurrentDownloads = 3;
   private static activeDownloads = 0;
   private static downloadQueue: Array<DownloadTask> = [];
+
+  // ---- API 请求风控防护 ----
+  // 请求队列（串行执行，一次只发一个请求）
+  private static apiQueue: Array<ApiQueueTask> = [];
+  private static isProcessingApiQueue = false;
+  private static lastApiRequestTime = 0;
+  // 最小请求间隔（单位 ms），在此基础增加随机 jitter
+  private static readonly MIN_API_INTERVAL = 1200;
+  // 最大重试次数（额外尝试，不含首次）
+  private static readonly MAX_RETRIES = 2;
 
   private static async enqueueDownload(url: string, savePath: string): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
@@ -206,11 +256,72 @@ export class PixivService {
     }
   }
 
+  // ---- 请求入队 + 串行调度 ----
+  private static enqueueApiRequest<T>(execute: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      PixivService.apiQueue.push({
+        resolve: resolve as (value: object) => void,
+        reject: reject as (reason: object) => void,
+        execute: execute as () => Promise<object>
+      });
+      PixivService.processApiQueue();
+    });
+  }
+
+  // 串行处理队列，每次请求间加随机延迟
+  private static async processApiQueue(): Promise<void> {
+    if (PixivService.isProcessingApiQueue) return;
+    PixivService.isProcessingApiQueue = true;
+
+    while (PixivService.apiQueue.length > 0) {
+      const task = PixivService.apiQueue.shift()!;
+
+      // 确保最小请求间隔（基础间隔 + 0~600ms jitter）
+      const now = Date.now();
+      const elapsed = now - PixivService.lastApiRequestTime;
+      const gap = PixivService.MIN_API_INTERVAL + Math.floor(Math.random() * 600);
+      if (elapsed < gap) {
+        await new Promise<void>(resolve => setTimeout(resolve, gap - elapsed));
+      }
+
+      // 执行请求 + 指数退避重试
+      let lastError: Error | null = null;
+      for (let attempt = 0; attempt <= PixivService.MAX_RETRIES; attempt++) {
+        if (attempt > 0) {
+          const backoff = Math.min(
+            2000 * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 1000),
+            15000
+          );
+          console.warn(`⏳ 第${attempt + 1}次重试，等待${backoff}ms...`);
+          await new Promise<void>(resolve => setTimeout(resolve, backoff));
+        }
+        try {
+          const result = await task.execute();
+          PixivService.lastApiRequestTime = Date.now();
+          task.resolve(result);
+          lastError = null;
+          break;
+        } catch (err) {
+          lastError = err as Error;
+          const msg = String(err);
+          // 仅在限流(429)或服务端错误(5xx)时重试
+          const isRetryable = /HTTP (429|5\d{2})/.test(msg);
+          if (!isRetryable) break;
+          console.warn(`⏳ 请求限流/服务器错误，准备重试: ${msg}`);
+        }
+      }
+
+      if (lastError) {
+        task.reject(lastError);
+      }
+    }
+
+    PixivService.isProcessingApiQueue = false;
+  }
+
   static async request<T>(path: string, options?: http.HttpRequestOptions): Promise<T> {
     const cookie = await CookieManager.getFullCookie();
     const url = `${PixivService.baseUrl}${path}`;
-
-    const httpRequest = http.createHttp();
 
     const finalOptions: http.HttpRequestOptions = {
       method: options?.method || http.RequestMethod.GET,
@@ -228,24 +339,25 @@ export class PixivService {
       usingCache: true
     };
 
-    try {
-      console.info(`Pixiv API 请求: ${url}`);
-
-      const response = await httpRequest.request(url, finalOptions);
-
-      if (response.responseCode === 200) {
-        const result = JSON.parse(response.result as string) as T;
-        return result;
-      } else {
-        console.error(`Pixiv API 错误 (${response.responseCode}):`, response.result);
-        throw new Error(`HTTP ${response.responseCode}`);
+    // 将实际 HTTP 调用包装后入队，由队列控制并发与间隔
+    return PixivService.enqueueApiRequest<T>(async () => {
+      const httpRequest = http.createHttp();
+      try {
+        console.info(`Pixiv API 请求: ${url}`);
+        const response = await httpRequest.request(url, finalOptions);
+        if (response.responseCode === 200) {
+          return JSON.parse(response.result as string) as T;
+        } else {
+          console.error(`Pixiv API 错误 (${response.responseCode}):`, response.result);
+          throw new Error(`HTTP ${response.responseCode}`);
+        }
+      } catch (err) {
+        console.error('Pixiv API 请求异常: ', err);
+        throw new Error(`Pixiv API 请求失败: ${String(err)}`);
+      } finally {
+        httpRequest.destroy();
       }
-    } catch (err) {
-      console.error('Pixiv API 请求异常: ', err);
-      throw new Error(`Pixiv API 请求失败: ${String(err)}`);
-    } finally {
-      httpRequest.destroy();
-    }
+    });
   }
 
   static async getUserInfo(): Promise<UserInfoResponse> {
@@ -262,6 +374,16 @@ export class PixivService {
       return userInfo.body.name;
     }
     throw new Error('无法获取用户名');
+  }
+
+  static async getFollowLatestIllusts(page: number = 1, mode: string = 'all'): Promise<FollowLatestIllustResponse> {
+    const path = `/ajax/follow_latest/illust?mode=${mode}&p=${page}`;
+    return PixivService.request<FollowLatestIllustResponse>(path);
+  }
+
+  static async getFollowLatestNovels(page: number = 1, mode: string = 'all'): Promise<FollowLatestNovelResponse> {
+    const path = `/ajax/follow_latest/novel?mode=${mode}&p=${page}`;
+    return PixivService.request<FollowLatestNovelResponse>(path);
   }
 
   static async getIllustBookmarks(userId: string, offset: number = 0, limit: number = 30, tag: string = '', rest: string = 'show'): Promise<IllustBookmarkResponse> {
