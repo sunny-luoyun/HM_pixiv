@@ -105,6 +105,14 @@ export class CookieManager {
     return await CookieStorage.getUserName();
   }
 
+  static async saveAvatarUrl(url: string): Promise<void> {
+    return await CookieStorage.saveAvatarUrl(url);
+  }
+
+  static async getAvatarUrl(): Promise<string> {
+    return await CookieStorage.getAvatarUrl();
+  }
+
   /**
    * 清除所有Cookie（包括Preferences存储和WebView）
    */

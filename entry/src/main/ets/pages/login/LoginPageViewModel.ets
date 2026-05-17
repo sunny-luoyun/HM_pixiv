@@ -1,6 +1,9 @@
 // entry/src/main/ets/pages/login/LoginPageViewModel.ets
 import webview from '@ohos.web.webview';
 import { LoginService, LoginUserData } from '../../services/LoginService';
+import { PixivService } from '../../services/PixivService';
+import { CookieManager } from '../../services/CookieManager';
+import { appState } from '../../store/AppState';
 
 /**
  * LoginPage 的 ViewModel
@@ -34,6 +37,19 @@ export class LoginPageViewModel {
       // 第三步：保存用户信息
       console.info('💾 第三步：保存用户信息...');
       await LoginService.saveUserInfo(userData);
+
+      // 第四步：获取用户头像URL并下载缓存
+      console.info('🖼️ 第四步：获取用户头像...');
+      try {
+        const userInfo = await PixivService.getUserInfo();
+        if (userInfo?.body?.image) {
+          await CookieManager.saveAvatarUrl(userInfo.body.image);
+          await appState.cacheAvatar();
+          console.info('✅ 头像已缓存到本地');
+        }
+      } catch (err) {
+        console.warn('⚠️ 获取头像失败，后续可刷新:', err);
+      }
 
       this.statusMessage = `登录成功！欢迎 ${userData.userName}`;
       this.isProcessing = false;

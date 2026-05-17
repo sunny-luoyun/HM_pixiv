@@ -1,8 +1,12 @@
 // entry/src/main/ets/services/PixivService.ets
 import http from '@ohos.net.http';
+import fileIo from '@ohos.file.fs';
 import { CookieManager } from './CookieManager';
-interface UserInfoBody {
+export interface UserInfoBody {
+  userId?: string;
   name: string;
+  image?: string;
+  imageBig?: string;
 }
 
 interface RequestHeaders {
@@ -81,5 +85,33 @@ export class PixivService {
       return userInfo.body.name;
     }
     throw new Error('无法获取用户名');
+  }
+
+  static async downloadImage(imageUrl: string, savePath: string): Promise<boolean> {
+    const httpRequest = http.createHttp();
+    try {
+      const response = await httpRequest.request(imageUrl, {
+        method: http.RequestMethod.GET,
+        header: {
+          'Referer': 'https://www.pixiv.net/',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        expectDataType: http.HttpDataType.ARRAY_BUFFER
+      });
+      if (response.responseCode === 200) {
+        const file = fileIo.openSync(savePath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY);
+        fileIo.writeSync(file.fd, response.result as ArrayBuffer);
+        fileIo.closeSync(file);
+        console.info('✅ 图片已缓存到:', savePath);
+        return true;
+      }
+      console.error('下载图片失败, 状态码:', response.responseCode);
+      return false;
+    } catch (err) {
+      console.error('下载图片异常:', err);
+      return false;
+    } finally {
+      httpRequest.destroy();
+    }
   }
 }

@@ -22,10 +22,7 @@ export struct SettingPage {
     Column() {
       if (this.appState.isLoggedIn) {
         Row() {
-          Image($r('app.media.avatar_placeholder'))
-            .width(48)
-            .height(48)
-            .borderRadius(24)
+          this.UserAvatar()
           Column() {
             Text(this.appState.userName || '已登录用户')
               .fontSize(18)
@@ -49,10 +46,7 @@ export struct SettingPage {
         .borderRadius(12)
       } else {
         Row() {
-          Image($r('app.media.avatar_placeholder'))
-            .width(48)
-            .height(48)
-            .borderRadius(24)
+          this.UserAvatar()
           Column() {
             Text('登录 Pixiv 账号')
               .fontSize(18)
@@ -78,5 +72,21 @@ export struct SettingPage {
       }
     }
     .margin({ top: 16, left: 16, right: 16 })
+  }
+
+  @Builder
+  UserAvatar() {
+    if (this.appState.avatarUrl) {
+      Image(this.appState.avatarUrl)
+        .width(48)
+        .height(48)
+        .borderRadius(24)
+        .objectFit(ImageFit.Cover)
+    } else {
+      Image($r('app.media.avatar_placeholder'))
+        .width(48)
+        .height(48)
+        .borderRadius(24)
+    }
   }
 }

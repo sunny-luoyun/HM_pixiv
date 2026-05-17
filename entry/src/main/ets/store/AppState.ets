@@ -2,6 +2,8 @@
 import { CookieManager } from '../services/CookieManager';
 import { PixivService, UserInfoResponse } from '../services/PixivService';
 import http from '@ohos.net.http';
+import fileIo from '@ohos.file.fs';
+import common from '@ohos.app.ability.common';
 
 @Observed
 export class AppState {
@@ -10,6 +12,7 @@ export class AppState {
   isLoggedIn: boolean = false;
   userId: string = '';
   userName: string = '';
+  avatarUrl: string = '';
 
   private constructor() {}
 
@@ -37,6 +40,10 @@ export class AppState {
           this.userId = cookieMap.get('user_id') || '';
           this.userName = cookieMap.get('user_name') || '用户';
         }
+        const savedAvatarUrl = await CookieManager.getAvatarUrl();
+        if (savedAvatarUrl) {
+          this.avatarUrl = savedAvatarUrl;
+        }
 
         // 仅当 skipVerify 为 false 时验证
         if (!skipVerify) {
@@ -60,6 +67,13 @@ export class AppState {
       } else {
         this.userId = '';
         this.userName = '';
+      }
+      if (this.isLoggedIn) {
+        try {
+          await this.cacheAvatar();
+        } catch (err) {
+          console.warn('缓存头像失败，可后续重试:', err);
+        }
       }
     } catch (err) {
       console.error('检查登录状态失败', err);
@@ -149,6 +163,32 @@ export class AppState {
     this.isLoggedIn = false;
     this.userId = '';
     this.userName = '';
+    this.avatarUrl = '';
+  }
+
+  async cacheAvatar(): Promise<void> {
+    if (!this.isLoggedIn || !this.userId) return;
+
+    const webUrl = await CookieManager.getAvatarUrl();
+    if (!webUrl || !webUrl.startsWith('http')) return;
+
+    const appContext: common.UIAbilityContext = globalThis.appContext as common.UIAbilityContext;
+    if (!appContext) return;
+    const cacheDir: string = appContext.cacheDir;
+
+    const fileName = `avatar_${this.userId}.jpg`;
+    const localPath = cacheDir + '/' + fileName;
+
+    try {
+      const file = fileIo.openSync(localPath, fileIo.OpenMode.READ_ONLY);
+      fileIo.closeSync(file);
+      this.avatarUrl = 'file://' + localPath;
+      return;
+    } catch (_) {}
+
+    const success = await PixivService.downloadImage(webUrl, localPath);
+    this.avatarUrl = success ? 'file://' + localPath : webUrl;
+    await CookieManager.saveAvatarUrl(this.avatarUrl);
   }
 
   async refreshUserInfo() {
@@ -157,7 +197,10 @@ export class AppState {
       const userInfo: UserInfoResponse = await PixivService.getUserInfo();
       if (userInfo && !userInfo.error && userInfo.body?.name) {
         this.userName = userInfo.body.name;
-        // ✨ 新增：每次更新用户名时，也保存到本地存储
+        if (userInfo.body.image) {
+          await CookieManager.saveAvatarUrl(userInfo.body.image);
+          await this.cacheAvatar();
+        }
         await CookieManager.saveUserInfo(this.userId, this.userName);
       } else {
         console.warn('获取用户信息失败或没有名字字段');

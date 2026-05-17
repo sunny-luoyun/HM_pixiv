@@ -7,6 +7,7 @@ export class CookieStorage {
   private static KEY_COOKIE = 'pixiv_cookie';
   private static KEY_USER_ID = 'pixiv_user_id';      // ✨ 新增
   private static KEY_USER_NAME = 'pixiv_user_name';  // ✨ 新增
+  private static KEY_AVATAR_URL = 'pixiv_avatar_url';
   private static context: common.BaseContext;
 
   static init(context: common.BaseContext) {
@@ -51,6 +52,19 @@ export class CookieStorage {
     return await pref.get(CookieStorage.KEY_USER_NAME, '') as string;
   }
 
+  static async saveAvatarUrl(url: string): Promise<void> {
+    if (!CookieStorage.context) throw new Error('CookieStorage not initialized');
+    const pref = await preferences.getPreferences(CookieStorage.context, CookieStorage.PREFERENCES_NAME);
+    await pref.put(CookieStorage.KEY_AVATAR_URL, url);
+    await pref.flush();
+  }
+
+  static async getAvatarUrl(): Promise<string> {
+    if (!CookieStorage.context) return '';
+    const pref = await preferences.getPreferences(CookieStorage.context, CookieStorage.PREFERENCES_NAME);
+    return await pref.get(CookieStorage.KEY_AVATAR_URL, '') as string;
+  }
+
   // 清除所有数据
   static async clearCookie(): Promise<void> {
     if (!CookieStorage.context) return;
@@ -58,6 +72,7 @@ export class CookieStorage {
     await pref.delete(CookieStorage.KEY_COOKIE);
     await pref.delete(CookieStorage.KEY_USER_ID);      // ✨ 新增
     await pref.delete(CookieStorage.KEY_USER_NAME);    // ✨ 新增
+    await pref.delete(CookieStorage.KEY_AVATAR_URL);
     await pref.flush();
   }
 }
