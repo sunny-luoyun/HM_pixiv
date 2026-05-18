@@ -2,6 +2,7 @@ import { PixivService, IllustBookmark, NovelBookmark } from '../../services/Pixi
 import { NovelCard } from '../../components/NovelCard';
 import { IllustCard } from '../../components/IllustCard';
 import { appState } from '../../store/AppState';
+import { PullToRefresh } from '../../components/PullToRefresh';
 
 @Component
 export struct LatestPage {
@@ -10,6 +11,8 @@ export struct LatestPage {
   @State novelWorks: NovelBookmark[] = [];
   @State isLoadingIllust: boolean = true;
   @State isLoadingNovel: boolean = false;
+  @State isRefreshingIllust: boolean = false;
+  @State isRefreshingNovel: boolean = false;
   @State illustError: string = '';
   @State novelError: string = '';
 
@@ -32,6 +35,7 @@ export struct LatestPage {
   }
 
   async loadIllusts() {
+    this.isRefreshingIllust = true;
     this.isLoadingIllust = true;
     this.illustError = '';
     this.illustPage = 1;
@@ -50,6 +54,7 @@ export struct LatestPage {
       this.illustError = '加载失败';
     }
     this.isLoadingIllust = false;
+    this.isRefreshingIllust = false;
   }
 
   async loadMoreIllusts() {
@@ -71,6 +76,7 @@ export struct LatestPage {
   }
 
   async loadNovels() {
+    this.isRefreshingNovel = true;
     this.isLoadingNovel = true;
     this.novelError = '';
     this.novelPage = 1;
@@ -89,6 +95,7 @@ export struct LatestPage {
       this.novelError = '加载失败';
     }
     this.isLoadingNovel = false;
+    this.isRefreshingNovel = false;
   }
 
   async loadMoreNovels() {
@@ -135,6 +142,19 @@ export struct LatestPage {
   }
 
   @Builder
+  RefreshIndicator() {
+    Column() {
+      LoadingProgress()
+        .width(28)
+        .height(28)
+        .color($r('app.color.tab_selected'))
+    }
+    .width('100%')
+    .height(50)
+    .justifyContent(FlexAlign.Center)
+  }
+
+  @Builder
   TabsSection() {
     Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
       TabContent() {
@@ -150,10 +170,11 @@ export struct LatestPage {
         } else if (this.illustWorks.length === 0) {
           Text('没有更多最新插画').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
         } else {
-          Scroll() {
-            Column() {
-              Grid() {
-                ForEach(this.illustWorks, (item: IllustBookmark) => {
+          PullToRefresh({ refreshing: this.isRefreshingIllust, onRefresh: (): Promise<void> => this.loadIllusts() }) {
+            Scroll() {
+              Column() {
+                Grid() {
+                  ForEach(this.illustWorks, (item: IllustBookmark) => {
                   GridItem() {
                     IllustCard({ item: item })
                   }
@@ -185,6 +206,7 @@ export struct LatestPage {
               this.loadMoreIllusts();
             }
           })
+          }
         }
       }
       .tabBar('插画')
@@ -202,10 +224,11 @@ export struct LatestPage {
         } else if (this.novelWorks.length === 0) {
           Text('没有更多最新小说').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
         } else {
-          Scroll() {
-            Column() {
-              List() {
-                ForEach(this.novelWorks, (item: NovelBookmark) => {
+          PullToRefresh({ refreshing: this.isRefreshingNovel, onRefresh: (): Promise<void> => this.loadNovels() }) {
+            Scroll() {
+              Column() {
+                List() {
+                  ForEach(this.novelWorks, (item: NovelBookmark) => {
                   ListItem() {
                     NovelCard({ item: item })
                   }
@@ -234,6 +257,7 @@ export struct LatestPage {
               this.loadMoreNovels();
             }
           })
+          }
         }
       }
       .tabBar('小说')
