@@ -7,6 +7,7 @@
     "pages/illust/IllustDetailPage",
     "pages/settings/SettingsPage",
     "pages/settings/CachedNovelsPage",
-    "pages/setting/FollowingPage"
+    "pages/setting/FollowingPage",
+    "pages/user/UserProfilePage"
   ]
 }

@@ -250,6 +250,15 @@ export struct NovelCard {
         .maxLines(1)
         .margin({ top: 4 })
         .width('100%')
+        .onClick(() => {
+          router.pushUrl({
+            url: 'pages/user/UserProfilePage',
+            params: {
+              userId: this.item.userId,
+              userName: this.item.userName
+            }
+          });
+        })
 
       if (this.item.tags && this.item.tags.length > 0) {
         Text(this.item.tags.slice(0, 3).join(' · '))

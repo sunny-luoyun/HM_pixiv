@@ -1,3 +1,4 @@
+import router from '@ohos.router';
 import { PixivService, UserSearchResult } from '../services/PixivService';
 
 @Component
@@ -51,5 +52,15 @@ export struct UserCard {
     .borderRadius(12)
     .margin({ bottom: 10 })
     .alignItems(VerticalAlign.Center)
+    .onClick(() => {
+      router.pushUrl({
+        url: 'pages/user/UserProfilePage',
+        params: {
+          userId: this.item.userId,
+          userName: this.item.name,
+          userAvatar: this.item.imageBig || this.item.image
+        }
+      });
+    })
   }
 }

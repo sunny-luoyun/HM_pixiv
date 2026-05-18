@@ -341,6 +341,71 @@ export interface FollowingUserResponse {
   body: FollowingUserBody;
 }
 
+export interface ProfileIllust {
+  id: string;
+  title: string;
+  illustType: number;
+  xRestrict: number;
+  url: string;
+  tags: string[];
+  userId: string;
+  userName?: string;
+  width: number;
+  height: number;
+  pageCount: number;
+  isBookmarkable: boolean;
+  bookmarkData: BookmarkData | null;
+  createDate?: string;
+  profileImageUrl?: string;
+}
+
+export interface ProfileIllustsBody {
+  works: Record<string, ProfileIllust>;
+}
+
+export interface ProfileIllustsResponse {
+  error: boolean;
+  body: ProfileIllustsBody;
+}
+
+export interface ProfileNovel {
+  id: string;
+  title: string;
+  tags: string[];
+  userId: string;
+  userName?: string;
+  url: string;
+  description?: string;
+  pageCount: number;
+  textCount?: number;
+  wordCount?: number;
+  readingTime?: number;
+  bookmarkCount?: number;
+  createDate?: string;
+  updateDate?: string;
+  profileImageUrl?: string;
+}
+
+export interface ProfileNovelsBody {
+  works: Record<string, ProfileNovel>;
+}
+
+export interface ProfileNovelsResponse {
+  error: boolean;
+  body: ProfileNovelsBody;
+}
+
+export interface ProfileAllBody {
+  illusts: Record<string, null>;
+  manga: Record<string, null>;
+  novels: Record<string, null>;
+}
+
+export interface ProfileAllResponse {
+  error: boolean;
+  body: ProfileAllBody;
+}
+
 interface ApiQueueTask {
   resolve: (value: object) => void;
   reject: (reason: object) => void;
@@ -714,6 +779,27 @@ export class PixivService {
   static async getFollowingList(userId: string, offset: number = 0, limit: number = 30): Promise<FollowingUserResponse> {
     const path = `/ajax/user/${userId}/following?offset=${offset}&limit=${limit}&rest=show`;
     return PixivService.request<FollowingUserResponse>(path);
+  }
+
+  static async getUserProfileAll(userId: string): Promise<ProfileAllResponse> {
+    const path = `/ajax/user/${userId}/profile/all`;
+    return PixivService.request<ProfileAllResponse>(path);
+  }
+
+  static async getUserProfileIllusts(userId: string, ids: string[], workCategory: string = 'illustManga'): Promise<ProfileIllustsResponse> {
+    let path = `/ajax/user/${userId}/profile/illusts?is_first_page=1&work_category=${workCategory}`;
+    for (let i = 0; i < ids.length; i++) {
+      path += `&ids[]=${ids[i]}`;
+    }
+    return PixivService.request<ProfileIllustsResponse>(path);
+  }
+
+  static async getUserProfileNovels(userId: string, ids: string[]): Promise<ProfileNovelsResponse> {
+    let path = `/ajax/user/${userId}/profile/novels?is_first_page=1`;
+    for (let i = 0; i < ids.length; i++) {
+      path += `&ids[]=${ids[i]}`;
+    }
+    return PixivService.request<ProfileNovelsResponse>(path);
   }
 
   static async fetchNovelDetail(novelId: string): Promise<PixivNovel> {
