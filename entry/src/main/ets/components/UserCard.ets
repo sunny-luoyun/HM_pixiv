@@ -34,7 +34,7 @@ export struct UserCard {
           .width(44)
           .height(44)
           .borderRadius(22)
-          .backgroundColor('#FFE8E8E8')
+          .backgroundColor($r('app.color.loading_card'))
           .textAlign(TextAlign.Center)
       }
 

@@ -114,7 +114,7 @@ struct FollowingPage {
             if (!this.isLoadingMore && !this.hasMore && this.users.length > 0) {
               Text('- 已显示全部关注 -')
                 .fontSize(12)
-                .fontColor('#999')
+                .fontColor($r('app.color.text_secondary'))
                 .width('100%')
                 .textAlign(TextAlign.Center)
                 .margin({ top: 8, bottom: 24 })

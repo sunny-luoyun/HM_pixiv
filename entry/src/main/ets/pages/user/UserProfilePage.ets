@@ -455,7 +455,7 @@ struct UserProfilePage {
           .width(72)
           .height(72)
           .borderRadius(36)
-          .backgroundColor('#FFE8E8E8')
+          .backgroundColor($r('app.color.loading_card'))
           .textAlign(TextAlign.Center)
           .margin({ top: 16 })
       }
@@ -559,7 +559,7 @@ struct UserProfilePage {
           if (!this.isLoadingMoreIllust && !this.hasMoreIllust && this.illustWorks.length > 0) {
             Text('- 已显示全部作品 -')
               .fontSize(12)
-              .fontColor('#999')
+              .fontColor($r('app.color.text_secondary'))
               .width('100%')
               .textAlign(TextAlign.Center)
               .margin({ top: 8, bottom: 24 })
@@ -597,7 +597,7 @@ struct UserProfilePage {
           if (!this.isLoadingMoreNovel && !this.hasMoreNovel && this.novelWorks.length > 0) {
             Text('- 已显示全部作品 -')
               .fontSize(12)
-              .fontColor('#999')
+              .fontColor($r('app.color.text_secondary'))
               .width('100%')
               .textAlign(TextAlign.Center)
               .margin({ top: 8, bottom: 24 })
@@ -645,7 +645,7 @@ struct UserProfilePage {
           if (!this.isLoadingMoreBookmarkIllust && !this.hasMoreBookmarkIllust && this.bookmarkIllustWorks.length > 0) {
             Text('- 已显示全部作品 -')
               .fontSize(12)
-              .fontColor('#999')
+              .fontColor($r('app.color.text_secondary'))
               .width('100%')
               .textAlign(TextAlign.Center)
               .margin({ top: 8, bottom: 24 })
@@ -683,7 +683,7 @@ struct UserProfilePage {
           if (!this.isLoadingMoreBookmarkNovel && !this.hasMoreBookmarkNovel && this.bookmarkNovelWorks.length > 0) {
             Text('- 已显示全部作品 -')
               .fontSize(12)
-              .fontColor('#999')
+              .fontColor($r('app.color.text_secondary'))
               .width('100%')
               .textAlign(TextAlign.Center)
               .margin({ top: 8, bottom: 24 })

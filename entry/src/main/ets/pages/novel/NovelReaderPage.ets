@@ -29,7 +29,7 @@ function getReaderColors(isDark: boolean): ReaderColors {
     headerBg:      isDark ? '#141414' : '#FFFFFF',
     primaryText:   isDark ? '#E6E6E6' : '#1A1A1A',
     secondaryText: isDark ? '#888888' : '#666666',
-    accentText:    '#007DFF',
+    accentText:    isDark ? '#0A84FF' : '#007DFF',
     divider:       isDark ? '#2A2A2A' : '#E5E5E5',
     iconBtnBg:     isDark ? '#2A2A2A' : '#F0F0F0',
     iconBtnText:   isDark ? '#CCCCCC' : '#444444',

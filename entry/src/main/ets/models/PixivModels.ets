@@ -52,7 +52,7 @@ export function getCacheStatusDisplay(status: CacheStatus): CacheStatusDisplay {
       return { label: '缓存失败', color: '#FF4D4F' };
     case CacheStatus.NOT_CACHED:
     default:
-      return { label: '未缓存', color: '#999999' };
+      return { label: '未缓存', color: '#666666' };
   }
 }
 

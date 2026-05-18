@@ -32,7 +32,7 @@ export struct IllustCard {
           Column()
             .width('100%')
             .height(140)
-            .backgroundColor('#FFE8E8E8')
+            .backgroundColor($r('app.color.loading_card'))
             .borderRadius({ topLeft: 8, topRight: 8 })
         }
         Text(this.item.title)

@@ -209,7 +209,7 @@ export struct SearchPage {
         .height(40)
         .fontSize(14)
         .borderRadius(20)
-        .backgroundColor('#FFF5F5F5')
+        .backgroundColor($r('app.color.surface_secondary'))
         .padding({ left: 16, right: 16 })
         .onChange((val: string) => { this.keyword = val; })
         .onSubmit(() => { this.onSearch(); })
@@ -228,7 +228,7 @@ export struct SearchPage {
     }
     .width('100%')
     .padding({ left: 12, right: 12, top: 8, bottom: 8 })
-    .backgroundColor(Color.White)
+    .backgroundColor($r('app.color.surface_secondary'))
   }
 
   @Builder
@@ -302,7 +302,7 @@ export struct SearchPage {
           if (!this.isLoadingMoreIllust && this.illustPage >= this.illustPages && this.illustWorks.length > 0) {
             Text('- 已显示全部作品 -')
               .fontSize(12)
-              .fontColor('#999')
+              .fontColor($r('app.color.text_secondary'))
               .width('100%')
               .textAlign(TextAlign.Center)
               .margin({ top: 8, bottom: 24 })
@@ -351,7 +351,7 @@ export struct SearchPage {
           if (!this.isLoadingMoreNovel && this.novelPage >= this.novelPages && this.novelWorks.length > 0) {
             Text('- 已显示全部作品 -')
               .fontSize(12)
-              .fontColor('#999')
+              .fontColor($r('app.color.text_secondary'))
               .width('100%')
               .textAlign(TextAlign.Center)
               .margin({ top: 8, bottom: 24 })
@@ -403,7 +403,7 @@ export struct SearchPage {
           if (!this.isLoadingMoreUser && this.userPage >= this.userPages && this.userWorks.length > 0) {
             Text('- 已显示全部用户 -')
               .fontSize(12)
-              .fontColor('#999')
+              .fontColor($r('app.color.text_secondary'))
               .width('100%')
               .textAlign(TextAlign.Center)
               .margin({ top: 8, bottom: 24 })

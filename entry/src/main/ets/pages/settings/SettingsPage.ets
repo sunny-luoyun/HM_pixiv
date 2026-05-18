@@ -186,7 +186,7 @@ export struct SettingsPage {
           this.CacheRow('头像缓存', this.avatarCacheSize, this.avatarCacheCount, () => { this.clearImageCache('avatar') })
           Divider()
             .height(1)
-            .color('#333333')
+            .color($r('app.color.divider'))
             .margin({ top: 8, bottom: 8 })
           this.CacheRow('总计', this.totalImageCacheSize, this.illustCacheCount + this.novelCoverCacheCount + this.avatarCacheCount, () => { this.clearImageCache('all') })
         }
@@ -215,7 +215,7 @@ export struct SettingsPage {
           Blank()
           Text('查看详情')
             .fontSize(13)
-            .fontColor('#4A90D9')
+            .fontColor($r('app.color.tab_selected'))
             .margin({ right: 12 })
             .onClick(() => {
               router.pushUrl({ url: 'pages/settings/CachedNovelsPage' });

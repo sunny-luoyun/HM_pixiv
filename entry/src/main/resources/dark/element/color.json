@@ -14,15 +14,39 @@
     },
     {
       "name": "text_secondary",
-      "value": "#FF000000"
+      "value": "#FFCCCCCC"
     },
     {
       "name": "loading_card",
-      "value": "#FFBEBEBE"
+      "value": "#FF2A2A2A"
     },
     {
       "name": "user_name",
-      "value": "#FF000000"
+      "value": "#FFE0E0E0"
+    },
+    {
+      "name": "surface_secondary",
+      "value": "#FF1C1C1E"
+    },
+    {
+      "name": "divider",
+      "value": "#FF333333"
+    },
+    {
+      "name": "start_window_background",
+      "value": "#000000"
+    },
+    {
+      "name": "error",
+      "value": "#FFFF453A"
+    },
+    {
+      "name": "error_light",
+      "value": "#FFFF6961"
+    },
+    {
+      "name": "background",
+      "value": "#FF1C1C1E"
     }
   ]
 }

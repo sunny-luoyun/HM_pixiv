@@ -11,7 +11,7 @@ export struct NovelCard {
   @State localCoverPath: string = '';
   @State cacheStatus: CacheStatus = CacheStatus.NOT_CACHED;
   @State cacheLabel: string = '缓存';
-  @State cacheColor: string = '#999999';
+  @State cacheColor: string = '#666666';
 
   async aboutToAppear() {
     if (!this.item.url) return;
@@ -218,7 +218,7 @@ export struct NovelCard {
       .height(110)
       .justifyContent(FlexAlign.Center)
       .alignItems(HorizontalAlign.Center)
-      .backgroundColor('#FFE0E0E0')
+      .backgroundColor($r('app.color.loading_card'))
       .borderRadius(6)
       .margin({ right: 12 })
     }
@@ -237,7 +237,7 @@ export struct NovelCard {
       if (this.item.seriesTitle) {
         Text(this.item.seriesTitle)
           .fontSize(12)
-          .fontColor('#FF8A8A8A')
+          .fontColor($r('app.color.text_secondary'))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .margin({ top: 4 })

@@ -171,7 +171,7 @@ export struct LatestPage {
               if (!this.isLoadingMoreIllust && this.illustPage >= this.illustPages && this.illustWorks.length > 0) {
                 Text('- 已显示全部作品 -')
                   .fontSize(12)
-                  .fontColor('#999')
+                  .fontColor($r('app.color.text_secondary'))
                   .width('100%')
                   .textAlign(TextAlign.Center)
                   .margin({ top: 8, bottom: 24 })
@@ -220,7 +220,7 @@ export struct LatestPage {
               if (!this.isLoadingMoreNovel && this.novelPage >= this.novelPages && this.novelWorks.length > 0) {
                 Text('- 已显示全部作品 -')
                   .fontSize(12)
-                  .fontColor('#999')
+                  .fontColor($r('app.color.text_secondary'))
                   .width('100%')
                   .textAlign(TextAlign.Center)
                   .margin({ top: 8, bottom: 24 })

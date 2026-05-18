@@ -185,7 +185,7 @@ export struct HomePage {
                 Column() {
                   Text('- 已显示全部作品 -')
                     .fontSize(12)
-                    .fontColor('#999')
+                    .fontColor($r('app.color.text_secondary'))
                     .width('100%')
                     .textAlign(TextAlign.Center)
                   Button('刷新推荐')
@@ -249,7 +249,7 @@ export struct HomePage {
                 Column() {
                   Text('- 已显示全部作品 -')
                     .fontSize(12)
-                    .fontColor('#999')
+                    .fontColor($r('app.color.text_secondary'))
                     .width('100%')
                     .textAlign(TextAlign.Center)
                   Button('刷新推荐')
