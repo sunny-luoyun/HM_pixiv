@@ -24,6 +24,23 @@ function mapProfileIllustToBookmark(item: ProfileIllust, defaultName: string = '
   };
 }
 
+function extractNovelWorks(body: object): Record<string, ProfileNovel> {
+  const bodyAny = body as Record<string, Object>;
+  if (bodyAny['works'] && typeof bodyAny['works'] === 'object') {
+    const works = bodyAny['works'] as Record<string, ProfileNovel>;
+    if (Object.keys(works).length > 0) return works;
+  }
+  const direct: Record<string, ProfileNovel> = {};
+  const keys = Object.keys(bodyAny);
+  for (let i = 0; i < keys.length; i++) {
+    const val = bodyAny[keys[i]];
+    if (val && typeof val === 'object' && (val as Record<string, Object>)['id']) {
+      direct[keys[i]] = val as ProfileNovel;
+    }
+  }
+  return direct;
+}
+
 function mapProfileNovelToBookmark(item: ProfileNovel, defaultName: string = ''): NovelBookmark {
   return {
     id: item.id,
@@ -89,6 +106,8 @@ struct UserProfilePage {
   @State isLoadingNovel: boolean = false;
   @State isLoadingMoreNovel: boolean = false;
   @State novelError: string = '';
+  private allNovelIds: string[] = [];
+  private novelPage: number = 1;
 
   @State bookmarkIllustWorks: IllustBookmark[] = [];
   @State bookmarkIllustOffset: number = 0;
@@ -211,6 +230,8 @@ struct UserProfilePage {
     this.novelError = '';
     this.novelOffset = 0;
     this.hasMoreNovel = true;
+    this.novelPage = 1;
+    this.allNovelIds = [];
     try {
       // Step 1: get all work IDs
       const allRes = await PixivService.getUserProfileAll(this.userId);
@@ -219,32 +240,30 @@ struct UserProfilePage {
         this.isLoadingNovel = false;
         return;
       }
-      const allIds: string[] = [];
       const novelMap = allRes.body.novels || {};
-      const novelKeys = Object.keys(novelMap);
-      for (let i = 0; i < novelKeys.length; i++) {
-        allIds.push(novelKeys[i]);
-      }
+      const allIds = Object.keys(novelMap);
       if (allIds.length === 0) {
         this.hasMoreNovel = false;
         this.isLoadingNovel = false;
         return;
       }
       allIds.sort((a, b) => Number(b) - Number(a));
-      // Step 2: fetch full data with ids[]
-      const res = await PixivService.getUserProfileNovels(this.userId, allIds);
+      this.allNovelIds = allIds;
+      // Step 2: fetch first page
+      const pageIds = allIds.slice(0, PAGE_SIZE);
+      const res = await PixivService.getUserProfileNovels(this.userId, pageIds);
       if (!res.error) {
-        const workMap = res.body.works || {};
+        const workMap = extractNovelWorks(res.body as object);
         const works: NovelBookmark[] = [];
-        for (let i = 0; i < allIds.length; i++) {
-          const work = workMap[allIds[i]];
+        for (let i = 0; i < pageIds.length; i++) {
+          const work = workMap[pageIds[i]];
           if (work) {
             works.push(mapProfileNovelToBookmark(work, this.userName));
           }
         }
         this.novelWorks = works;
         this.novelOffset = works.length;
-        this.hasMoreNovel = false;
+        this.hasMoreNovel = allIds.length > PAGE_SIZE;
       } else {
         this.novelError = '加载失败';
       }
@@ -256,7 +275,35 @@ struct UserProfilePage {
   }
 
   async loadMoreNovels() {
-    this.hasMoreNovel = false;
+    if (this.isLoadingMoreNovel || !this.hasMoreNovel) return;
+    this.isLoadingMoreNovel = true;
+    try {
+      const start = this.novelPage * PAGE_SIZE;
+      const pageIds = this.allNovelIds.slice(start, start + PAGE_SIZE);
+      if (pageIds.length === 0) {
+        this.hasMoreNovel = false;
+        this.isLoadingMoreNovel = false;
+        return;
+      }
+      const res = await PixivService.getUserProfileNovels(this.userId, pageIds);
+      if (!res.error) {
+        const workMap = extractNovelWorks(res.body as object);
+        const works: NovelBookmark[] = [];
+        for (let i = 0; i < pageIds.length; i++) {
+          const work = workMap[pageIds[i]];
+          if (work) {
+            works.push(mapProfileNovelToBookmark(work, this.userName));
+          }
+        }
+        this.novelWorks = [...this.novelWorks, ...works];
+        this.novelOffset += works.length;
+        this.novelPage++;
+        this.hasMoreNovel = start + PAGE_SIZE < this.allNovelIds.length;
+      }
+    } catch (err) {
+      console.error('加载更多作者小说失败:', err);
+    }
+    this.isLoadingMoreNovel = false;
   }
 
   async loadBookmarkIllusts() {

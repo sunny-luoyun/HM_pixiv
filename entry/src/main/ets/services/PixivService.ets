@@ -387,7 +387,7 @@ export interface ProfileNovel {
 }
 
 export interface ProfileNovelsBody {
-  works: Record<string, ProfileNovel>;
+  works?: Record<string, ProfileNovel>;
 }
 
 export interface ProfileNovelsResponse {
@@ -795,7 +795,7 @@ export class PixivService {
   }
 
   static async getUserProfileNovels(userId: string, ids: string[]): Promise<ProfileNovelsResponse> {
-    let path = `/ajax/user/${userId}/profile/novels?is_first_page=1`;
+    let path = `/ajax/user/${userId}/novels?lang=zh`;
     for (let i = 0; i < ids.length; i++) {
       path += `&ids[]=${ids[i]}`;
     }
