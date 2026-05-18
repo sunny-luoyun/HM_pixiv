@@ -1,6 +1,6 @@
-// entry/src/main/ets/store/AppState.ets
 import { CookieManager } from '../services/CookieManager';
 import { PixivService, UserInfoResponse } from '../services/PixivService';
+import { OAuthService } from '../services/OAuthService';
 import http from '@ohos.net.http';
 import fileIo from '@ohos.file.fs';
 import common from '@ohos.app.ability.common';
@@ -13,6 +13,7 @@ export class AppState {
   userId: string = '';
   userName: string = '';
   avatarUrl: string = '';
+  hasOAuthTokens: boolean = false;
 
   private constructor() {}
 
@@ -25,17 +26,18 @@ export class AppState {
 
   async checkLoginStatus(skipVerify: boolean = false) {
     try {
+      const hasTokens = await CookieManager.hasTokens();
       const cookieStr = await CookieManager.getFullCookie();
-      this.isLoggedIn = cookieStr !== '';
+      this.hasOAuthTokens = hasTokens;
+      this.isLoggedIn = hasTokens || cookieStr !== '';
 
       if (this.isLoggedIn) {
-        // 读取用户信息（优先本地，其次 Cookie 解析）
         const savedUserId = await CookieManager.getUserId();
         const savedUserName = await CookieManager.getUserName();
         if (savedUserId && savedUserName) {
           this.userId = savedUserId;
           this.userName = savedUserName;
-        } else {
+        } else if (cookieStr) {
           const cookieMap = CookieManager.parseCookie(cookieStr);
           this.userId = cookieMap.get('user_id') || '';
           this.userName = cookieMap.get('user_name') || '用户';
@@ -45,23 +47,39 @@ export class AppState {
           this.avatarUrl = savedAvatarUrl;
         }
 
-        // 仅当 skipVerify 为 false 时验证
         if (!skipVerify) {
           try {
-            const isValid = await this.verifyCookieWithUserId();
-            if (!isValid) {
-              console.warn('⚠️ Cookie验证失败，自动登出');
-              await this.logout();
-            } else {
-              // 异步刷新用户名
-              try {
-                await this.refreshUserInfo();
-              } catch (err) {
-                console.warn('刷新用户信息失败，保留原有用户名:', err);
+            let isValid = false;
+
+            if (hasTokens) {
+              const expired = await CookieManager.isTokenExpired();
+              if (expired) {
+                console.info('⏰ Token可能已过期，尝试刷新...');
+                const refreshed = await this.tryRefreshToken();
+                isValid = refreshed;
+              } else {
+                isValid = true;
               }
             }
+
+            if (!isValid && cookieStr) {
+              try {
+                isValid = await this.verifyCookieWithUserId();
+              } catch (networkErr) {
+                if (hasTokens) {
+                  isValid = true;
+                } else {
+                  throw new Error(String(networkErr));
+                }
+              }
+            }
+
+            if (!isValid) {
+              console.warn('⚠️ 认证验证失败，自动登出');
+              await this.logout();
+            }
           } catch (networkErr) {
-            console.error('🌐 网络异常，Cookie验证跳过，保持登录状态:', networkErr);
+            console.error('🌐 网络异常，认证验证跳过，保持登录状态:', networkErr);
           }
         }
       } else {
@@ -72,7 +90,7 @@ export class AppState {
         try {
           await this.cacheAvatar();
         } catch (err) {
-          console.warn('缓存头像失败，可后续重试:', err);
+          console.warn('缓存头像失败:', err);
         }
       }
     } catch (err) {
@@ -83,70 +101,82 @@ export class AppState {
     }
   }
 
-  // entry/src/main/ets/store/AppState.ets 中增加以下方法
+  async tryRefreshToken(): Promise<boolean> {
+    try {
+      const refreshToken = await CookieManager.getRefreshToken();
+      if (!refreshToken) return false;
+      const tokenResponse = await OAuthService.refreshAccessToken(refreshToken);
+      await CookieManager.saveTokens({
+        access_token: tokenResponse.access_token,
+        refresh_token: tokenResponse.refresh_token,
+        expires_in: tokenResponse.expires_in,
+        obtained_at: Date.now(),
+      });
+      if (tokenResponse.user) {
+        this.userId = String(tokenResponse.user.id);
+        this.userName = tokenResponse.user.name;
+        await CookieManager.saveUserInfo(this.userId, this.userName);
+      }
+      console.info('✅ Token 刷新成功');
+      return true;
+    } catch (err) {
+      const msg = String(err);
+      if (msg.includes('INVALID_REFRESH_TOKEN')) {
+        console.warn('⚠️ refresh_token 已失效');
+      }
+      return false;
+    }
+  }
 
-  /**
-   * 使用保存的用户ID验证Cookie是否有效
-   * @returns true: 有效；false: 失效（需登出）
-   * @throws 网络异常时抛出错误，由调用方决定是否登出
-   */
   async verifyCookieWithUserId(): Promise<boolean> {
     if (!this.userId) {
       console.warn('用户ID为空，无法验证');
       return false;
     }
-
     const url = `https://www.pixiv.net/users/${this.userId}`;
     const cookieStr = await CookieManager.getFullCookie();
+    const accessToken = await CookieManager.getAccessToken();
     const httpRequest = http.createHttp();
     try {
+      const header: Record<string, string> = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Referer': 'https://www.pixiv.net/',
+      };
+      if (cookieStr) header['Cookie'] = cookieStr;
+      if (accessToken) header['Authorization'] = `Bearer ${accessToken}`;
+
       const response = await httpRequest.request(url, {
         method: http.RequestMethod.GET,
-        header: {
-          'Cookie': cookieStr,
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Referer': 'https://www.pixiv.net/'
-        },
+        header,
         connectTimeout: 10000,
-        readTimeout: 10000
+        readTimeout: 10000,
       });
       const statusCode: number = response.responseCode;
 
-      // ✅ 有效情况：200 OK 且页面包含用户相关信息（可根据需要增加内容校验）
       if (statusCode === 200) {
         const body: string = response.result.toString();
-        // 简单校验页面是否包含用户标识（例如 user-id 属性或用户名）
         if (body.includes(`"userId":${this.userId}`) || body.includes(`/users/${this.userId}`)) {
-          console.info(`✅ Cookie有效，用户 ${this.userName} (${this.userId}) 可访问主页`);
+          console.info(`✅ 认证有效，用户 ${this.userName} (${this.userId})`);
           return true;
-        } else {
-          console.warn(`⚠️ 主页返回200但页面内容异常，可能已登出`);
-          return false;
         }
-      }
-      // ❌ 认证失效：401/403 或 302重定向到登录页
-      else if (statusCode === 401 || statusCode === 403) {
-        console.warn(`❌ Cookie失效，服务器返回 ${statusCode}`);
+        console.warn(`⚠️ 页面内容异常，可能已登出`);
         return false;
-      }
-      else if (statusCode === 302) {
-        const location: string | undefined = response.header?.['Location'];
+      } else if (statusCode === 401 || statusCode === 403) {
+        console.warn(`❌ 认证失效，服务器返回 ${statusCode}`);
+        return false;
+      } else if (statusCode === 302) {
+        const location: string | undefined = (response.header as Record<string, string>)?.['Location'];
         if (location?.includes('/login')) {
-          console.warn(`❌ Cookie失效，重定向到登录页: ${location}`);
+          console.warn(`❌ 认证失效，重定向到登录页`);
           return false;
         }
-        // 其他302可能是正常跳转，暂视为有效（可选：再请求一次）
-        console.info(`ℹ️ 收到302跳转至 ${location}，暂视为有效`);
         return true;
-      }
-      // 其他状态码视为异常
-      else {
-        console.warn(`⚠️ 主页请求返回非预期状态码 ${statusCode}`);
+      } else {
+        console.warn(`⚠️ 非预期状态码 ${statusCode}`);
         return false;
       }
     } catch (err) {
-      // 🌐 网络问题：超时、无网络、DNS错误等，抛出异常以便上层区分
-      console.error(`🌐 网络异常，无法验证Cookie: ${err}`);
+      console.error(`🌐 网络异常: ${err}`);
       throw new Error(`NETWORK_ERROR: ${err}`);
     } finally {
       httpRequest.destroy();
@@ -159,33 +189,29 @@ export class AppState {
   }
 
   async logout() {
-    await CookieManager.clearCookies();
+    await CookieManager.clearAll();
     this.isLoggedIn = false;
     this.userId = '';
     this.userName = '';
     this.avatarUrl = '';
+    this.hasOAuthTokens = false;
   }
 
   async cacheAvatar(): Promise<void> {
     if (!this.isLoggedIn || !this.userId) return;
-
     const webUrl = await CookieManager.getAvatarUrl();
     if (!webUrl || !webUrl.startsWith('http')) return;
-
     const appContext: common.UIAbilityContext = globalThis.appContext as common.UIAbilityContext;
     if (!appContext) return;
     const cacheDir: string = appContext.cacheDir;
-
     const fileName = `avatar_${this.userId}.jpg`;
     const localPath = cacheDir + '/' + fileName;
-
     try {
       const file = fileIo.openSync(localPath, fileIo.OpenMode.READ_ONLY);
       fileIo.closeSync(file);
       this.avatarUrl = 'file://' + localPath;
       return;
     } catch (_) {}
-
     const success = await PixivService.downloadImageDirect(webUrl, localPath);
     this.avatarUrl = success ? 'file://' + localPath : webUrl;
     await CookieManager.saveAvatarUrl(this.avatarUrl);
@@ -202,8 +228,6 @@ export class AppState {
           await this.cacheAvatar();
         }
         await CookieManager.saveUserInfo(this.userId, this.userName);
-      } else {
-        console.warn('获取用户信息失败或没有名字字段');
       }
     } catch (err) {
       console.error('刷新用户信息失败', err);

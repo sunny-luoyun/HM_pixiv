@@ -4,6 +4,7 @@ import fileIo from '@ohos.file.fs';
 import common from '@ohos.app.ability.common';
 import request from '@ohos.request';
 import { CookieManager } from './CookieManager';
+import { OAuthService } from './OAuthService';
 import { PixivNovel, CacheStatus, PixivTag, PixivSeries } from '../models/PixivModels';
 import photoAccessHelper from '@ohos.file.photoAccessHelper';
 import { Context } from '@kit.AbilityKit';
@@ -344,13 +345,10 @@ export class PixivService {
   private static downloadQueue: Array<DownloadTask> = [];
 
   // ---- API 请求风控防护 ----
-  // 请求队列（串行执行，一次只发一个请求）
   private static apiQueue: Array<ApiQueueTask> = [];
   private static isProcessingApiQueue = false;
   private static lastApiRequestTime = 0;
-  // 最小请求间隔（单位 ms），在此基础增加随机 jitter
   private static readonly MIN_API_INTERVAL = 1200;
-  // 最大重试次数（额外尝试，不含首次）
   private static readonly MAX_RETRIES = 2;
 
   private static async enqueueDownload(url: string, savePath: string): Promise<boolean> {
@@ -376,15 +374,19 @@ export class PixivService {
     const context = globalThis.appContext as common.UIAbilityContext;
     if (!context) return false;
     const cookie = await CookieManager.getFullCookie();
+    const accessToken = await CookieManager.getAccessToken();
     try {
+      const header: Record<string, string> = {
+        'Referer': 'https://www.pixiv.net/',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      };
+      if (cookie) header['Cookie'] = cookie;
+      if (accessToken) header['Authorization'] = `Bearer ${accessToken}`;
+
       const downloadTask = await request.downloadFile(context, {
         url: imageUrl,
         filePath: savePath,
-        header: {
-          'Referer': 'https://www.pixiv.net/',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Cookie': cookie
-        }
+        header,
       });
       return new Promise<boolean>((resolve) => {
         downloadTask.on('complete', () => {
@@ -467,25 +469,38 @@ export class PixivService {
 
   static async request<T>(path: string, options?: http.HttpRequestOptions): Promise<T> {
     const cookie = await CookieManager.getFullCookie();
+    const accessToken = await CookieManager.getAccessToken();
     const url = `${PixivService.baseUrl}${path}`;
+
+    const header: Record<string, string> = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Referer': 'https://www.pixiv.net/',
+      'Accept': 'application/json',
+      'Accept-Language': 'zh-CN,zh;q=0.9',
+      'Accept-Encoding': 'gzip, deflate',
+    };
+
+    if (cookie) {
+      header['Cookie'] = cookie;
+      header['X-Requested-With'] = 'XMLHttpRequest';
+    }
+    if (accessToken) {
+      header['Authorization'] = `Bearer ${accessToken}`;
+    }
+
+    if (!cookie && !accessToken) {
+      console.warn('⚠️ 无认证信息(Cookie/Token)，请求可能失败');
+    }
 
     const finalOptions: http.HttpRequestOptions = {
       method: options?.method || http.RequestMethod.GET,
-      header: {
-        'Cookie': cookie,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Referer': 'https://www.pixiv.net/',
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-        'Accept-Language': 'zh-CN,zh;q=0.9',
-        'Accept-Encoding': 'gzip, deflate'
-      },
+      header,
+      extraData: options?.extraData,
       connectTimeout: 10000,
       readTimeout: 10000,
-      usingCache: true
+      usingCache: true,
     };
 
-    // 将实际 HTTP 调用包装后入队，由队列控制并发与间隔
     return PixivService.enqueueApiRequest<T>(async () => {
       const httpRequest = http.createHttp();
       try {
@@ -493,10 +508,35 @@ export class PixivService {
         const response = await httpRequest.request(url, finalOptions);
         if (response.responseCode === 200) {
           return JSON.parse(response.result as string) as T;
-        } else {
-          console.error(`Pixiv API 错误 (${response.responseCode}):`, response.result);
-          throw new Error(`HTTP ${response.responseCode}`);
         }
+        if (response.responseCode === 400 || response.responseCode === 401) {
+          const body = String(response.result);
+          if (body.includes('Error occurred at the OAuth process') ||
+              body.includes('Invalid refresh token') ||
+              response.responseCode === 401) {
+            console.warn('⚠️ Token可能已过期，尝试刷新...');
+            const refreshed = await PixivService.tryRefreshToken();
+            if (refreshed) {
+              const newToken = await CookieManager.getAccessToken();
+              if (newToken) {
+                header['Authorization'] = `Bearer ${newToken}`;
+                const retryResponse = await httpRequest.request(url, {
+                  method: finalOptions.method,
+                  header: header,
+                  extraData: finalOptions.extraData,
+                  connectTimeout: finalOptions.connectTimeout,
+                  readTimeout: finalOptions.readTimeout,
+                  usingCache: finalOptions.usingCache,
+                });
+                if (retryResponse.responseCode === 200) {
+                  return JSON.parse(retryResponse.result as string) as T;
+                }
+              }
+            }
+          }
+        }
+        console.error(`Pixiv API 错误 (${response.responseCode}):`, response.result);
+        throw new Error(`HTTP ${response.responseCode}`);
       } catch (err) {
         console.error('Pixiv API 请求异常: ', err);
         throw new Error(`Pixiv API 请求失败: ${String(err)}`);
@@ -504,6 +544,39 @@ export class PixivService {
         httpRequest.destroy();
       }
     });
+  }
+
+  private static async tryRefreshToken(): Promise<boolean> {
+    try {
+      const refreshToken = await CookieManager.getRefreshToken();
+      if (!refreshToken) return false;
+      const tokenResponse = await OAuthService.refreshAccessToken(refreshToken);
+      await CookieManager.saveTokens({
+        access_token: tokenResponse.access_token,
+        refresh_token: tokenResponse.refresh_token,
+        expires_in: tokenResponse.expires_in,
+        obtained_at: Date.now(),
+      });
+      if (tokenResponse.user) {
+        const userId = String(tokenResponse.user.id);
+        const userName = tokenResponse.user.name;
+        await CookieManager.saveUserInfo(userId, userName);
+      }
+      console.info('✅ Token 自动刷新成功');
+      return true;
+    } catch (err) {
+      const msg = String(err);
+      if (msg.includes('INVALID_REFRESH_TOKEN')) {
+        console.warn('⚠️ refresh_token 已失效，需要重新登录');
+      } else {
+        console.error('❌ Token 自动刷新失败:', err);
+      }
+      return false;
+    }
+  }
+
+  static get getBaseUrl(): string {
+    return PixivService.baseUrl;
   }
 
   static async getUserInfo(): Promise<UserInfoResponse> {
