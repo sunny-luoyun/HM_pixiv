@@ -38,6 +38,9 @@ export struct SettingPage {
   @Builder
   MenuSection() {
     Column() {
+      this.MenuItem('我的关注', () => {
+        router.pushUrl({ url: 'pages/setting/FollowingPage' });
+      })
       this.MenuItem('我的作品', () => {})
       this.MenuItem('我的收藏', () => {
         router.pushUrl({ url: 'pages/favorites/FavoritesPage' });

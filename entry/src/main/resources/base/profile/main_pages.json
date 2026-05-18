@@ -6,6 +6,7 @@
     "pages/novel/NovelReaderPage",
     "pages/illust/IllustDetailPage",
     "pages/settings/SettingsPage",
-    "pages/settings/CachedNovelsPage"
+    "pages/settings/CachedNovelsPage",
+    "pages/setting/FollowingPage"
   ]
 }

@@ -391,7 +391,7 @@ export struct SearchPage {
               }
             }, (item: UserSearchResult) => item.userId)
           }
-          .columnsTemplate('1fr 1fr')
+          .columnsTemplate('1fr')
           .columnsGap(8)
           .rowsGap(8)
           .padding(12)

@@ -20,78 +20,36 @@ export struct UserCard {
   }
 
   build() {
-    Column() {
-      this.CoverSection()
-      this.InfoSection()
-    }
-    .width('100%')
-    .backgroundColor($r('app.color.loading_card'))
-    .borderRadius(12)
-    .margin({ bottom: 10 })
-  }
-
-  @Builder
-  CoverSection() {
-    if (this.localAvatar) {
-      Image(this.localAvatar)
-        .width('100%')
-        .height(120)
-        .objectFit(ImageFit.Cover)
-        .borderRadius({ topLeft: 12, topRight: 12 })
-    } else {
-      Column() {
+    Row() {
+      if (this.localAvatar) {
+        Image(this.localAvatar)
+          .width(44)
+          .height(44)
+          .objectFit(ImageFit.Cover)
+          .borderRadius(22)
+      } else {
         Text('👤')
-          .fontSize(48)
+          .fontSize(24)
+          .width(44)
+          .height(44)
+          .borderRadius(22)
+          .backgroundColor('#FFE8E8E8')
+          .textAlign(TextAlign.Center)
       }
-      .width('100%')
-      .height(120)
-      .justifyContent(FlexAlign.Center)
-      .alignItems(HorizontalAlign.Center)
-      .backgroundColor('#FFE8E8E8')
-      .borderRadius({ topLeft: 12, topRight: 12 })
-    }
-  }
 
-  @Builder
-  InfoSection() {
-    Column() {
       Text(this.item.name)
-        .fontSize(15)
+        .fontSize(16)
         .fontWeight(FontWeight.Medium)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
-
-      if (this.item.comment) {
-        Text(this.item.comment)
-          .fontSize(11)
-          .fontColor($r('app.color.text_secondary'))
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .margin({ top: 4 })
-          .width('100%')
-      }
-
-      Row() {
-        this.StatItem('👥', this.item.following)
-      }
-      .width('100%')
-      .margin({ top: 8 })
-      .justifyContent(FlexAlign.SpaceAround)
+        .margin({ left: 12 })
+        .layoutWeight(1)
     }
-    .alignItems(HorizontalAlign.Start)
     .width('100%')
-    .padding({ left: 10, right: 10, top: 8, bottom: 10 })
-  }
-
-  @Builder
-  StatItem(icon: string, count: number) {
-    Row() {
-      Text(icon)
-        .fontSize(12)
-      Text(` ${count}`)
-        .fontSize(11)
-        .fontColor($r('app.color.text_secondary'))
-    }
+    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+    .backgroundColor($r('app.color.loading_card'))
+    .borderRadius(12)
+    .margin({ bottom: 10 })
+    .alignItems(VerticalAlign.Center)
   }
 }

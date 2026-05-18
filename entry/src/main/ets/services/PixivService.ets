@@ -319,6 +319,28 @@ export interface SearchUserResponse {
   body: SearchUserBody;
 }
 
+export interface FollowingUserRaw {
+  userId: string;
+  userName: string;
+  profileImageUrl: string;
+  userComment: string;
+  following: boolean;
+  followed: boolean;
+  isBlocking: boolean;
+  isMypixiv: boolean;
+  acceptRequest: boolean;
+}
+
+export interface FollowingUserBody {
+  total: number;
+  users: FollowingUserRaw[];
+}
+
+export interface FollowingUserResponse {
+  error: boolean;
+  body: FollowingUserBody;
+}
+
 interface ApiQueueTask {
   resolve: (value: object) => void;
   reject: (reason: object) => void;
@@ -687,6 +709,11 @@ export class PixivService {
     const encoded = encodeURIComponent(keyword);
     const path = `/ajax/search/users?nick=${encoded}&s_mode=s_usr&i=0&lang=en&p=${page}`;
     return PixivService.request<SearchUserResponse>(path);
+  }
+
+  static async getFollowingList(userId: string, offset: number = 0, limit: number = 30): Promise<FollowingUserResponse> {
+    const path = `/ajax/user/${userId}/following?offset=${offset}&limit=${limit}&rest=show`;
+    return PixivService.request<FollowingUserResponse>(path);
   }
 
   static async fetchNovelDetail(novelId: string): Promise<PixivNovel> {
