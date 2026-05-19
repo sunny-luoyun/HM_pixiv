@@ -186,24 +186,22 @@ struct NovelSeriesPage {
   build() {
     Column() {
       Row() {
-        Button() {
-          Text('〈 返回').fontSize(14).fontColor('#FA8C16')
-        }
-        .backgroundColor(Color.Transparent)
-        .onClick(() => router.back())
-
+        Text('‹')
+          .fontSize(28)
+          .fontColor($r('app.color.tab_selected'))
+          .onClick(() => router.back())
         Text(this.seriesTitle)
           .fontSize(18)
-          .fontWeight(FontWeight.Bold)
+          .fontWeight(FontWeight.Medium)
+          .margin({ left: 12 })
           .layoutWeight(1)
-          .textAlign(TextAlign.Center)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        Blank().width(60)
+        Blank()
       }
       .width('100%')
-      .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+      .height(48)
+      .padding({ left: 16, right: 16 })
       .backgroundColor($r('app.color.loading_card'))
 
       if (this.isOfflineMode) {
@@ -217,7 +215,7 @@ struct NovelSeriesPage {
             .layoutWeight(1)
           Text('重试')
             .fontSize(13)
-            .fontColor('#FA8C16')
+            .fontColor($r('app.color.tab_selected'))
             .padding({ left: 12, top: 4, bottom: 4 })
             .onClick((): void => {
               this.isOfflineMode = false;
@@ -274,20 +272,17 @@ struct NovelSeriesPage {
         }
         .width('100%').layoutWeight(1).justifyContent(FlexAlign.Center)
       } else if (this.bookmarks.length > 0) {
-        List({ space: 10 }) {
-          ForEach(this.bookmarks, (item: NovelBookmark): void => {
-            ListItem() {
+        Scroll() {
+          Column() {
+            ForEach(this.bookmarks, (item: NovelBookmark): void => {
               NovelCard({ item: item })
-            }
-            .width('92%')
-          }, (item: NovelBookmark): string => item.id)
+            }, (item: NovelBookmark): string => item.id)
 
-          ListItem() {
             if (this.hasMore) {
               Button(this.isLoading ? '加载中...' : '加载更多')
                 .width('100%').height(44).fontSize(14)
                 .fontColor($r('app.color.tab_selected'))
-                .backgroundColor(Color.White)
+                .backgroundColor($r('app.color.surface_secondary'))
                 .borderRadius(12)
                 .enabled(!this.isLoading)
                 .onClick((): void => { this.loadMore() })
@@ -295,14 +290,19 @@ struct NovelSeriesPage {
               Text(this.isOfflineMode ? '— 以上为本系列所有缓存作品 —' : '— 已加载全部作品 —')
                 .fontSize(12).fontColor($r('app.color.text_secondary'))
                 .width('100%').textAlign(TextAlign.Center)
-                .padding({ top: 8, bottom: 8 })
+                .padding({ top: 8, bottom: 24 })
             }
           }
-          .width('92%')
+          .width('100%')
+          .padding(12)
         }
-        .width('100%').layoutWeight(1)
-        .alignListItem(ListItemAlign.Center)
-        .edgeEffect(EdgeEffect.Spring)
+        .width('100%')
+        .layoutWeight(1)
+        .onReachEnd(() => {
+          if (this.hasMore && !this.isLoading) {
+            this.loadMore();
+          }
+        })
       } else {
         Column() {
           Text('📚').fontSize(60).margin({ bottom: 16 })
@@ -316,6 +316,6 @@ struct NovelSeriesPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.loading_card'))
+    .backgroundColor($r('app.color.page_background'))
   }
 }
