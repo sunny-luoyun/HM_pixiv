@@ -5,7 +5,7 @@ import common from '@ohos.app.ability.common';
 import request from '@ohos.request';
 import { CookieManager } from './CookieManager';
 import { OAuthService } from './OAuthService';
-import { PixivNovel, CacheStatus, PixivTag, PixivSeries } from '../models/PixivModels';
+import { PixivNovel, CacheStatus, PixivTag, PixivSeries, PixivSeriesResult, parsePixivNovelFromRaw, RawPixivNovelItem } from '../models/PixivModels';
 import photoAccessHelper from '@ohos.file.photoAccessHelper';
 import { Context } from '@kit.AbilityKit';
 export interface UserInfoBody {
@@ -384,6 +384,9 @@ export interface ProfileNovel {
   createDate?: string;
   updateDate?: string;
   profileImageUrl?: string;
+  seriesId?: number;
+  seriesTitle?: string;
+  series?: NovelSeries;
 }
 
 export interface ProfileNovelsBody {
@@ -404,6 +407,28 @@ export interface ProfileAllBody {
 export interface ProfileAllResponse {
   error: boolean;
   body: ProfileAllBody;
+}
+
+interface SeriesInfoBody {
+  id: number;
+  title: string;
+  caption?: string;
+  userId: string;
+  userName: string;
+  publishedContentCount: number;
+}
+
+interface SeriesContentPage {
+  seriesContents?: RawPixivNovelItem[];
+}
+
+interface SeriesContentThumbnails {
+  novel?: RawPixivNovelItem[];
+}
+
+interface SeriesContentBody {
+  page?: SeriesContentPage;
+  thumbnails?: SeriesContentThumbnails;
 }
 
 interface ApiQueueTask {
@@ -831,6 +856,50 @@ export class PixivService {
       fullText:      b.content ?? undefined
     };
     return novel;
+  }
+
+  static async fetchSeriesNovels(seriesId: string, page: number = 1): Promise<PixivSeriesResult | null> {
+    if (!seriesId) return null;
+    const limit = 30;
+    const lastOrder = (page - 1) * limit;
+    try {
+      const infoResp = await PixivService.request<NovelAjaxResponse<SeriesInfoBody>>(
+        `/ajax/novel/series/${seriesId}`
+      );
+      if (infoResp.error) {
+        console.error(`获取系列信息失败: ${infoResp.message}`);
+        return null;
+      }
+      const info = infoResp.body;
+      const contentResp = await PixivService.request<NovelAjaxResponse<SeriesContentBody>>(
+        `/ajax/novel/series_content/${seriesId}?limit=${limit}&last_order=${lastOrder}&order_by=asc`
+      );
+      if (contentResp.error) {
+        console.error(`获取系列内容失败: ${contentResp.message}`);
+        return null;
+      }
+      const content = contentResp.body;
+      const rawList: RawPixivNovelItem[] =
+        content?.page?.seriesContents ??
+        content?.thumbnails?.novel ??
+        [];
+      const novels = rawList.map((raw) => parsePixivNovelFromRaw(raw));
+      const total: number = info?.publishedContentCount ?? 0;
+      return {
+        seriesId: String(info?.id ?? seriesId),
+        seriesTitle: info?.title ?? '',
+        seriesCaption: info?.caption ?? '',
+        authorId: String(info?.userId ?? ''),
+        authorName: info?.userName ?? '',
+        novels,
+        total,
+        currentPage: page,
+        hasMore: lastOrder + limit < total
+      };
+    } catch (err) {
+      console.error(`获取系列小说失败 seriesId=${seriesId}:`, err);
+      return null;
+    }
   }
 
   static async getIllustDetail(illustId: string): Promise<IllustDetailResponse> {

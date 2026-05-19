@@ -198,6 +198,22 @@ export class PixivCacheDB {
     }
   }
 
+  async getNovelsBySeriesId(seriesId: string): Promise<PixivNovel[]> {
+    if (!this.checkReady()) return [];
+    const predicates = new relationalStore.RdbPredicates(TABLE_NOVELS);
+    predicates.equalTo(COL.SERIES_ID, seriesId)
+      .equalTo(COL.CACHE_STATUS, CacheStatus.CACHED)
+      .orderByAsc(COL.SERIES_ORDER);
+    try {
+      const cols = ALL_COLUMNS.filter(c => c !== COL.FULL_TEXT);
+      const result = await this.rdbStore!.query(predicates, cols);
+      return this.resultSetToNovels(result);
+    } catch (err) {
+      console.error(`[PixivCacheDB] getNovelsBySeriesId 失败: ${JSON.stringify(err)}`);
+      return [];
+    }
+  }
+
   async getAllCachedNovels(): Promise<PixivNovel[]> {
     if (!this.checkReady()) return [];
     const predicates = new relationalStore.RdbPredicates(TABLE_NOVELS);

@@ -16,6 +16,92 @@ export interface PixivSeries {
   order?: number;
 }
 
+export interface PixivSeriesResult {
+  seriesId: string;
+  seriesTitle: string;
+  seriesCaption?: string;
+  authorId: string;
+  authorName: string;
+  novels: PixivNovel[];
+  total: number;
+  currentPage: number;
+  hasMore: boolean;
+}
+
+export interface RawPixivSeries {
+  id?: number;
+  contentOrder?: number;
+  viewableType?: number;
+}
+
+export interface RawPixivNovelItem {
+  id: string;
+  title: string;
+  comment: string;
+  userName: string;
+  userId: string;
+  url: string;
+  tags: string[];
+  textCount: number;
+  wordCount?: number;
+  pageCount: number;
+  createDate: string;
+  updateDate: string;
+  seriesId?: string;
+  seriesTitle?: string;
+  seriesOrder?: number;
+  seriesContentOrder?: number;
+  series?: RawPixivSeries;
+  bookmarkCount: number;
+  viewCount: number;
+  commentCount: number;
+}
+
+export function parsePixivNovelFromRaw(raw: RawPixivNovelItem): PixivNovel {
+  let order = 0;
+  if (raw.seriesContentOrder !== undefined) {
+    order = raw.seriesContentOrder;
+  } else if (raw.series?.contentOrder !== undefined) {
+    order = raw.series.contentOrder;
+  } else if (raw.seriesOrder !== undefined) {
+    order = raw.seriesOrder;
+  }
+
+  let series: PixivSeries | undefined = undefined;
+  if (raw.seriesId) {
+    series = {
+      id: raw.seriesId,
+      title: raw.seriesTitle ?? '',
+      order: order
+    };
+  } else if (raw.series) {
+    series = {
+      id: String(raw.series.id),
+      title: raw.seriesTitle ?? '',
+      order: raw.series.contentOrder ?? order
+    };
+  }
+
+  return {
+    id: raw.id,
+    title: raw.title,
+    caption: raw.comment ?? '',
+    author: raw.userName,
+    authorId: raw.userId,
+    coverUrl: raw.url,
+    tags: (raw.tags ?? []).map((t: string): PixivTag => ({ name: t })),
+    textLength: raw.textCount ?? raw.wordCount ?? 0,
+    pageCount: raw.pageCount ?? 1,
+    createDate: raw.createDate,
+    updateDate: raw.updateDate,
+    series: series,
+    bookmarkCount: raw.bookmarkCount ?? 0,
+    viewCount: raw.viewCount ?? 0,
+    commentCount: raw.commentCount ?? 0,
+    cacheStatus: CacheStatus.NOT_CACHED
+  };
+}
+
 export interface PixivNovel {
   id: string;
   title: string;

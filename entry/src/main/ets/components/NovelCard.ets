@@ -237,11 +237,23 @@ export struct NovelCard {
       if (this.item.seriesTitle) {
         Text(this.item.seriesTitle)
           .fontSize(12)
-          .fontColor($r('app.color.text_secondary'))
+          .fontColor($r('app.color.tab_selected'))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .margin({ top: 4 })
           .width('100%')
+          .onClick(() => {
+            const sid = this.item.series?.id ?? this.item.seriesId;
+            if (sid) {
+              router.pushUrl({
+                url: 'pages/novel/NovelSeriesPage',
+                params: {
+                  seriesId: String(sid),
+                  seriesTitle: this.item.seriesTitle
+                }
+              });
+            }
+          })
       }
 
       Text(this.item.userName)
