@@ -86,8 +86,6 @@ struct UserProfilePage {
   @State userName: string = '';
   @State userAvatarUrl: string = '';
   @State userComment: string = '';
-  @State totalIllusts: number = 0;
-  @State totalNovels: number = 0;
   @State isLoadingProfile: boolean = true;
   @State profileError: string = '';
 
@@ -139,6 +137,7 @@ struct UserProfilePage {
   async loadProfile() {
     this.isLoadingProfile = true;
     this.profileError = '';
+    let avatarUrl = '';
     try {
       const res = await AppApiService.getUserDetail(Number(this.userId)) as Record<string, Object>;
       const user = res['user'] as Record<string, Object>;
@@ -146,12 +145,8 @@ struct UserProfilePage {
       if (user) {
         this.userName = String(user['name'] || '');
         const urls = user['profile_image_urls'] as Record<string, string> || {};
-        this.userAvatarUrl = urls['medium'] || '';
+        avatarUrl = urls['medium'] || '';
         this.userComment = String(user['comment'] || '');
-      }
-      if (profile) {
-        this.totalIllusts = Number(profile['total_illusts'] || 0) + Number(profile['total_manga'] || 0);
-        this.totalNovels = Number(profile['total_novels'] || 0);
       }
     } catch (err) {
       console.error('加载作者资料失败:', err);
@@ -159,10 +154,13 @@ struct UserProfilePage {
         const userInfo = await PixivService.getUserProfile(this.userId);
         if (userInfo && !userInfo.error && userInfo.body) {
           this.userName = userInfo.body.name || this.userName;
-          if (userInfo.body.imageBig) this.userAvatarUrl = userInfo.body.imageBig;
-          else if (userInfo.body.image) this.userAvatarUrl = userInfo.body.image;
+          if (userInfo.body.imageBig) avatarUrl = userInfo.body.imageBig;
+          else if (userInfo.body.image) avatarUrl = userInfo.body.image;
         }
       } catch (_) {}
+    }
+    if (avatarUrl) {
+      this.userAvatarUrl = await PixivService.cacheImage(avatarUrl, `user_${this.userId}.jpg`);
     }
     this.isLoadingProfile = false;
   }
@@ -475,29 +473,9 @@ struct UserProfilePage {
           .padding({ left: 24, right: 24 })
       }
 
-      Row() {
-        this.StatItem('插画', this.totalIllusts)
-        this.StatItem('小说', this.totalNovels)
-      }
-      .margin({ top: 12, bottom: 12 })
-      .width('100%')
-      .justifyContent(FlexAlign.Center)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Center)
-  }
-
-  @Builder
-  StatItem(label: string, count: number) {
-    Column() {
-      Text(String(count))
-        .fontSize(16)
-        .fontWeight(FontWeight.Bold)
-      Text(label)
-        .fontSize(12)
-        .fontColor($r('app.color.text_secondary'))
-    }
-    .padding({ left: 20, right: 20 })
   }
 
   @Builder
