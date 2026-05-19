@@ -121,6 +121,13 @@ export interface PixivNovel {
   cacheStatus: CacheStatus;
   cachedAt?: string;
   fullText?: string;
+
+  titleTranslated?: string;
+  hasTitleTranslation?: boolean;
+  fullTextTranslated?: string;
+  hasFullTranslation?: boolean;
+  translationProgress?: number;
+  translationStatus?: 'none' | 'in_progress' | 'completed' | 'failed';
 }
 
 export interface CacheStatusDisplay {

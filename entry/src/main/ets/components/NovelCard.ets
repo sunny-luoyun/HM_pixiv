@@ -4,6 +4,7 @@ import common from '@ohos.app.ability.common';
 import { NovelBookmark, PixivService } from '../services/PixivService';
 import { pixivCacheDB } from '../database/PixivCacheDB';
 import { CacheStatus, getCacheStatusDisplay, PixivTag } from '../models/PixivModels';
+import { getDeepSeekService } from '../services/DeepSeekService';
 
 @Component
 export struct NovelCard {
@@ -12,6 +13,10 @@ export struct NovelCard {
   @State cacheStatus: CacheStatus = CacheStatus.NOT_CACHED;
   @State cacheLabel: string = '缓存';
   @State cacheColor: string = '#666666';
+  @State translatingTitle: boolean = false;
+  @State translatedTitle: string = '';
+  @State hasTitleTranslation: boolean = false;
+  @State showOriginalTitle: boolean = true;
 
   async aboutToAppear() {
     if (!this.item.url) return;
@@ -29,9 +34,52 @@ export struct NovelCard {
       const novel = await pixivCacheDB.getNovelById(this.item.id);
       if (novel) {
         this.cacheStatus = novel.cacheStatus;
+        if (novel.hasTitleTranslation && novel.titleTranslated) {
+          this.translatedTitle = novel.titleTranslated;
+          this.hasTitleTranslation = true;
+          this.showOriginalTitle = false;
+        }
       }
     } catch (_) {}
     this.updateCacheDisplay();
+  }
+
+  async handleTitleClick() {
+    if (this.translatingTitle) return;
+
+    if (this.hasTitleTranslation) {
+      this.showOriginalTitle = !this.showOriginalTitle;
+      promptAction.showToast({
+        message: this.showOriginalTitle ? '已切换为原文' : '已切换为译文'
+      });
+      return;
+    }
+
+    const service = getDeepSeekService();
+    if (!service.hasValidKey()) {
+      promptAction.showToast({ message: '请先在设置中填入 DeepSeek API 密钥' });
+      return;
+    }
+
+    this.translatingTitle = true;
+
+    const result = await service.translateText(this.item.title, true);
+
+    if (result.success && result.translatedText) {
+      this.translatedTitle = result.translatedText;
+      this.hasTitleTranslation = true;
+      this.showOriginalTitle = false;
+
+      const ctx = getContext(this) as common.UIAbilityContext;
+      await pixivCacheDB.init(ctx);
+      await pixivCacheDB.saveTitleTranslation(this.item.id, result.translatedText);
+
+      promptAction.showToast({ message: '标题翻译完成' });
+    } else {
+      promptAction.showToast({ message: result.error || '翻译失败' });
+    }
+
+    this.translatingTitle = false;
   }
 
   updateCacheDisplay() {
@@ -126,7 +174,9 @@ export struct NovelCard {
           novelId: this.item.id,
           title: this.item.title,
           author: this.item.userName,
-          cached: true
+          cached: true,
+          translatedTitle: this.translatedTitle || '',
+          hasTitleTranslation: this.hasTitleTranslation
         }
       });
     } else {
@@ -227,10 +277,38 @@ export struct NovelCard {
   @Builder
   InfoSection() {
     Column() {
-      Text(this.item.title)
-        .fontSize(15)
-        .fontWeight(FontWeight.Medium)
-        .width('100%')
+      Row() {
+        if (this.translatingTitle) {
+          LoadingProgress()
+            .width(14).height(14)
+            .color($r('app.color.tab_selected'))
+            .margin({ right: 6 })
+        }
+        Text(
+          this.showOriginalTitle ? this.item.title
+            : (this.translatedTitle || this.item.title)
+        )
+          .fontSize(15)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.hasTitleTranslation && !this.showOriginalTitle
+            ? $r('app.color.tab_selected') : $r('app.color.user_name'))
+          .layoutWeight(1)
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .onClick(() => this.handleTitleClick())
+
+        if (this.hasTitleTranslation) {
+          Text('译')
+            .fontSize(9)
+            .fontColor('#52C41A')
+            .backgroundColor('#F6FFED')
+            .borderRadius(3)
+            .padding({ left: 4, right: 4, top: 1, bottom: 1 })
+            .margin({ left: 4 })
+        }
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
 
       if (this.item.seriesTitle) {
         Text(this.item.seriesTitle)

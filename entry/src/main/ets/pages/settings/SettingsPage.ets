@@ -3,6 +3,8 @@ import { AppState, appState } from '../../store/AppState';
 import common from '@ohos.app.ability.common';
 import { PixivService } from '../../services/PixivService';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
+import { TranslationStorage } from '../../common/utils/TranslationStorage';
+import { getDeepSeekService } from '../../services/DeepSeekService';
 
 function formatFileSize(bytes: number): string {
   if (bytes <= 0) return '0 B';
@@ -24,9 +26,49 @@ export struct SettingsPage {
   @State avatarCacheCount: number = 0;
   @State cachedNovelCount: number = 0;
   @State isLoadingCache: boolean = true;
+  @State deepseekApiKey: string = '';
+  @State showApiKeyText: boolean = false;
+  @State apiKeyCheckState: 'idle' | 'checking' | 'ok' | 'fail' = 'idle';
+  @State balanceAmount: string = '';
+  @State balanceFetchState: 'idle' | 'loading' | 'ok' | 'fail' = 'idle';
 
   aboutToAppear() {
+    this.deepseekApiKey = AppStorage.get<string>('deepseekApiKey') ?? '';
     this.initCache();
+  }
+
+  async checkApiKeyValidity(): Promise<void> {
+    this.apiKeyCheckState = 'checking';
+    const service = getDeepSeekService();
+    const result = await service.fetchBalance(this.deepseekApiKey);
+    if (result.success) {
+      this.apiKeyCheckState = 'ok';
+      this.balanceAmount = result.data;
+      this.balanceFetchState = 'ok';
+    } else {
+      this.apiKeyCheckState = 'fail';
+    }
+  }
+
+  async clearApiKey(): Promise<void> {
+    this.deepseekApiKey = '';
+    AppStorage.setOrCreate('deepseekApiKey', '');
+    await TranslationStorage.clearDeepSeekApiKey();
+    this.apiKeyCheckState = 'idle';
+    this.balanceAmount = '';
+    this.balanceFetchState = 'idle';
+  }
+
+  async fetchBalance(): Promise<void> {
+    this.balanceFetchState = 'loading';
+    const service = getDeepSeekService();
+    const result = await service.fetchBalance(this.deepseekApiKey);
+    if (result.success) {
+      this.balanceAmount = result.data;
+      this.balanceFetchState = 'ok';
+    } else {
+      this.balanceFetchState = 'fail';
+    }
   }
 
   async initCache() {
@@ -148,11 +190,175 @@ export struct SettingsPage {
       .width('100%')
       .padding({ left: 24, right: 24, top: 16 })
 
+      this.DeepSeekApiKeyCard()
       this.CacheSection()
     }
     .width('100%')
     .height('100%')
     .backgroundColor($r('app.color.page_background'))
+  }
+
+  @Builder
+  DeepSeekApiKeyCard() {
+    Column() {
+      Row() {
+        Row() {
+          Text('DeepSeek API 密钥')
+            .fontSize(16)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.user_name'))
+
+          if (this.apiKeyCheckState === 'ok') {
+            Text(' ●').fontSize(12).fontColor('#52C41A')
+          } else if (this.apiKeyCheckState === 'fail') {
+            Text(' ●').fontSize(12).fontColor('#FF4D4F')
+          } else if (this.deepseekApiKey.length > 0 && this.apiKeyCheckState === 'idle') {
+            Text(' ●').fontSize(12).fontColor('#FAAD14')
+          }
+        }.alignItems(VerticalAlign.Center)
+
+        Blank()
+
+        Text(this.showApiKeyText ? '隐藏' : '显示')
+          .fontSize(13)
+          .fontColor($r('app.color.tab_selected'))
+          .onClick(() => {
+            this.showApiKeyText = !this.showApiKeyText;
+          })
+      }
+      .width('100%')
+      .margin({ bottom: 10 })
+
+      TextInput({
+        text: this.deepseekApiKey,
+        placeholder: '粘贴 DeepSeek API 密钥...'
+      })
+        .width('100%')
+        .height(44)
+        .fontSize(13)
+        .fontColor($r('app.color.user_name'))
+        .placeholderColor($r('app.color.text_secondary'))
+        .backgroundColor($r('app.color.page_background'))
+        .borderRadius(8)
+        .padding({ left: 12, right: 12 })
+        .border({
+          width: 1,
+          color: this.deepseekApiKey.length === 0
+            ? $r('app.color.divider')
+            : this.apiKeyCheckState === 'ok'
+              ? '#52C41A'
+              : this.apiKeyCheckState === 'fail'
+                ? '#FF4D4F'
+                : $r('app.color.tab_selected'),
+          radius: 8
+        })
+        .type(this.showApiKeyText ? InputType.Normal : InputType.Password)
+        .onChange((val: string): void => {
+          this.deepseekApiKey = val;
+          this.apiKeyCheckState = 'idle';
+          AppStorage.setOrCreate('deepseekApiKey', val);
+          TranslationStorage.saveDeepSeekApiKey(val);
+        })
+
+      Row() {
+        Button(this.apiKeyCheckState === 'checking' ? '验证中...' : '验证密钥')
+          .fontSize(13)
+          .height(36)
+          .layoutWeight(1)
+          .fontColor('#FFFFFF')
+          .backgroundColor($r('app.color.tab_selected'))
+          .borderRadius(8)
+          .enabled(this.apiKeyCheckState !== 'checking' && this.deepseekApiKey.length > 0)
+          .onClick(() => { this.checkApiKeyValidity(); })
+
+        if (this.deepseekApiKey.length > 0) {
+          Button('清除')
+            .fontSize(13)
+            .height(36)
+            .fontColor('#FF4D4F')
+            .backgroundColor(Color.Transparent)
+            .borderRadius(8)
+            .margin({ left: 8 })
+            .onClick(() => { this.clearApiKey(); })
+        }
+      }
+      .width('100%')
+      .margin({ top: 12 })
+
+      Text('前往 deepseek.com 注册获取 API 密钥，用于翻译日文小说标题和内容')
+        .fontSize(11)
+        .fontColor($r('app.color.text_secondary'))
+        .margin({ top: 10 })
+        .lineHeight(18)
+
+      if (this.deepseekApiKey.length > 0) {
+        Divider()
+          .strokeWidth(1)
+          .color($r('app.color.divider'))
+          .margin({ top: 14, bottom: 14 })
+
+        Row() {
+          Column() {
+            Text('账户余额')
+              .fontSize(13)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.user_name'))
+
+            if (this.balanceFetchState === 'loading') {
+              Text('查询中...')
+                .fontSize(12)
+                .fontColor($r('app.color.text_secondary'))
+                .margin({ top: 4 })
+            } else if (this.balanceFetchState === 'ok' && this.balanceAmount !== '') {
+              Text('¥ ' + this.balanceAmount)
+                .fontSize(20)
+                .fontWeight(FontWeight.Bold)
+                .fontColor('#007DFF')
+                .margin({ top: 4 })
+              Text('约可翻译 ' + (Math.floor(parseFloat(this.balanceAmount) * 53.63 * 10) / 10).toString() + ' 万字小说')
+                .fontSize(11)
+                .fontColor($r('app.color.text_secondary'))
+                .margin({ top: 4 })
+            } else if (this.balanceFetchState === 'fail') {
+              Text('获取失败，请重试')
+                .fontSize(12)
+                .fontColor('#FF4D4F')
+                .margin({ top: 4 })
+            } else {
+              Text('点击刷新查询余额')
+                .fontSize(12)
+                .fontColor($r('app.color.text_secondary'))
+                .margin({ top: 4 })
+            }
+          }
+          .layoutWeight(1)
+          .alignItems(HorizontalAlign.Start)
+
+          Button(this.balanceFetchState === 'loading' ? '查询中' : '↻ 刷新')
+            .fontSize(13)
+            .height(34)
+            .padding({ left: 14, right: 14 })
+            .fontColor($r('app.color.tab_selected'))
+            .backgroundColor($r('app.color.page_background'))
+            .borderRadius(8)
+            .border({ width: 1, color: $r('app.color.tab_selected'), radius: 8 })
+            .enabled(this.balanceFetchState !== 'loading')
+            .onClick(() => { this.fetchBalance(); })
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Top)
+
+        Text('估算仅供参考，以官方为准')
+          .fontSize(10)
+          .fontColor($r('app.color.text_secondary'))
+          .margin({ top: 8 })
+      }
+    }
+    .width('100%')
+    .padding(16)
+    .backgroundColor($r('app.color.loading_card'))
+    .borderRadius(12)
+    .margin({ bottom: 10 })
   }
 
   @Builder

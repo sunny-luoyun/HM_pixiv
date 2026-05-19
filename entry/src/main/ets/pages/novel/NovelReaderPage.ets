@@ -2,12 +2,16 @@ import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
 import common from '@ohos.app.ability.common';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
+import { getDeepSeekService } from '../../services/DeepSeekService';
+import preferences from '@ohos.data.preferences';
 
 interface ReaderRouterParams {
   novelId: string;
   title: string;
   author: string;
   cached: boolean;
+  translatedTitle?: string;
+  hasTitleTranslation?: boolean;
 }
 
 interface ReaderColors {
@@ -21,6 +25,11 @@ interface ReaderColors {
   iconBtnText: string;
   chapterColor: string;
   hrColor: string;
+  translateBtnText: string;
+  translatedTextColor: string;
+  translationProgressBg: string;
+  translationProgressFill: string;
+  dangerText: string;
 }
 
 function getReaderColors(isDark: boolean): ReaderColors {
@@ -34,7 +43,12 @@ function getReaderColors(isDark: boolean): ReaderColors {
     iconBtnBg:     isDark ? '#2A2A2A' : '#F0F0F0',
     iconBtnText:   isDark ? '#CCCCCC' : '#444444',
     chapterColor:  isDark ? '#AADDFF' : '#0055AA',
-    hrColor:       isDark ? '#333333' : '#DDDDDD'
+    hrColor:       isDark ? '#333333' : '#DDDDDD',
+    translateBtnText: '#007DFF',
+    translatedTextColor: isDark ? '#CCE5FF' : '#0055AA',
+    translationProgressBg: isDark ? '#333333' : '#E5E5E5',
+    translationProgressFill: '#007DFF',
+    dangerText: '#FF4D4F'
   };
 }
 
@@ -43,6 +57,8 @@ type BlockType = 'paragraph' | 'chapter' | 'hr' | 'blank';
 interface ContentBlock {
   type: BlockType;
   text: string;
+  bold?: boolean;
+  italic?: boolean;
 }
 
 function parsePixivBlocks(raw: string): ContentBlock[] {
@@ -53,16 +69,16 @@ function parsePixivBlocks(raw: string): ContentBlock[] {
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) {
-      blocks.push({ type: 'blank', text: '' });
+      blocks.push({ type: 'blank', text: '', bold: false, italic: false });
       continue;
     }
     if (trimmed === '[newpage]') {
-      blocks.push({ type: 'hr', text: '' });
+      blocks.push({ type: 'hr', text: '', bold: false, italic: false });
       continue;
     }
     const chapterMatch = trimmed.match(/^\[chapter:(.*?)\]$/);
     if (chapterMatch) {
-      blocks.push({ type: 'chapter', text: chapterMatch[1] });
+      blocks.push({ type: 'chapter', text: chapterMatch[1], bold: false, italic: false });
       continue;
     }
     let text = trimmed
@@ -72,7 +88,9 @@ function parsePixivBlocks(raw: string): ContentBlock[] {
       .replace(/\[jump:(.*?)\]/g, '')
       .replace(/\[[^\]]*\]/g, '');
     if (!text.trim()) continue;
-    blocks.push({ type: 'paragraph', text: text });
+    const hasBold = /\[b\]/.test(line);
+    const hasItalic = /\[i\]/.test(line);
+    blocks.push({ type: 'paragraph', text: text, bold: hasBold, italic: hasItalic });
   }
   return blocks;
 }
@@ -91,6 +109,14 @@ struct NovelReaderPage {
   @State private showFontPanel: boolean = false;
   @State private isDark: boolean = false;
 
+  @State private showTranslation: boolean = false;
+  @State private isTranslating: boolean = false;
+  @State private translationProgress: number = 0;
+  @State private translatedTitle: string = '';
+  @State private translatedBlocks: ContentBlock[] = [];
+  @State private showOriginal: boolean = true;
+  @State private renderBlocks: ContentBlock[] = [];
+
   private scroller: Scroller = new Scroller();
   private saveProgressTimer: number = -1;
   private readonly PROGRESS_SAVE_DELAY = 800;
@@ -101,6 +127,12 @@ struct NovelReaderPage {
     this.isCachedMode = this.params?.cached === true;
     this.novelTitle = this.params?.title ?? '小说阅读';
     this.novelAuthor = this.params?.author ?? '';
+    if (this.params?.translatedTitle) {
+      this.translatedTitle = this.params.translatedTitle;
+    }
+    if (this.params?.hasTitleTranslation) {
+      this.showTranslation = true;
+    }
 
     if (this.isCachedMode && this.params?.novelId) {
       this.loadOfflineContent(this.params.novelId);
@@ -116,7 +148,7 @@ struct NovelReaderPage {
     }
     if (this.params?.novelId && this.isCachedMode) {
       const yOffset = this.scroller.currentOffset().yOffset;
-      pixivCacheDB.saveReadingProgress(this.params.novelId, Math.floor(yOffset));
+      pixivCacheDB.saveReadingProgress(this.params.novelId, Math.floor(yOffset), !this.showOriginal);
     }
   }
 
@@ -133,9 +165,27 @@ struct NovelReaderPage {
       }
 
       this.contentBlocks = parsePixivBlocks(text);
+      this.renderBlocks = this.contentBlocks;
 
-      if (this.contentBlocks.length > 0) {
-        const savedY = await pixivCacheDB.getReadingProgress(novelId);
+      const novel = await pixivCacheDB.getNovelById(novelId);
+      if (novel?.hasTitleTranslation && novel.titleTranslated) {
+        this.translatedTitle = novel.titleTranslated;
+      }
+      if (novel?.hasFullTranslation && novel.fullTextTranslated) {
+        this.translatedBlocks = parsePixivBlocks(novel.fullTextTranslated);
+      }
+
+      if (this.translatedBlocks.length > 0) {
+        const preferTranslation = await this.getViewPreference();
+        if (preferTranslation) {
+          this.showOriginal = false;
+          this.showTranslation = true;
+          this.renderBlocks = this.translatedBlocks;
+        }
+      }
+
+      if (this.renderBlocks.length > 0) {
+        const savedY = await pixivCacheDB.getReadingProgress(novelId, !this.showOriginal);
         if (savedY > 0) {
           setTimeout(() => {
             this.scroller.scrollTo({ xOffset: 0, yOffset: savedY });
@@ -157,9 +207,150 @@ struct NovelReaderPage {
     }
     this.saveProgressTimer = setTimeout(() => {
       if (this.params?.novelId) {
-        pixivCacheDB.saveReadingProgress(this.params.novelId, Math.floor(yOffset));
+        pixivCacheDB.saveReadingProgress(this.params.novelId, Math.floor(yOffset), !this.showOriginal);
       }
     }, this.PROGRESS_SAVE_DELAY);
+  }
+
+  private async translateTitle(): Promise<void> {
+    const service = getDeepSeekService();
+
+    if (!service.hasValidKey()) {
+      promptAction.showToast({ message: '请先在设置中填入 DeepSeek API 密钥' });
+      return;
+    }
+
+    this.isTranslating = true;
+
+    const result = await service.translateText(this.novelTitle, true);
+
+    if (result.success && result.translatedText) {
+      this.translatedTitle = result.translatedText;
+
+      if (this.params?.novelId) {
+        await pixivCacheDB.saveTitleTranslation(this.params.novelId, result.translatedText);
+      }
+
+      promptAction.showToast({ message: '标题翻译完成' });
+    } else {
+      promptAction.showToast({ message: result.error || '翻译失败' });
+    }
+
+    this.isTranslating = false;
+  }
+
+  private async translateFullText(): Promise<void> {
+    const service = getDeepSeekService();
+
+    if (!service.hasValidKey()) {
+      promptAction.showToast({ message: '请先在设置中填入 DeepSeek API 密钥' });
+      return;
+    }
+
+    const novelId = this.params?.novelId;
+    if (!novelId) return;
+
+    const ctx = getContext(this) as common.UIAbilityContext;
+    await pixivCacheDB.init(ctx);
+    const originalText = await pixivCacheDB.getFullText(novelId);
+
+    if (!originalText) {
+      promptAction.showToast({ message: '找不到原文内容' });
+      return;
+    }
+
+    const estimatedCost = service.estimateCost(originalText.length);
+
+    promptAction.showDialog({
+      title: '确认翻译全文',
+      message: `预计翻译 ${originalText.length} 字符，费用约 $${estimatedCost.toFixed(4)}（仅供参考）。\n是否继续？`,
+      buttons: [
+        { text: '取消', color: '#666666' },
+        { text: '开始翻译', color: '#007DFF' }
+      ]
+    }).then((data) => {
+      if (data.index === 1) {
+        this.performFullTranslation(novelId, originalText);
+      }
+    });
+  }
+
+  private mergeShortParagraphs(paragraphs: string[], maxChars: number = 2000): string[] {
+    const merged: string[] = [];
+    let current = '';
+    for (const para of paragraphs) {
+      const text = para.trim();
+      if (!text) continue;
+      if (current && (current.length + text.length + 1) > maxChars) {
+        merged.push(current);
+        current = text;
+      } else {
+        current = current ? current + '\n' + text : text;
+      }
+    }
+    if (current) merged.push(current);
+    return merged;
+  }
+
+  private async performFullTranslation(novelId: string, originalText: string): Promise<void> {
+    this.isTranslating = true;
+    this.showTranslation = true;
+    this.translationProgress = 0;
+
+    await pixivCacheDB.updateTranslationProgress(novelId, 0, 'in_progress');
+
+    const paragraphs = originalText.split('\n');
+    const mergedParagraphs = this.mergeShortParagraphs(paragraphs, 2000);
+    const service = getDeepSeekService();
+
+    const results = await service.translateParagraphs(
+      mergedParagraphs,
+      (current, total, _translated) => {
+        this.translationProgress = Math.floor((current / total) * 100);
+      }
+    );
+
+    const translatedParagraphs = results.map((r, i) => {
+      if (!mergedParagraphs[i]) {
+        return '';
+      }
+      return (r.success && r.translatedText) ? r.translatedText : mergedParagraphs[i];
+    });
+
+    const fullTranslated = translatedParagraphs.join('\n');
+
+    const newBlocks = parsePixivBlocks(fullTranslated);
+    this.translatedBlocks = newBlocks;
+    this.showOriginal = false;
+    this.showTranslation = true;
+    this.renderBlocks = newBlocks;
+
+    await pixivCacheDB.saveFullTextTranslation(novelId, fullTranslated);
+
+    this.isTranslating = false;
+    promptAction.showToast({ message: '全文翻译完成' });
+  }
+
+  private async saveViewPreference(showTranslation: boolean): Promise<void> {
+    try {
+      const ctx = getContext(this) as common.UIAbilityContext;
+      const pref = await preferences.getPreferences(ctx, 'pixiv_novel_view');
+      await pref.put(`${this.params!.novelId}_showTranslation`, showTranslation);
+      await pref.flush();
+    } catch (e) {
+      console.error('saveViewPreference failed', JSON.stringify(e));
+    }
+  }
+
+  private async getViewPreference(): Promise<boolean> {
+    try {
+      const ctx = getContext(this) as common.UIAbilityContext;
+      const pref = await preferences.getPreferences(ctx, 'pixiv_novel_view');
+      const value = await pref.get(`${this.params!.novelId}_showTranslation`, false);
+      return value as boolean;
+    } catch (e) {
+      return false;
+    }
   }
 
   private getColors(): ReaderColors {
@@ -182,13 +373,29 @@ struct NovelReaderPage {
       .onClick(() => router.back())
 
       Column() {
-        Text(this.novelTitle)
-          .fontSize(16)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(this.getColors().primaryText)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width('100%')
+        if (this.showTranslation && this.translatedTitle) {
+          Text(this.translatedTitle)
+            .fontSize(16)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(this.getColors().translatedTextColor)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .width('100%')
+          Text(this.novelTitle)
+            .fontSize(11)
+            .fontColor(this.getColors().secondaryText)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .width('100%')
+        } else {
+          Text(this.novelTitle)
+            .fontSize(16)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(this.getColors().primaryText)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .width('100%')
+        }
 
         if (this.novelAuthor) {
           Text(this.novelAuthor)
@@ -203,6 +410,70 @@ struct NovelReaderPage {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
       .padding({ left: 12, right: 12 })
+
+      if (this.isCachedMode) {
+        Button({ type: ButtonType.Circle }) {
+          Text(this.showOriginal ? '译' : '原')
+            .fontSize(16)
+            .fontColor(this.getColors().translateBtnText)
+        }
+        .width(40).height(40)
+        .backgroundColor(this.getColors().iconBtnBg)
+        .margin({ right: 8 })
+        .enabled(this.translatedBlocks.length > 0)
+        .onClick(() => {
+          if (!this.params?.novelId) return;
+
+          const currentY = this.scroller.currentOffset().yOffset;
+          pixivCacheDB.saveReadingProgress(
+            this.params.novelId, Math.floor(currentY), !this.showOriginal
+          );
+
+          this.showOriginal = !this.showOriginal;
+          this.showTranslation = !this.showOriginal;
+          this.renderBlocks = this.showOriginal
+            ? this.contentBlocks
+            : this.translatedBlocks;
+          this.saveViewPreference(!this.showOriginal);
+
+          setTimeout(async () => {
+            const targetY = await pixivCacheDB.getReadingProgress(
+              this.params!.novelId, !this.showOriginal
+            );
+            this.scroller.scrollTo({
+              xOffset: 0, yOffset: targetY > 0 ? targetY : 0
+            });
+          }, 50);
+        })
+
+        Button({ type: ButtonType.Circle }) {
+          if (this.isTranslating) {
+            LoadingProgress()
+              .width(20).height(20)
+              .color(this.getColors().accentText)
+          } else {
+            Text('翻')
+              .fontSize(16)
+              .fontColor(this.translatedBlocks.length > 0
+                ? this.getColors().translatedTextColor
+                : this.getColors().translateBtnText)
+          }
+        }
+        .width(40).height(40)
+        .backgroundColor(this.getColors().iconBtnBg)
+        .margin({ right: 8 })
+        .onClick(() => {
+          if (this.translatedBlocks.length > 0) {
+            this.showTranslation = !this.showTranslation;
+            this.showOriginal = !this.showTranslation;
+            this.renderBlocks = this.showTranslation
+              ? this.translatedBlocks
+              : this.contentBlocks;
+          } else {
+            this.translateFullText();
+          }
+        })
+      }
 
       Button({ type: ButtonType.Circle }) {
         Text(this.isDark ? '☀' : '☾')
@@ -255,19 +526,23 @@ struct NovelReaderPage {
       Scroll(this.scroller) {
         Column() {
           ForEach(
-            this.contentBlocks,
+            this.renderBlocks,
             (block: ContentBlock, index: number) => {
               if (block.type === 'chapter') {
                 Row() {
                   Blank()
                     .width(3)
                     .height('100%')
-                    .backgroundColor(this.getColors().chapterColor)
+                    .backgroundColor(this.showOriginal
+                      ? this.getColors().chapterColor
+                      : this.getColors().translatedTextColor)
 
                   Text(block.text)
                     .fontSize(this.fontSize * 1.1)
                     .fontWeight(FontWeight.Bold)
-                    .fontColor(this.getColors().chapterColor)
+                    .fontColor(this.showOriginal
+                      ? this.getColors().chapterColor
+                      : this.getColors().translatedTextColor)
                     .layoutWeight(1)
                     .padding({ left: 13, right: 16, top: 20, bottom: 8 })
                 }
@@ -282,15 +557,19 @@ struct NovelReaderPage {
               } else {
                 Text(block.text)
                   .fontSize(this.fontSize)
+                  .fontWeight(block.bold ? FontWeight.Bold : FontWeight.Normal)
+                  .fontStyle(block.italic ? FontStyle.Italic : FontStyle.Normal)
                   .lineHeight(this.fontSize * 1.9)
-                  .fontColor(this.getColors().primaryText)
+                  .fontColor(this.showOriginal
+                    ? this.getColors().primaryText
+                    : this.getColors().translatedTextColor)
                   .width('100%')
                   .padding({ left: 20, right: 20 })
                   .textAlign(TextAlign.Start)
                   .copyOption(CopyOptions.LocalDevice)
               }
             },
-            (block: ContentBlock, index: number) => `block_${index}`
+            (block: ContentBlock, index: number) => `${this.showOriginal ? 'orig' : 'trans'}_${index}`
           )
 
           Row().height(80).width('100%')
@@ -309,6 +588,32 @@ struct NovelReaderPage {
           this.debouncedSaveProgress(yOffset);
         }
       })
+    }
+
+    if (this.isTranslating) {
+      Column() {
+        Row() {
+          Text(`翻译中... ${this.translationProgress}%`)
+            .fontSize(12)
+            .fontColor(this.getColors().secondaryText)
+          Blank()
+        }
+        .width('100%')
+        .padding({ left: 20, right: 20, bottom: 8 })
+
+        Progress({
+          value: this.translationProgress,
+          total: 100,
+          type: ProgressType.Linear
+        })
+          .width('100%')
+          .height(4)
+          .color(this.getColors().accentText)
+          .backgroundColor(this.getColors().translationProgressBg)
+      }
+      .width('100%')
+      .backgroundColor(this.getColors().headerBg)
+      .padding({ top: 8, bottom: 8 })
     }
   }
 

@@ -4,7 +4,7 @@ import { PixivNovel, PixivTag, PixivSeries, CacheStatus } from '../models/PixivM
 
 const DB_NAME = 'pixiv_cache.db';
 const TABLE_NOVELS = 'pixiv_novels';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 const SQL_CREATE_NOVELS_TABLE = `
   CREATE TABLE IF NOT EXISTS ${TABLE_NOVELS} (
@@ -27,7 +27,13 @@ const SQL_CREATE_NOVELS_TABLE = `
     comment_count INTEGER DEFAULT 0,
     cache_status  TEXT    DEFAULT 'not_cached',
     cached_at     TEXT    DEFAULT '',
-    full_text     TEXT    DEFAULT ''
+    full_text     TEXT    DEFAULT '',
+    title_translated      TEXT    DEFAULT '',
+    has_title_translation INTEGER DEFAULT 0,
+    full_text_translated  TEXT    DEFAULT '',
+    has_full_translation  INTEGER DEFAULT 0,
+    translation_status    TEXT    DEFAULT 'none',
+    translation_progress  INTEGER DEFAULT 0
   )
 `;
 
@@ -38,6 +44,9 @@ interface ColumnMap {
   SERIES_ID: string; SERIES_TITLE: string; SERIES_ORDER: string;
   BOOKMARK_COUNT: string; VIEW_COUNT: string; COMMENT_COUNT: string;
   CACHE_STATUS: string; CACHED_AT: string; FULL_TEXT: string;
+  TITLE_TRANSLATED: string; HAS_TITLE_TRANSLATION: string;
+  FULL_TEXT_TRANSLATED: string; HAS_FULL_TRANSLATION: string;
+  TRANSLATION_STATUS: string; TRANSLATION_PROGRESS: string;
 }
 
 const COL: ColumnMap = {
@@ -48,16 +57,23 @@ const COL: ColumnMap = {
   SERIES_ID: 'series_id', SERIES_TITLE: 'series_title', SERIES_ORDER: 'series_order',
   BOOKMARK_COUNT: 'bookmark_count', VIEW_COUNT: 'view_count',
   COMMENT_COUNT: 'comment_count', CACHE_STATUS: 'cache_status',
-  CACHED_AT: 'cached_at', FULL_TEXT: 'full_text'
+  CACHED_AT: 'cached_at', FULL_TEXT: 'full_text',
+  TITLE_TRANSLATED: 'title_translated',
+  HAS_TITLE_TRANSLATION: 'has_title_translation',
+  FULL_TEXT_TRANSLATED: 'full_text_translated',
+  HAS_FULL_TRANSLATION: 'has_full_translation',
+  TRANSLATION_STATUS: 'translation_status',
+  TRANSLATION_PROGRESS: 'translation_progress'
 };
 
 const ALL_COLUMNS: string[] = Object.values(COL);
 const SQL_CREATE_PROGRESS_TABLE = `
   CREATE TABLE IF NOT EXISTS reading_progress (
     novel_id      TEXT    NOT NULL,
+    is_translated INTEGER DEFAULT 0,
     scroll_y      INTEGER DEFAULT 0,
     last_read_at  TEXT    DEFAULT '',
-    PRIMARY KEY (novel_id)
+    PRIMARY KEY (novel_id, is_translated)
   )
 `;
 
@@ -80,6 +96,8 @@ export class PixivCacheDB {
       if (version === 0) {
         await this.rdbStore.executeSql(SQL_CREATE_NOVELS_TABLE);
         this.rdbStore.version = DB_VERSION;
+      } else if (version < DB_VERSION) {
+        await this.upgradeDatabase(version, DB_VERSION);
       }
 
       await this.initProgressTable();
@@ -93,9 +111,15 @@ export class PixivCacheDB {
     if (!this.checkReady()) return;
 
     const existing = await this.getNovelById(novel.id);
-    const keepFullText    = existing?.fullText    ?? '';
-    const keepCachedAt    = existing?.cachedAt    ?? '';
-    const keepCacheStatus = existing?.cacheStatus ?? CacheStatus.NOT_CACHED;
+    const keepFullText         = existing?.fullText    ?? '';
+    const keepCachedAt         = existing?.cachedAt    ?? '';
+    const keepCacheStatus      = existing?.cacheStatus ?? CacheStatus.NOT_CACHED;
+    const keepTitleTranslated  = existing?.titleTranslated     ?? '';
+    const keepHasTitleTrans    = existing?.hasTitleTranslation ?? false;
+    const keepFullTranslated   = existing?.fullTextTranslated  ?? '';
+    const keepHasFullTrans     = existing?.hasFullTranslation  ?? false;
+    const keepTransStatus      = existing?.translationStatus   ?? 'none';
+    const keepTransProgress    = existing?.translationProgress ?? 0;
 
     const values: relationalStore.ValuesBucket = {
       'id':             novel.id,
@@ -117,7 +141,13 @@ export class PixivCacheDB {
       'comment_count':  novel.commentCount,
       'cache_status':   keepCacheStatus,
       'cached_at':      keepCachedAt,
-      'full_text':      keepFullText
+      'full_text':      keepFullText,
+      'title_translated':      keepTitleTranslated ?? '',
+      'has_title_translation': keepHasTitleTrans ? 1 : 0,
+      'full_text_translated':  keepFullTranslated ?? '',
+      'has_full_translation':  keepHasFullTrans ? 1 : 0,
+      'translation_status':    keepTransStatus ?? 'none',
+      'translation_progress':  keepTransProgress ?? 0
     };
 
     try {
@@ -229,10 +259,11 @@ export class PixivCacheDB {
     }
   }
 
-  async saveReadingProgress(novelId: string, scrollY: number): Promise<void> {
+  async saveReadingProgress(novelId: string, scrollY: number, isTranslated: boolean = false): Promise<void> {
     if (!this.checkReady() || !novelId) return;
     const values: relationalStore.ValuesBucket = {
       'novel_id':    novelId,
+      'is_translated': isTranslated ? 1 : 0,
       'scroll_y':    Math.max(0, Math.floor(scrollY)),
       'last_read_at': new Date().toISOString()
     };
@@ -287,11 +318,13 @@ export class PixivCacheDB {
     }
   }
 
-  async getReadingProgress(novelId: string): Promise<number> {
+  async getReadingProgress(novelId: string, isTranslated: boolean = false): Promise<number> {
     if (!this.checkReady() || !novelId) return 0;
     try {
       const predicates = new relationalStore.RdbPredicates('reading_progress');
-      predicates.equalTo('novel_id', novelId);
+      predicates.equalTo('novel_id', novelId)
+        .and()
+        .equalTo('is_translated', isTranslated ? 1 : 0);
       const result = await this.rdbStore!.query(predicates, ['scroll_y']);
       if (result.rowCount > 0) {
         result.goToFirstRow();
@@ -304,6 +337,50 @@ export class PixivCacheDB {
     } catch (err) {
       return 0;
     }
+  }
+
+  private async upgradeDatabase(oldVersion: number, newVersion: number): Promise<void> {
+    if (oldVersion < 2) {
+      const alterQueries = [
+        `ALTER TABLE ${TABLE_NOVELS} ADD COLUMN title_translated TEXT DEFAULT '';`,
+        `ALTER TABLE ${TABLE_NOVELS} ADD COLUMN has_title_translation INTEGER DEFAULT 0;`,
+        `ALTER TABLE ${TABLE_NOVELS} ADD COLUMN full_text_translated TEXT DEFAULT '';`,
+        `ALTER TABLE ${TABLE_NOVELS} ADD COLUMN has_full_translation INTEGER DEFAULT 0;`,
+        `ALTER TABLE ${TABLE_NOVELS} ADD COLUMN translation_status TEXT DEFAULT 'none';`,
+        `ALTER TABLE ${TABLE_NOVELS} ADD COLUMN translation_progress INTEGER DEFAULT 0;`
+      ];
+      for (const query of alterQueries) {
+        try {
+          await this.rdbStore!.executeSql(query);
+        } catch (e) {
+          console.warn(`[PixivCacheDB] ALTER TABLE 跳过: ${JSON.stringify(e)}`);
+        }
+      }
+    }
+    this.rdbStore!.version = newVersion;
+  }
+
+  async saveTitleTranslation(novelId: string, translatedTitle: string): Promise<void> {
+    await this.updateCacheFields(novelId, {
+      'title_translated': translatedTitle,
+      'has_title_translation': 1
+    });
+  }
+
+  async saveFullTextTranslation(novelId: string, translatedText: string): Promise<void> {
+    await this.updateCacheFields(novelId, {
+      'full_text_translated': translatedText,
+      'has_full_translation': 1,
+      'translation_status': 'completed',
+      'translation_progress': 100
+    });
+  }
+
+  async updateTranslationProgress(novelId: string, progress: number, status: string): Promise<void> {
+    await this.updateCacheFields(novelId, {
+      'translation_progress': progress,
+      'translation_status': status
+    });
   }
 
   private async initProgressTable(): Promise<void> {
@@ -377,7 +454,13 @@ export class PixivCacheDB {
           commentCount:  result.getLong(result.getColumnIndex(COL.COMMENT_COUNT)),
           cacheStatus:   (result.getString(result.getColumnIndex(COL.CACHE_STATUS)) as CacheStatus) || CacheStatus.NOT_CACHED,
           cachedAt:      result.getString(result.getColumnIndex(COL.CACHED_AT)) || undefined,
-          fullText
+          fullText,
+          titleTranslated:     result.getString(result.getColumnIndex(COL.TITLE_TRANSLATED)) || undefined,
+          hasTitleTranslation: result.getLong(result.getColumnIndex(COL.HAS_TITLE_TRANSLATION)) === 1,
+          fullTextTranslated:  result.getString(result.getColumnIndex(COL.FULL_TEXT_TRANSLATED)) || undefined,
+          hasFullTranslation:  result.getLong(result.getColumnIndex(COL.HAS_FULL_TRANSLATION)) === 1,
+          translationStatus:   (result.getString(result.getColumnIndex(COL.TRANSLATION_STATUS)) || 'none') as 'none' | 'in_progress' | 'completed' | 'failed',
+          translationProgress: result.getLong(result.getColumnIndex(COL.TRANSLATION_PROGRESS)) ?? 0
         });
       }
     } finally {
