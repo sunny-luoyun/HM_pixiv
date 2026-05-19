@@ -230,16 +230,12 @@ export struct NovelCard {
       Text(this.item.title)
         .fontSize(15)
         .fontWeight(FontWeight.Medium)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
 
       if (this.item.seriesTitle) {
         Text(this.item.seriesTitle)
           .fontSize(12)
           .fontColor($r('app.color.tab_selected'))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
           .margin({ top: 4 })
           .width('100%')
           .onClick(() => {
@@ -273,11 +269,9 @@ export struct NovelCard {
         })
 
       if (this.item.tags && this.item.tags.length > 0) {
-        Text(this.item.tags.slice(0, 3).join(' · '))
+        Text(this.item.tags.join(' · '))
           .fontSize(10)
           .fontColor($r('app.color.text_secondary'))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
           .margin({ top: 4 })
           .width('100%')
       }
