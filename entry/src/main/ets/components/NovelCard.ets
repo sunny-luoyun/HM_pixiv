@@ -117,7 +117,15 @@ export struct NovelCard {
         pageCount: this.item.pageCount || 1,
         createDate: this.item.createDate,
         updateDate: this.item.updateDate,
-        series: this.item.series ? { id: String(this.item.series.id), title: this.item.series.title } : undefined,
+        series: this.item.series ? {
+          id: String(this.item.series.id),
+          title: this.item.series.title,
+          order: this.item.series.order ?? this.item.seriesContentOrder ?? this.item.seriesOrder
+        } : (this.item.seriesId ? {
+          id: String(this.item.seriesId),
+          title: this.item.seriesTitle ?? '',
+          order: this.item.seriesContentOrder ?? this.item.seriesOrder
+        } : undefined),
         bookmarkCount: this.item.bookmarkCount || 0,
         viewCount: 0,
         commentCount: this.item.commentCount || 0,

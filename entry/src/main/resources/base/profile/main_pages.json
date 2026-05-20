@@ -8,6 +8,8 @@
     "pages/illust/IllustDetailPage",
     "pages/settings/SettingsPage",
     "pages/settings/CachedNovelsPage",
+    "pages/settings/AuthorDetailPage",
+    "pages/settings/SeriesDetailPage",
     "pages/setting/FollowingPage",
     "pages/user/UserProfilePage"
   ]

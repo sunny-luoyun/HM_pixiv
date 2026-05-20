@@ -111,6 +111,7 @@ export interface IllustBookmarkResponse {
 export interface NovelSeries {
   id: number;
   title: string;
+  order?: number;
 }
 
 export interface NovelBookmark {
@@ -144,6 +145,8 @@ export interface NovelBookmark {
   markerCount: number;
   seriesId?: number;
   seriesTitle?: string;
+  seriesContentOrder?: number;
+  seriesOrder?: number;
   series?: NovelSeries;
   originalWork: boolean;
   aiType: number;
@@ -386,6 +389,8 @@ export interface ProfileNovel {
   profileImageUrl?: string;
   seriesId?: number;
   seriesTitle?: string;
+  seriesContentOrder?: number;
+  seriesOrder?: number;
   series?: NovelSeries;
 }
 

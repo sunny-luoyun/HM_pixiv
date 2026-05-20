@@ -47,7 +47,7 @@ function pixivNovelToBookmark(novel: PixivNovel, seriesTitle: string): NovelBook
     markerCount: 0,
     seriesId: novel.series ? Number(novel.series.id) : undefined,
     seriesTitle: novel.series?.title || seriesTitle,
-    series: novel.series ? { id: Number(novel.series.id), title: novel.series.title || seriesTitle } as NovelSeries : undefined,
+    series: novel.series ? { id: Number(novel.series.id), title: novel.series.title || seriesTitle, order: novel.series.order } as NovelSeries : undefined,
     originalWork: false,
     aiType: 0
   };
@@ -150,9 +150,9 @@ struct NovelSeriesPage {
       this.hasMore = result.hasMore;
       this.currentPage = page;
 
-      result.novels.forEach((novel: PixivNovel) => {
-        pixivCacheDB.saveNovelMeta(novel);
-      });
+      for (const novel of result.novels) {
+        await pixivCacheDB.saveNovelMeta(novel);
+      }
     } else {
       console.warn('[NovelSeriesPage] 网络请求失败，尝试加载本地缓存');
       await this.loadCachedSeriesNovels();

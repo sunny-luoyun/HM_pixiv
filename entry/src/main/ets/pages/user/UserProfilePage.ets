@@ -73,6 +73,8 @@ function mapProfileNovelToBookmark(item: ProfileNovel, defaultName: string = '')
     markerCount: 0,
     seriesId: item.seriesId,
     seriesTitle: item.seriesTitle,
+    seriesContentOrder: item.seriesContentOrder,
+    seriesOrder: item.seriesOrder,
     series: item.series,
     originalWork: false,
     aiType: 0,
