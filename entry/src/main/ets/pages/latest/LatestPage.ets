@@ -1,11 +1,11 @@
 import { PixivService, IllustBookmark, NovelBookmark } from '../../services/PixivService';
 import { NovelCard } from '../../components/NovelCard';
 import { IllustCard } from '../../components/IllustCard';
-import { appState } from '../../store/AppState';
 import { PullToRefresh } from '../../components/PullToRefresh';
 
 @Component
 export struct LatestPage {
+  @Consume('isLoggedIn') @Watch('onLoginStateChange') isLoggedIn: boolean;
   @State currentTab: number = 0;
   @State illustWorks: IllustBookmark[] = [];
   @State novelWorks: NovelBookmark[] = [];
@@ -27,11 +27,17 @@ export struct LatestPage {
   @State isLoadingMoreNovel: boolean = false;
 
   async aboutToAppear() {
-    if (!appState.isLoggedIn) {
+    if (!this.isLoggedIn) {
       this.isLoadingIllust = false;
       return;
     }
     await this.loadIllusts();
+  }
+
+  onLoginStateChange() {
+    if (this.isLoggedIn && this.illustWorks.length === 0 && !this.isLoadingIllust) {
+      this.loadIllusts();
+    }
   }
 
   async loadIllusts() {
@@ -118,7 +124,7 @@ export struct LatestPage {
 
   build() {
     Column() {
-      if (!appState.isLoggedIn) {
+      if (!this.isLoggedIn) {
         this.NotLoggedInView()
       } else {
         this.TabsSection()

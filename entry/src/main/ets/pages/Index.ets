@@ -10,12 +10,17 @@ import { appState } from '../store/AppState';
 struct Index {
   @State currentIndex: number = 0;
   @State isReady: boolean = false;
+  @Provide('isLoggedIn') isLoggedIn: boolean = false;
   private tabsController: TabsController = new TabsController();
   async aboutToAppear() {
     await appState.checkLoginStatus();
+    this.isLoggedIn = appState.isLoggedIn;
     this.isReady = true;
     console.info(`🔄 检查登录状态: ${appState.isLoggedIn ? '已登录' : '未登录'}`);
     console.info(`👤 用户: ${appState.userName || '未知用户'} (${appState.userId || '无ID'})`);
+  }
+  onPageShow() {
+    this.isLoggedIn = appState.isLoggedIn;
   }
 
   build() {
