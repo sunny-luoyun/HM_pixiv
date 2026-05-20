@@ -17,6 +17,10 @@
 - **AI 翻译** — 集成 DeepSeek API，支持日文小说标题与全文的中文翻译
 - **深色模式** — 跟随系统自动切换明暗主题
 
+## 食用方法
+
+您可以使用[Auto-installer](https://github.com/likuai2010/auto-installer/)或[DevEcho Testing](https://developer.huawei.com/consumer/cn/deveco-testing/)进行安装。
+
 ## 免责声明
 
 本项目为个人学习用途的第三方客户端，与 Pixiv Inc. 无关。所有内容版权归原作者所有。请合理使用，遵守 Pixiv 服务条款。
