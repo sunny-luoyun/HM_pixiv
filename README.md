@@ -1,6 +1,6 @@
 # HPixiv
 
-基于 HarmonyOS 的第三方 Pixiv 客户端。
+基于 HarmonyOS 的第三方 Pixiv 精简客户端。
 
 ## 功能
 
