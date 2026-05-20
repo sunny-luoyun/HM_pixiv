@@ -424,7 +424,7 @@ export struct SettingsPage {
             .fontColor($r('app.color.tab_selected'))
             .margin({ right: 12 })
             .onClick(() => {
-              router.pushUrl({ url: 'pages/settings/CachedNovelsPage' });
+              router.pushUrl({ url: 'pages/settings/CachedNovelsSimplePage' });
             })
           Button('清除全部')
             .fontSize(13)

@@ -10,6 +10,7 @@
     "pages/settings/CachedNovelsPage",
     "pages/settings/AuthorDetailPage",
     "pages/settings/SeriesDetailPage",
+    "pages/settings/CachedNovelsSimplePage",
     "pages/setting/FollowingPage",
     "pages/user/UserProfilePage"
   ]
