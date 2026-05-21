@@ -13,6 +13,14 @@
       "value": "#0A84FF"
     },
     {
+      "name": "pill_bg",
+      "value": "#FF3A3A3C"
+    },
+    {
+      "name": "pill_stroke",
+      "value": "#FF636366"
+    },
+    {
       "name": "text_secondary",
       "value": "#FF98989D"
     },

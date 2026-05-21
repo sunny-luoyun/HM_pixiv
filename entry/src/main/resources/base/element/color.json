@@ -13,6 +13,14 @@
       "value": "#007AFF"
     },
     {
+      "name": "pill_bg",
+      "value": "#FFFFFFFF"
+    },
+    {
+      "name": "pill_stroke",
+      "value": "#FFB0B0B5"
+    },
+    {
       "name": "start_window_background",
       "value": "#ffffff"
     },

@@ -1,45 +1,50 @@
 @Component
 export struct SegmentedTabBar {
   private tabs: string[] = [];
-  @Prop currentIndex: number = 0;
+  @Prop @Watch('onIndexChange') currentIndex: number = 0;
   onChange?: (index: number) => void;
 
   @State private animIndex: number = 0;
-  @State private containerWidth: number = 0;
+  @State private pillWidth: number = 0;
+  private updatingFromClick: boolean = false;
 
   aboutToAppear() {
     this.animIndex = this.currentIndex;
   }
 
-  aboutToUpdate() {
-    this.animIndex = this.currentIndex;
-  }
-
-  get pillWidth(): number {
-    if (this.containerWidth <= 4) return 0;
-    return (this.containerWidth - 4) / this.tabs.length;
-  }
-
-  get pillTranslateX(): number {
-    return this.animIndex * this.pillWidth;
+  onIndexChange() {
+    if (this.updatingFromClick) {
+      this.updatingFromClick = false;
+      return;
+    }
+    animateTo({ duration: 350, curve: Curve.EaseOut }, () => {
+      this.animIndex = this.currentIndex;
+    });
   }
 
   handleClick(index: number) {
     if (index === this.animIndex) return;
-    this.animIndex = index;
+    this.updatingFromClick = true;
+    animateTo({ duration: 350, curve: Curve.EaseOut }, () => {
+      this.animIndex = index;
+    });
     this.onChange?.(index);
   }
 
   build() {
     Stack() {
-      Column()
-        .width(this.pillWidth)
-        .height('100%')
-        .backgroundColor($r('app.color.card_bg'))
-        .borderRadius(14)
-        .shadow({ radius: 4, color: $r('app.color.card_shadow'), offsetY: 1 })
-        .translate({ x: this.pillTranslateX })
-        .animation({ duration: 250, curve: Curve.Friction })
+      Row() {
+        Column()
+          .width(this.animIndex * this.pillWidth)
+        Column()
+          .width(this.pillWidth)
+          .height('100%')
+          .backgroundColor($r('app.color.pill_bg'))
+          .border({ width: 1, color: $r('app.color.pill_stroke'), radius: 14 })
+          .shadow({ radius: 8, color: $r('app.color.card_shadow'), offsetY: 2 })
+      }
+      .width('100%')
+      .height('100%')
 
       Row() {
         ForEach(this.tabs, (tab: string, index: number) => {
@@ -64,7 +69,7 @@ export struct SegmentedTabBar {
     .padding(2)
     .align(Alignment.TopStart)
     .onAreaChange((_old: Area, area: Area) => {
-      this.containerWidth = area.width as number;
+      this.pillWidth = ((area.width as number) - 4) / this.tabs.length;
     })
   }
 }
