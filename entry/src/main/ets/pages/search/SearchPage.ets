@@ -2,11 +2,16 @@ import { PixivService, IllustBookmark, NovelBookmark, UserSearchResult } from '.
 import { IllustCard } from '../../components/IllustCard';
 import { NovelCard } from '../../components/NovelCard';
 import { UserCard } from '../../components/UserCard';
+import inputMethod from '@ohos.inputMethod';
+import preferences from '@ohos.data.preferences';
+import common from '@ohos.app.ability.common';
 
 @Component
 export struct SearchPage {
   @State keyword: string = '';
   @State currentTab: number = 0;
+  @State showHistory: boolean = false;
+  @State searchHistory: string[] = [];
 
   // illust
   @State illustWorks: IllustBookmark[] = [];
@@ -33,6 +38,58 @@ export struct SearchPage {
   @State userError: string = '';
 
   @State hasSearched: boolean = false;
+
+  aboutToAppear() {
+    this.loadSearchHistory();
+  }
+
+  loadSearchHistory() {
+    const ctx = globalThis.appContext as common.UIAbilityContext;
+    if (!ctx) return;
+    preferences.getPreferences(ctx, 'app_search_history')
+      .then(pref => pref.get('searchHistory', '[]'))
+      .then((stored: string | preferences.ValueType) => {
+        try {
+          this.searchHistory = JSON.parse(stored as string);
+        } catch {
+          this.searchHistory = [];
+        }
+      })
+      .catch(() => {});
+  }
+
+  saveSearchHistory() {
+    const ctx = globalThis.appContext as common.UIAbilityContext;
+    if (!ctx) return;
+    preferences.getPreferences(ctx, 'app_search_history')
+      .then(pref => {
+        pref.put('searchHistory', JSON.stringify(this.searchHistory));
+        pref.flush();
+      })
+      .catch(() => {});
+  }
+
+  addToHistory(keyword: string) {
+    const trimmed = keyword.trim();
+    if (!trimmed) return;
+    const filtered = this.searchHistory.filter(h => h !== trimmed);
+    this.searchHistory = [trimmed, ...filtered].slice(0, 10);
+    this.saveSearchHistory();
+  }
+
+  removeFromHistory(keyword: string) {
+    this.searchHistory = this.searchHistory.filter(h => h !== keyword);
+    if (this.searchHistory.length === 0) {
+      this.showHistory = false;
+    }
+    this.saveSearchHistory();
+  }
+
+  clearHistory() {
+    this.searchHistory = [];
+    this.showHistory = false;
+    this.saveSearchHistory();
+  }
 
   async searchIllusts(page: number, reset: boolean = false) {
     if (!this.keyword.trim()) return;
@@ -147,7 +204,14 @@ export struct SearchPage {
 
   async onSearch() {
     if (!this.keyword.trim()) return;
+    this.addToHistory(this.keyword);
     this.hasSearched = true;
+    this.showHistory = false;
+    try {
+      inputMethod.getController().stopInputSession();
+    } catch (e) {
+      console.warn('dismiss keyboard failed');
+    }
     if (this.currentTab === 0) {
       await this.searchIllusts(1, true);
     } else if (this.currentTab === 1) {
@@ -190,7 +254,9 @@ export struct SearchPage {
   build() {
     Column() {
       this.SearchBar()
-      if (this.hasSearched) {
+      if (this.showHistory) {
+        this.SearchHistoryPanel()
+      } else if (this.hasSearched) {
         this.TabsSection()
       } else {
         this.EmptyHint()
@@ -213,6 +279,11 @@ export struct SearchPage {
         .padding({ left: 16, right: 16 })
         .onChange((val: string) => { this.keyword = val; })
         .onSubmit(() => { this.onSearch(); })
+        .onClick(() => {
+          if (this.searchHistory.length > 0) {
+            this.showHistory = !this.showHistory;
+          }
+        })
 
       Blank()
         .width(8)
@@ -229,6 +300,51 @@ export struct SearchPage {
     .width('100%')
     .padding({ left: 12, right: 12, top: 8, bottom: 8 })
     .backgroundColor($r('app.color.surface_secondary'))
+  }
+
+  @Builder
+  SearchHistoryPanel() {
+    Column() {
+      Row() {
+        Text('搜索历史')
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
+        Blank()
+        Text('清空')
+          .fontSize(14)
+          .fontColor($r('app.color.tab_selected'))
+          .onClick(() => { this.clearHistory(); })
+      }
+      .padding({ left: 16, right: 16, top: 12, bottom: 8 })
+
+      List() {
+        ForEach(this.searchHistory, (item: string) => {
+          ListItem() {
+            Row() {
+              Text(item)
+                .fontSize(14)
+                .textAlign(TextAlign.Start)
+                .layoutWeight(1)
+              Text('✕')
+                .fontSize(14)
+                .fontColor($r('app.color.text_secondary'))
+                .padding({ left: 12, right: 4 })
+                .onClick(() => { this.removeFromHistory(item); })
+            }
+            .padding({ left: 16, right: 16, top: 10, bottom: 10 })
+            .width('100%')
+            .onClick(() => {
+              this.keyword = item;
+              this.onSearch();
+            })
+          }
+        }, (item: string) => item)
+      }
+      .width('100%')
+      .layoutWeight(1)
+    }
+    .width('100%')
+    .backgroundColor($r('app.color.page_background'))
   }
 
   @Builder
