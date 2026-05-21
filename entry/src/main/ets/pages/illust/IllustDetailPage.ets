@@ -10,10 +10,13 @@ struct IllustDetailPage {
   @State detail: IllustDetailBody | null = null;
   @State isLoading: boolean = true;
   @State errorMsg: string = '';
-  @State localImageUrl: string = '';
+  @State localImageUrls: string[] = [];
+  @State currentIndex: number = 0;
+  @State pageRegularUrls: string[] = [];
   @State isDownloading: boolean = false;
   @State downloadSuccess: boolean = false;
   @State downloadFail: boolean = false;
+  @State illustPageCount: number = 1;
 
   @State scaleValue: number = 1;
   @State translateX: number = 0;
@@ -21,6 +24,11 @@ struct IllustDetailPage {
   private baseScale: number = 1;
   private baseTranslateX: number = 0;
   private baseTranslateY: number = 0;
+  private swiperController: SwiperController = new SwiperController();
+
+  get pageCount(): number {
+    return this.detail?.pageCount ?? 1;
+  }
 
   async aboutToAppear() {
     const params = router.getParams() as Record<string, Object>;
@@ -40,10 +48,15 @@ struct IllustDetailPage {
       const res = await PixivService.getIllustDetail(this.illustId);
       if (!res.error && res.body) {
         this.detail = res.body;
-        const path = await PixivService.cacheImage(res.body.urls.regular, `illust_${res.body.illustId}_detail.jpg`);
-        if (path) {
-          this.localImageUrl = path;
-        }
+        const pageCount = res.body.pageCount;
+        this.illustPageCount = pageCount;
+        const urls = PixivService.generatePageUrls(res.body.urls.regular, pageCount);
+        this.pageRegularUrls = urls;
+        const cachePromises = urls.map((url, i) =>
+          PixivService.cacheImage(url, `illust_${res.body.illustId}_pg${i}.jpg`)
+        );
+        const paths = await Promise.all(cachePromises);
+        this.localImageUrls = paths.filter(p => !!p) as string[];
       } else {
         this.errorMsg = res.message || '获取详情失败';
       }
@@ -56,6 +69,11 @@ struct IllustDetailPage {
 
   async handleDownload() {
     if (!this.detail || this.isDownloading) return;
+    if (this.currentIndex >= this.pageRegularUrls.length) {
+      console.error('handleDownload: 页码超出范围');
+      this.downloadFail = true;
+      return;
+    }
     this.isDownloading = true;
     this.downloadSuccess = false;
     this.downloadFail = false;
@@ -71,10 +89,11 @@ struct IllustDetailPage {
         this.isDownloading = false;
         return;
       }
+      const localUrl = this.localImageUrls[this.currentIndex];
       const ok = await PixivService.saveImageToGallery(
         ctx,
-        this.detail.urls.original,
-        `illust_${this.detail.illustId}_original.jpg`
+        localUrl,
+        `illust_${this.detail.illustId}_p${this.currentIndex}.jpg`
       );
       if (ok) {
         this.downloadSuccess = true;
@@ -86,6 +105,12 @@ struct IllustDetailPage {
       this.downloadFail = true;
     }
     this.isDownloading = false;
+  }
+
+  resetZoom() {
+    this.scaleValue = 1;
+    this.translateX = 0;
+    this.translateY = 0;
   }
 
   build() {
@@ -102,47 +127,51 @@ struct IllustDetailPage {
         .height('100%')
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
-      } else if (this.detail && this.localImageUrl) {
+      } else if (this.detail && this.localImageUrls.length > 0) {
         Stack() {
-          Image(this.localImageUrl)
-            .width('100%')
-            .height('100%')
-            .objectFit(ImageFit.Contain)
-            .scale({ x: this.scaleValue, y: this.scaleValue })
-            .translate({ x: this.translateX, y: this.translateY })
-            .gesture(
-              GestureGroup(GestureMode.Parallel,
-                PinchGesture()
-                  .onActionStart(() => {
-                    this.baseScale = this.scaleValue;
-                  })
-                  .onActionUpdate((event: PinchGestureEvent) => {
-                    this.scaleValue = Math.max(1, Math.min(5, this.baseScale * event.scale));
-                  }),
-                PanGesture()
-                  .onActionStart(() => {
-                    this.baseTranslateX = this.translateX;
-                    this.baseTranslateY = this.translateY;
-                  })
-                  .onActionUpdate((event: GestureEvent) => {
-                    if (this.scaleValue > 1) {
-                      this.translateX = this.baseTranslateX + event.offsetX;
-                      this.translateY = this.baseTranslateY + event.offsetY;
-                    }
-                  }),
-                TapGesture({ count: 2 })
-                  .onAction(() => {
-                    if (this.scaleValue > 1) {
-                      this.scaleValue = 1;
-                      this.translateX = 0;
-                      this.translateY = 0;
-                    } else {
-                      this.scaleValue = 2.5;
-                    }
-                  })
-              )
-            )
+          Swiper(this.swiperController) {
+            ForEach(this.localImageUrls, (url: string) => {
+              Image(url)
+                .width('100%')
+                .height('100%')
+                .objectFit(ImageFit.Contain)
+                .scale({ x: this.scaleValue, y: this.scaleValue })
+                .translate({ x: this.translateX, y: this.translateY })
+                .gesture(
+                  GestureGroup(GestureMode.Parallel,
+                    PinchGesture()
+                      .onActionStart(() => {
+                        this.baseScale = this.scaleValue;
+                      })
+                      .onActionUpdate((event: PinchGestureEvent) => {
+                        this.scaleValue = Math.max(1, Math.min(5, this.baseScale * event.scale));
+                      }),
+                    TapGesture({ count: 2 })
+                      .onAction(() => {
+                        if (this.scaleValue > 1) {
+                          this.scaleValue = 1;
+                          this.translateX = 0;
+                          this.translateY = 0;
+                        } else {
+                          this.scaleValue = 2.5;
+                        }
+                      })
+                  )
+                )
+            }, (url: string) => url)
+          }
+          .index(this.currentIndex)
+          .autoPlay(false)
+          .loop(false)
+          .indicator(false)
+          .onChange((index: number) => {
+            this.currentIndex = index;
+            this.resetZoom();
+            this.downloadSuccess = false;
+            this.downloadFail = false;
+          })
 
+          // Top bar
           Column() {
             Row() {
               Button({ type: ButtonType.Circle }) {
@@ -153,6 +182,17 @@ struct IllustDetailPage {
               .width(40).height(40)
               .backgroundColor('#33FFFFFF')
               .onClick(() => router.back())
+
+              Blank()
+
+              if (this.illustPageCount > 1) {
+                Text(`${this.currentIndex + 1} / ${this.illustPageCount}`)
+                  .fontSize(13)
+                  .fontColor(Color.White)
+                  .backgroundColor('#66000000')
+                  .borderRadius(10)
+                  .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+              }
 
               Blank()
 
@@ -174,33 +214,48 @@ struct IllustDetailPage {
             .width('100%')
             .padding({ left: 16, right: 16, top: 8 })
             .height(52)
-
-            Blank()
-
-            Column() {
-              Text(this.detail.illustTitle)
-                .fontSize(14)
-                .fontWeight(FontWeight.Medium)
-                .fontColor(Color.White)
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-              Text(this.detail.userName)
-                .fontSize(12)
-                .fontColor(Color.White)
-                .maxLines(1)
-                .margin({ top: 2 })
-              if (this.downloadFail) {
-                Text('保存失败').fontSize(12).fontColor('#FF4D4F').margin({ top: 4 })
-              }
-            }
-            .width('100%')
-            .padding(16)
-            .alignItems(HorizontalAlign.Start)
-            .backgroundColor('#80000000')
           }
           .width('100%')
-          .height('100%')
-          .justifyContent(FlexAlign.SpaceBetween)
+          .alignItems(HorizontalAlign.Center)
+          .position({ top: 0 })
+          .hitTestBehavior(HitTestMode.Transparent)
+
+          // Bottom info bar
+          Column() {
+            if (this.illustPageCount > 1) {
+              Row() {
+                ForEach(Array.from<undefined, number>({ length: this.illustPageCount }, (_, i) => i), (index: number) => {
+                  Circle()
+                    .width(6).height(6)
+                    .fill(index === this.currentIndex ? Color.White : '#66FFFFFF')
+                    .margin({ left: 3, right: 3 })
+                }, (index: number) => String(index))
+              }
+              .width('100%')
+              .justifyContent(FlexAlign.Center)
+              .padding({ bottom: 8 })
+            }
+
+            Text(this.detail.illustTitle)
+              .fontSize(14)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(Color.White)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+            Text(this.detail.userName)
+              .fontSize(12)
+              .fontColor(Color.White)
+              .maxLines(1)
+              .margin({ top: 2 })
+            if (this.downloadFail) {
+              Text('保存失败').fontSize(12).fontColor('#FF4D4F').margin({ top: 4 })
+            }
+          }
+          .width('100%')
+          .padding(16)
+          .alignItems(HorizontalAlign.Start)
+          .position({ bottom: 0 })
+          .backgroundColor('#80000000')
           .hitTestBehavior(HitTestMode.Transparent)
         }
         .width('100%')

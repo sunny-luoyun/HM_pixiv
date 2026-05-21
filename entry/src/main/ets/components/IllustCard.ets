@@ -22,19 +22,32 @@ export struct IllustCard {
   build() {
     Column() {
       Column() {
-        if (this.localUrl) {
-          Image(this.localUrl)
-            .width('100%')
-            .height(150)
-            .objectFit(ImageFit.Cover)
-            .borderRadius({ topLeft: 12, topRight: 12 })
-        } else {
-          Column()
-            .width('100%')
-            .height(150)
-            .backgroundColor($r('app.color.loading_card'))
-            .borderRadius({ topLeft: 12, topRight: 12 })
+        Stack() {
+          if (this.localUrl) {
+            Image(this.localUrl)
+              .width('100%')
+              .height(150)
+              .objectFit(ImageFit.Cover)
+              .borderRadius({ topLeft: 12, topRight: 12 })
+          } else {
+            Column()
+              .width('100%')
+              .height(150)
+              .backgroundColor($r('app.color.loading_card'))
+              .borderRadius({ topLeft: 12, topRight: 12 })
+          }
+          if (this.item.pageCount > 1) {
+            Text(`${this.item.pageCount}页`)
+              .fontSize(11)
+              .fontColor(Color.White)
+              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+              .backgroundColor('#AA000000')
+              .borderRadius(8)
+              .position({ top: 6, right: 6 })
+          }
         }
+        .width('100%')
+        .height(150)
         Text(this.item.title)
           .fontSize(13)
           .fontWeight(FontWeight.Medium)

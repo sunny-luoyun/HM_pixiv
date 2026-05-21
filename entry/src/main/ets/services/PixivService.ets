@@ -912,19 +912,65 @@ export class PixivService {
     return PixivService.request<IllustDetailResponse>(path);
   }
 
-  static async saveImageToGallery(context: Context, imageUrl: string, fileName: string): Promise<boolean> {
-    const cachePath = await PixivService.cacheImage(imageUrl, fileName);
-    if (!cachePath) return false;
-    const filePath = cachePath.replace('file://', '');
+  static generatePageUrls(baseUrl: string, pageCount: number): string[] {
+    if (!baseUrl || pageCount <= 1) return [baseUrl];
+    const urls: string[] = [];
+    for (let i = 0; i < pageCount; i++) {
+      urls.push(baseUrl.replace(/_p(\d+)/, `_p${i}`));
+    }
+    return urls;
+  }
+
+  static convertToOriginalUrl(regularUrl: string): string {
+    if (!regularUrl) return '';
+    return regularUrl
+      .replace(/\/c\/[^/]+\/img-master\//, '/img-original/')
+      .replace('_master1200', '');
+  }
+
+  static detectImageExt(filePath: string): string | null {
     try {
+      const file = fileIo.openSync(filePath, fileIo.OpenMode.READ_ONLY);
+      const buf = new ArrayBuffer(8);
+      fileIo.readSync(file.fd, buf);
+      fileIo.closeSync(file);
+      const arr = new Uint8Array(buf);
+      if (arr[0] === 0x89 && arr[1] === 0x50 && arr[2] === 0x4E && arr[3] === 0x47) return 'png';
+      if (arr[0] === 0xFF && arr[1] === 0xD8 && arr[2] === 0xFF) return 'jpg';
+      if (arr[0] === 0x47 && arr[1] === 0x49 && arr[2] === 0x46) return 'gif';
+      if (arr[0] === 0x52 && arr[1] === 0x49 && arr[2] === 0x46 && arr[3] === 0x46) return 'webp';
+      if (arr[0] === 0x42 && arr[1] === 0x4D) return 'bmp';
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static async saveImageToGallery(context: Context, source: string, fileName: string): Promise<boolean> {
+    if (!source) {
+      console.error('saveImageToGallery: 图片源为空');
+      return false;
+    }
+    let filePath: string;
+    if (source.startsWith('file://')) {
+      filePath = source.slice(7);
+    } else {
+      const cachePath = await PixivService.cacheImage(source, fileName);
+      if (!cachePath) return false;
+      filePath = cachePath.replace('file://', '');
+    }
+    try {
+      const ext = PixivService.detectImageExt(filePath);
+      if (!ext) {
+        console.error('保存到相册: 下载的文件不是可识别的图片格式');
+        return false;
+      }
       const helper = photoAccessHelper.getPhotoAccessHelper(context);
-      const uri = await helper.createAsset(photoAccessHelper.PhotoType.IMAGE, 'jpg');
+      const uri = await helper.createAsset(photoAccessHelper.PhotoType.IMAGE, ext);
       const dstFile = fileIo.openSync(uri, fileIo.OpenMode.WRITE_ONLY);
       const srcFile = fileIo.openSync(filePath, fileIo.OpenMode.READ_ONLY);
       const stat = fileIo.statSync(filePath);
-      const buf = new ArrayBuffer(stat.size);
-      fileIo.readSync(srcFile.fd, buf);
-      fileIo.writeSync(dstFile.fd, buf);
+      fileIo.copyFileSync(srcFile.fd, dstFile.fd);
       fileIo.closeSync(srcFile);
       fileIo.closeSync(dstFile);
       console.info('✅ 图片已保存到相册:', fileName);
