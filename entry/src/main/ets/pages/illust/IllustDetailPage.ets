@@ -145,25 +145,35 @@ struct IllustDetailPage {
 
           Column() {
             Row() {
-              Text('‹')
-                .fontSize(28)
-                .fontColor(Color.White)
-                .onClick(() => router.back())
+              Button({ type: ButtonType.Circle }) {
+                Text('←')
+                  .fontSize(20)
+                  .fontColor(Color.White)
+              }
+              .width(40).height(40)
+              .backgroundColor('#33FFFFFF')
+              .onClick(() => router.back())
+
               Blank()
+
               if (this.isDownloading) {
                 LoadingProgress().width(20).height(20).color(Color.White)
               } else if (this.downloadSuccess) {
                 Text('✓ 已保存').fontSize(12).fontColor('#52C41A')
               } else {
-                Text('下载')
-                  .fontSize(14)
-                  .fontColor(Color.White)
-                  .onClick(() => this.handleDownload())
+                Button({ type: ButtonType.Circle }) {
+                  Text('↓')
+                    .fontSize(18)
+                    .fontColor(Color.White)
+                }
+                .width(40).height(40)
+                .backgroundColor('#33FFFFFF')
+                .onClick(() => this.handleDownload())
               }
             }
             .width('100%')
             .padding({ left: 16, right: 16, top: 8 })
-            .height(44)
+            .height(52)
 
             Blank()
 

@@ -151,8 +151,8 @@ struct FollowingPage {
       Blank()
     }
     .width('100%')
-    .height(48)
+    .height(52)
     .padding({ left: 16, right: 16 })
-    .backgroundColor($r('app.color.loading_card'))
+    .backgroundColor($r('app.color.glass_bg'))
   }
 }

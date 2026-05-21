@@ -24,34 +24,47 @@ export struct UserCard {
     Row() {
       if (this.localAvatar) {
         Image(this.localAvatar)
-          .width(44)
-          .height(44)
+          .width(48)
+          .height(48)
           .objectFit(ImageFit.Cover)
-          .borderRadius(22)
+          .borderRadius(24)
       } else {
         Text('👤')
           .fontSize(24)
-          .width(44)
-          .height(44)
-          .borderRadius(22)
+          .width(48)
+          .height(48)
+          .borderRadius(24)
           .backgroundColor($r('app.color.loading_card'))
           .textAlign(TextAlign.Center)
       }
 
-      Text(this.item.name)
-        .fontSize(16)
-        .fontWeight(FontWeight.Medium)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .margin({ left: 12 })
-        .layoutWeight(1)
+      Column() {
+        Text(this.item.name)
+          .fontSize(16)
+          .fontWeight(FontWeight.Medium)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+        if (this.item.comment) {
+          Text(this.item.comment)
+            .fontSize(12)
+            .fontColor($r('app.color.text_secondary'))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .margin({ top: 2 })
+        }
+      }
+      .alignItems(HorizontalAlign.Start)
+      .margin({ left: 14 })
+      .layoutWeight(1)
     }
     .width('100%')
-    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
-    .backgroundColor($r('app.color.loading_card'))
-    .borderRadius(12)
+    .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+    .backgroundColor($r('app.color.card_bg'))
+    .borderRadius(14)
     .margin({ bottom: 10 })
     .alignItems(VerticalAlign.Center)
+    .shadow({ radius: 8, color: $r('app.color.card_shadow'), offsetY: 2 })
     .onClick(() => {
       router.pushUrl({
         url: 'pages/user/UserProfilePage',

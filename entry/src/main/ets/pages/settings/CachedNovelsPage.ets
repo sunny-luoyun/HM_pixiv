@@ -255,8 +255,9 @@ export struct CachedNovelsPage {
     }
     .width('100%')
     .padding(14)
-    .backgroundColor($r('app.color.loading_card'))
-    .borderRadius(12)
+    .backgroundColor($r('app.color.card_bg'))
+    .borderRadius(14)
+    .shadow({ radius: 4, color: $r('app.color.card_shadow'), offsetY: 1 })
     .onClick(() => {
       this.openAuthorDetail(ag);
     })

@@ -208,13 +208,14 @@ export struct NovelCard {
         this.CacheButton()
       }
       .width('100%')
-      .margin({ top: 10 })
+      .margin({ top: 12 })
     }
     .width('100%')
-    .padding(12)
-    .backgroundColor($r('app.color.loading_card'))
-    .borderRadius(12)
-    .margin({ bottom: 10 })
+    .padding(14)
+    .backgroundColor($r('app.color.card_bg'))
+    .borderRadius(14)
+    .margin({ bottom: 12 })
+    .shadow({ radius: 8, color: $r('app.color.card_shadow'), offsetY: 2 })
   }
 
   @Builder
@@ -265,8 +266,8 @@ export struct NovelCard {
         .width(80)
         .height(110)
         .objectFit(ImageFit.Cover)
-        .borderRadius(6)
-        .margin({ right: 12 })
+        .borderRadius(8)
+        .margin({ right: 14 })
     } else {
       Column() {
         Text('📄')
@@ -277,8 +278,8 @@ export struct NovelCard {
       .justifyContent(FlexAlign.Center)
       .alignItems(HorizontalAlign.Center)
       .backgroundColor($r('app.color.loading_card'))
-      .borderRadius(6)
-      .margin({ right: 12 })
+      .borderRadius(8)
+      .margin({ right: 14 })
     }
   }
 

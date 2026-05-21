@@ -2,7 +2,7 @@
   "color": [
     {
       "name": "page_background",
-      "value": "#000000"
+      "value": "#FF0D0D10"
     },
     {
       "name": "tab_normal",
@@ -14,15 +14,19 @@
     },
     {
       "name": "text_secondary",
-      "value": "#FFCCCCCC"
+      "value": "#FF98989D"
     },
     {
       "name": "loading_card",
-      "value": "#FF2A2A2A"
+      "value": "#FF1C1C1E"
+    },
+    {
+      "name": "card_bg",
+      "value": "#FF1C1C1E"
     },
     {
       "name": "user_name",
-      "value": "#FFE0E0E0"
+      "value": "#FFE5E5EA"
     },
     {
       "name": "surface_secondary",
@@ -30,7 +34,7 @@
     },
     {
       "name": "divider",
-      "value": "#FF333333"
+      "value": "#FF38383A"
     },
     {
       "name": "start_window_background",
@@ -42,10 +46,30 @@
     },
     {
       "name": "error_light",
-      "value": "#FFFF6961"
+      "value": "#FF4A2024"
     },
     {
       "name": "background",
+      "value": "#FF1C1C1E"
+    },
+    {
+      "name": "glass_bg",
+      "value": "#CC1C1C1E"
+    },
+    {
+      "name": "glass_stroke",
+      "value": "#33FFFFFF"
+    },
+    {
+      "name": "card_shadow",
+      "value": "#4C000000"
+    },
+    {
+      "name": "tab_bar_bg",
+      "value": "#CC1C1C1E"
+    },
+    {
+      "name": "surface_primary",
       "value": "#FF1C1C1E"
     }
   ]

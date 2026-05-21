@@ -2,6 +2,7 @@ import { PixivService, IllustBookmark, NovelBookmark } from '../../services/Pixi
 import { NovelCard } from '../../components/NovelCard';
 import { IllustCard } from '../../components/IllustCard';
 import { PullToRefresh } from '../../components/PullToRefresh';
+import { SegmentedTabBar } from '../../components/SegmentedTabBar';
 
 const PAGE_SIZE = 30;
 const MAX_EMPTY_RETRIES = 3;
@@ -173,152 +174,170 @@ export struct HomePage {
     .justifyContent(FlexAlign.Center)
   }
 
+  handleTabChange(index: number) {
+    this.currentTab = index;
+    if (index === 1 && this.novelWorks.length === 0 && !this.isLoadingNovel) {
+      this.loadNovels();
+    }
+  }
+
   @Builder
   TabsSection() {
-    Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
-      TabContent() {
-        if (this.isLoadingIllust) {
-          LoadingProgress().width(40).height(40).margin({ top: 100 })
-        } else if (this.illustError) {
-          Column() {
-            Text(this.illustError).fontSize(14).fontColor($r('app.color.text_secondary'))
-            Button('重试').margin({ top: 12 }).onClick(() => this.loadIllusts())
-          }
-          .margin({ top: 80 })
-          .alignItems(HorizontalAlign.Center)
-        } else if (this.illustWorks.length === 0) {
-          Text('暂无推荐插画').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
-        } else {
-          PullToRefresh({ refreshing: this.isRefreshingIllust, onRefresh: (): Promise<void> => this.loadIllusts() }) {
-            Scroll() {
-              Column() {
-                Grid() {
-                  ForEach(this.illustWorks, (item: IllustBookmark) => {
-                  GridItem() {
-                    IllustCard({ item: item })
-                  }
-                }, (item: IllustBookmark) => item.id)
-              }
-              .columnsTemplate('1fr 1fr')
-              .columnsGap(8)
-              .rowsGap(8)
-              .padding(12)
-              .width('100%')
+    Column() {
+      SegmentedTabBar({
+        tabs: ['插画', '小说'],
+        currentIndex: this.currentTab,
+        onChange: (index: number): void => this.handleTabChange(index)
+      })
+      .padding({ left: 16, right: 16, top: 8, bottom: 4 })
 
-              if (this.isLoadingMoreIllust) {
-                LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
-              }
-              if (!this.isLoadingMoreIllust && !this.hasMoreIllust && this.illustWorks.length > 0) {
+      Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
+        TabContent() {
+          if (this.isLoadingIllust) {
+            LoadingProgress().width(40).height(40).margin({ top: 100 })
+          } else if (this.illustError) {
+            Column() {
+              Text(this.illustError).fontSize(14).fontColor($r('app.color.text_secondary'))
+              Button('重试').margin({ top: 12 }).onClick(() => this.loadIllusts())
+            }
+            .margin({ top: 80 })
+            .alignItems(HorizontalAlign.Center)
+          } else if (this.illustWorks.length === 0) {
+            Text('暂无推荐插画').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
+          } else {
+            PullToRefresh({ refreshing: this.isRefreshingIllust, onRefresh: (): Promise<void> => this.loadIllusts() }) {
+              Scroll() {
                 Column() {
-                  Text('- 已显示全部作品 -')
-                    .fontSize(12)
-                    .fontColor($r('app.color.text_secondary'))
-                    .width('100%')
-                    .textAlign(TextAlign.Center)
-                  Button('刷新推荐')
-                    .fontSize(13)
-                    .fontColor(Color.White)
-                    .backgroundColor($r('app.color.tab_selected'))
-                    .borderRadius(18)
-                    .height(36)
-                    .padding({ left: 20, right: 20 })
-                    .margin({ top: 12 })
-                    .onClick(() => {
-                      this.loadIllusts();
-                    })
+                  Grid() {
+                    ForEach(this.illustWorks, (item: IllustBookmark) => {
+                    GridItem() {
+                      IllustCard({ item: item })
+                    }
+                  }, (item: IllustBookmark) => item.id)
                 }
+                .columnsTemplate('1fr 1fr')
+                .columnsGap(8)
+                .rowsGap(8)
+                .padding(12)
                 .width('100%')
-                .alignItems(HorizontalAlign.Center)
-                .margin({ top: 8, bottom: 24 })
+
+                if (this.isLoadingMoreIllust) {
+                  LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
+                }
+                if (!this.isLoadingMoreIllust && !this.hasMoreIllust && this.illustWorks.length > 0) {
+                  Column() {
+                    Text('- 已显示全部作品 -')
+                      .fontSize(12)
+                      .fontColor($r('app.color.text_secondary'))
+                      .width('100%')
+                      .textAlign(TextAlign.Center)
+                    Button('刷新推荐')
+                      .fontSize(13)
+                      .fontColor(Color.White)
+                      .backgroundColor($r('app.color.tab_selected'))
+                      .borderRadius(18)
+                      .height(36)
+                      .padding({ left: 20, right: 20 })
+                      .margin({ top: 12 })
+                      .onClick(() => {
+                        this.loadIllusts();
+                      })
+                  }
+                  .width('100%')
+                  .alignItems(HorizontalAlign.Center)
+                  .margin({ top: 8, bottom: 24 })
+                }
               }
+              .width('100%')
             }
             .width('100%')
-          }
-          .width('100%')
-          .onReachEnd(() => {
-            if (this.hasMoreIllust && !this.isLoadingMoreIllust) {
-              this.loadMoreIllusts();
+            .onReachEnd(() => {
+              if (this.hasMoreIllust && !this.isLoadingMoreIllust) {
+                this.loadMoreIllusts();
+              }
+            })
             }
-          })
           }
         }
-      }
-      .tabBar('插画')
+        .tabBar('')
 
-      TabContent() {
-        if (this.isLoadingNovel) {
-          LoadingProgress().width(40).height(40).margin({ top: 100 })
-        } else if (this.novelError) {
-          Column() {
-            Text(this.novelError).fontSize(14).fontColor($r('app.color.text_secondary'))
-            Button('重试').margin({ top: 12 }).onClick(() => this.loadNovels())
-          }
-          .margin({ top: 80 })
-          .alignItems(HorizontalAlign.Center)
-        } else if (this.novelWorks.length === 0) {
-          Text('暂无推荐小说').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
-        } else {
-          PullToRefresh({ refreshing: this.isRefreshingNovel, onRefresh: (): Promise<void> => this.loadNovels() }) {
-            Scroll() {
-              Column() {
-                List() {
-                  ForEach(this.novelWorks, (item: NovelBookmark) => {
-                  ListItem() {
-                    NovelCard({ item: item })
-                  }
-                }, (item: NovelBookmark) => item.id)
-              }
-              .padding(12)
-              .width('100%')
-
-              if (this.isLoadingMoreNovel) {
-                LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
-              }
-              if (!this.isLoadingMoreNovel && !this.hasMoreNovel && this.novelWorks.length > 0) {
+        TabContent() {
+          if (this.isLoadingNovel) {
+            LoadingProgress().width(40).height(40).margin({ top: 100 })
+          } else if (this.novelError) {
+            Column() {
+              Text(this.novelError).fontSize(14).fontColor($r('app.color.text_secondary'))
+              Button('重试').margin({ top: 12 }).onClick(() => this.loadNovels())
+            }
+            .margin({ top: 80 })
+            .alignItems(HorizontalAlign.Center)
+          } else if (this.novelWorks.length === 0) {
+            Text('暂无推荐小说').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
+          } else {
+            PullToRefresh({ refreshing: this.isRefreshingNovel, onRefresh: (): Promise<void> => this.loadNovels() }) {
+              Scroll() {
                 Column() {
-                  Text('- 已显示全部作品 -')
-                    .fontSize(12)
-                    .fontColor($r('app.color.text_secondary'))
-                    .width('100%')
-                    .textAlign(TextAlign.Center)
-                  Button('刷新推荐')
-                    .fontSize(13)
-                    .fontColor(Color.White)
-                    .backgroundColor($r('app.color.tab_selected'))
-                    .borderRadius(18)
-                    .height(36)
-                    .padding({ left: 20, right: 20 })
-                    .margin({ top: 12 })
-                    .onClick(() => {
-                      this.loadNovels();
-                    })
+                  List() {
+                    ForEach(this.novelWorks, (item: NovelBookmark) => {
+                    ListItem() {
+                      NovelCard({ item: item })
+                    }
+                  }, (item: NovelBookmark) => item.id)
                 }
+                .padding(12)
                 .width('100%')
-                .alignItems(HorizontalAlign.Center)
-                .margin({ top: 8, bottom: 24 })
+
+                if (this.isLoadingMoreNovel) {
+                  LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
+                }
+                if (!this.isLoadingMoreNovel && !this.hasMoreNovel && this.novelWorks.length > 0) {
+                  Column() {
+                    Text('- 已显示全部作品 -')
+                      .fontSize(12)
+                      .fontColor($r('app.color.text_secondary'))
+                      .width('100%')
+                      .textAlign(TextAlign.Center)
+                    Button('刷新推荐')
+                      .fontSize(13)
+                      .fontColor(Color.White)
+                      .backgroundColor($r('app.color.tab_selected'))
+                      .borderRadius(18)
+                      .height(36)
+                      .padding({ left: 20, right: 20 })
+                      .margin({ top: 12 })
+                      .onClick(() => {
+                        this.loadNovels();
+                      })
+                  }
+                  .width('100%')
+                  .alignItems(HorizontalAlign.Center)
+                  .margin({ top: 8, bottom: 24 })
+                }
               }
+              .width('100%')
             }
             .width('100%')
-          }
-          .width('100%')
-          .onReachEnd(() => {
-            if (this.hasMoreNovel && !this.isLoadingMoreNovel) {
-              this.loadMoreNovels();
+            .onReachEnd(() => {
+              if (this.hasMoreNovel && !this.isLoadingMoreNovel) {
+                this.loadMoreNovels();
+              }
+            })
             }
-          })
           }
         }
+        .tabBar('')
       }
-      .tabBar('小说')
+      .vertical(false)
+      .barWidth(0)
+      .barHeight(0)
+      .onChange((index: number) => {
+        animateTo({ curve: Curve.Friction, duration: 250 }, () => {
+          this.currentTab = index;
+        });
+        this.handleTabChange(index);
+      })
+      .layoutWeight(1)
     }
-    .vertical(false)
-    .onChange((index: number) => {
-      this.currentTab = index;
-      if (index === 1 && this.novelWorks.length === 0 && !this.isLoadingNovel) {
-        this.loadNovels();
-      }
-    })
     .width('100%')
-    .layoutWeight(1)
   }
 }

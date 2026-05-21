@@ -188,10 +188,19 @@ export struct SettingsPage {
         Blank()
       }
       .width('100%')
-      .padding({ left: 24, right: 24, top: 16 })
+      .padding({ left: 24, right: 24, top: 12, bottom: 12 })
+      .backgroundColor($r('app.color.glass_bg'))
 
-      this.DeepSeekApiKeyCard()
-      this.CacheSection()
+      Scroll() {
+        Column() {
+          this.DeepSeekApiKeyCard()
+          this.CacheSection()
+        }
+        .width('100%')
+        .padding({ top: 12 })
+      }
+      .width('100%')
+      .layoutWeight(1)
     }
     .width('100%')
     .height('100%')
@@ -356,9 +365,10 @@ export struct SettingsPage {
     }
     .width('100%')
     .padding(16)
-    .backgroundColor($r('app.color.loading_card'))
-    .borderRadius(12)
-    .margin({ bottom: 10 })
+    .backgroundColor($r('app.color.card_bg'))
+    .borderRadius(14)
+    .shadow({ radius: 4, color: $r('app.color.card_shadow'), offsetY: 1 })
+    .margin({ bottom: 12 })
   }
 
   @Builder
@@ -399,9 +409,10 @@ export struct SettingsPage {
       }
       .width('100%')
       .padding(16)
-      .backgroundColor($r('app.color.loading_card'))
-      .borderRadius(12)
-      .margin({ bottom: 10 })
+      .backgroundColor($r('app.color.card_bg'))
+      .borderRadius(14)
+      .shadow({ radius: 4, color: $r('app.color.card_shadow'), offsetY: 1 })
+      .margin({ bottom: 12 })
 
       Column() {
         Row() {
@@ -439,9 +450,10 @@ export struct SettingsPage {
       }
       .width('100%')
       .padding(16)
-      .backgroundColor($r('app.color.loading_card'))
-      .borderRadius(12)
-      .margin({ bottom: 10 })
+      .backgroundColor($r('app.color.card_bg'))
+      .borderRadius(14)
+      .shadow({ radius: 4, color: $r('app.color.card_shadow'), offsetY: 1 })
+      .margin({ bottom: 12 })
     }
     .width('100%')
     .padding({ left: 16, right: 16 })

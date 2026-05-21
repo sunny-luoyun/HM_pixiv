@@ -2,6 +2,7 @@ import { PixivService, IllustBookmark, NovelBookmark } from '../../services/Pixi
 import { NovelCard } from '../../components/NovelCard';
 import { IllustCard } from '../../components/IllustCard';
 import { PullToRefresh } from '../../components/PullToRefresh';
+import { SegmentedTabBar } from '../../components/SegmentedTabBar';
 
 @Component
 export struct LatestPage {
@@ -162,120 +163,138 @@ export struct LatestPage {
 
   @Builder
   TabsSection() {
-    Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
-      TabContent() {
-        if (this.isLoadingIllust) {
-          LoadingProgress().width(40).height(40).margin({ top: 100 })
-        } else if (this.illustError) {
-          Column() {
-            Text(this.illustError).fontSize(14).fontColor($r('app.color.text_secondary'))
-            Button('重试').margin({ top: 12 }).onClick(() => this.loadIllusts())
-          }
-          .margin({ top: 80 })
-          .alignItems(HorizontalAlign.Center)
-        } else if (this.illustWorks.length === 0) {
-          Text('没有更多最新插画').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
-        } else {
-          PullToRefresh({ refreshing: this.isRefreshingIllust, onRefresh: (): Promise<void> => this.loadIllusts() }) {
-            Scroll() {
-              Column() {
-                Grid() {
-                  ForEach(this.illustWorks, (item: IllustBookmark) => {
-                  GridItem() {
-                    IllustCard({ item: item })
-                  }
-                }, (item: IllustBookmark) => item.id)
-              }
-              .columnsTemplate('1fr 1fr')
-              .columnsGap(8)
-              .rowsGap(8)
-              .padding(12)
-              .width('100%')
-
-              if (this.isLoadingMoreIllust) {
-                LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
-              }
-              if (!this.isLoadingMoreIllust && this.illustPage >= this.illustPages && this.illustWorks.length > 0) {
-                Text('- 已显示全部作品 -')
-                  .fontSize(12)
-                  .fontColor($r('app.color.text_secondary'))
-                  .width('100%')
-                  .textAlign(TextAlign.Center)
-                  .margin({ top: 8, bottom: 24 })
-              }
-            }
-            .width('100%')
-          }
-          .width('100%')
-          .onReachEnd(() => {
-            if (!this.isLoadingMoreIllust && this.illustPage < this.illustPages) {
-              this.loadMoreIllusts();
-            }
-          })
+    Column() {
+      SegmentedTabBar({
+        tabs: ['插画', '小说'],
+        currentIndex: this.currentTab,
+        onChange: (index: number) => {
+          this.currentTab = index;
+          if (index === 1 && this.novelWorks.length === 0 && !this.isLoadingNovel) {
+            this.loadNovels();
           }
         }
-      }
-      .tabBar('插画')
+      })
+      .padding({ left: 16, right: 16, top: 8, bottom: 4 })
 
-      TabContent() {
-        if (this.isLoadingNovel) {
-          LoadingProgress().width(40).height(40).margin({ top: 100 })
-        } else if (this.novelError) {
-          Column() {
-            Text(this.novelError).fontSize(14).fontColor($r('app.color.text_secondary'))
-            Button('重试').margin({ top: 12 }).onClick(() => this.loadNovels())
-          }
-          .margin({ top: 80 })
-          .alignItems(HorizontalAlign.Center)
-        } else if (this.novelWorks.length === 0) {
-          Text('没有更多最新小说').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
-        } else {
-          PullToRefresh({ refreshing: this.isRefreshingNovel, onRefresh: (): Promise<void> => this.loadNovels() }) {
-            Scroll() {
-              Column() {
-                List() {
-                  ForEach(this.novelWorks, (item: NovelBookmark) => {
-                  ListItem() {
-                    NovelCard({ item: item })
-                  }
-                }, (item: NovelBookmark) => item.id)
+      Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
+        TabContent() {
+          if (this.isLoadingIllust) {
+            LoadingProgress().width(40).height(40).margin({ top: 100 })
+          } else if (this.illustError) {
+            Column() {
+              Text(this.illustError).fontSize(14).fontColor($r('app.color.text_secondary'))
+              Button('重试').margin({ top: 12 }).onClick(() => this.loadIllusts())
+            }
+            .margin({ top: 80 })
+            .alignItems(HorizontalAlign.Center)
+          } else if (this.illustWorks.length === 0) {
+            Text('没有更多最新插画').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
+          } else {
+            PullToRefresh({ refreshing: this.isRefreshingIllust, onRefresh: (): Promise<void> => this.loadIllusts() }) {
+              Scroll() {
+                Column() {
+                  Grid() {
+                    ForEach(this.illustWorks, (item: IllustBookmark) => {
+                    GridItem() {
+                      IllustCard({ item: item })
+                    }
+                  }, (item: IllustBookmark) => item.id)
+                }
+                .columnsTemplate('1fr 1fr')
+                .columnsGap(8)
+                .rowsGap(8)
+                .padding(12)
+                .width('100%')
+
+                if (this.isLoadingMoreIllust) {
+                  LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
+                }
+                if (!this.isLoadingMoreIllust && this.illustPage >= this.illustPages && this.illustWorks.length > 0) {
+                  Text('- 已显示全部作品 -')
+                    .fontSize(12)
+                    .fontColor($r('app.color.text_secondary'))
+                    .width('100%')
+                    .textAlign(TextAlign.Center)
+                    .margin({ top: 8, bottom: 24 })
+                }
               }
-              .padding(12)
               .width('100%')
-
-              if (this.isLoadingMoreNovel) {
-                LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
-              }
-              if (!this.isLoadingMoreNovel && this.novelPage >= this.novelPages && this.novelWorks.length > 0) {
-                Text('- 已显示全部作品 -')
-                  .fontSize(12)
-                  .fontColor($r('app.color.text_secondary'))
-                  .width('100%')
-                  .textAlign(TextAlign.Center)
-                  .margin({ top: 8, bottom: 24 })
-              }
             }
             .width('100%')
-          }
-          .width('100%')
-          .onReachEnd(() => {
-            if (!this.isLoadingMoreNovel && this.novelPage < this.novelPages) {
-              this.loadMoreNovels();
+            .onReachEnd(() => {
+              if (!this.isLoadingMoreIllust && this.illustPage < this.illustPages) {
+                this.loadMoreIllusts();
+              }
+            })
             }
-          })
           }
         }
+        .tabBar('')
+
+        TabContent() {
+          if (this.isLoadingNovel) {
+            LoadingProgress().width(40).height(40).margin({ top: 100 })
+          } else if (this.novelError) {
+            Column() {
+              Text(this.novelError).fontSize(14).fontColor($r('app.color.text_secondary'))
+              Button('重试').margin({ top: 12 }).onClick(() => this.loadNovels())
+            }
+            .margin({ top: 80 })
+            .alignItems(HorizontalAlign.Center)
+          } else if (this.novelWorks.length === 0) {
+            Text('没有更多最新小说').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
+          } else {
+            PullToRefresh({ refreshing: this.isRefreshingNovel, onRefresh: (): Promise<void> => this.loadNovels() }) {
+              Scroll() {
+                Column() {
+                  List() {
+                    ForEach(this.novelWorks, (item: NovelBookmark) => {
+                    ListItem() {
+                      NovelCard({ item: item })
+                    }
+                  }, (item: NovelBookmark) => item.id)
+                }
+                .padding(12)
+                .width('100%')
+
+                if (this.isLoadingMoreNovel) {
+                  LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
+                }
+                if (!this.isLoadingMoreNovel && this.novelPage >= this.novelPages && this.novelWorks.length > 0) {
+                  Text('- 已显示全部作品 -')
+                    .fontSize(12)
+                    .fontColor($r('app.color.text_secondary'))
+                    .width('100%')
+                    .textAlign(TextAlign.Center)
+                    .margin({ top: 8, bottom: 24 })
+                }
+              }
+              .width('100%')
+            }
+            .width('100%')
+            .onReachEnd(() => {
+              if (!this.isLoadingMoreNovel && this.novelPage < this.novelPages) {
+                this.loadMoreNovels();
+              }
+            })
+            }
+          }
+        }
+        .tabBar('')
       }
-      .tabBar('小说')
+      .vertical(false)
+      .barWidth(0)
+      .barHeight(0)
+      .onChange((index: number) => {
+        animateTo({ curve: Curve.Friction, duration: 250 }, () => {
+          this.currentTab = index;
+        });
+        if (index === 1 && this.novelWorks.length === 0 && !this.isLoadingNovel) {
+          this.loadNovels();
+        }
+      })
+      .layoutWeight(1)
     }
-    .vertical(false)
-    .onChange((index: number) => {
-      this.currentTab = index;
-      if (index === 1 && this.novelWorks.length === 0 && !this.isLoadingNovel) {
-        this.loadNovels();
-      }
-    })
     .width('100%')
-    .layoutWeight(1)
   }
 }

@@ -3,6 +3,7 @@ import { AppApiService } from '../../services/AppApiService';
 import { PixivService, IllustBookmark, NovelBookmark, BookmarkData, ProfileIllust, ProfileNovel } from '../../services/PixivService';
 import { IllustCard } from '../../components/IllustCard';
 import { NovelCard } from '../../components/NovelCard';
+import { SegmentedTabBar } from '../../components/SegmentedTabBar';
 
 const PAGE_SIZE = 30;
 
@@ -434,9 +435,9 @@ struct UserProfilePage {
       Blank()
     }
     .width('100%')
-    .height(48)
+    .height(52)
     .padding({ left: 16, right: 16 })
-    .backgroundColor($r('app.color.loading_card'))
+    .backgroundColor($r('app.color.glass_bg'))
   }
 
   @Builder
@@ -482,31 +483,47 @@ struct UserProfilePage {
 
   @Builder
   TabsSection() {
-    Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
-      TabContent() {
-        this.IllustTabContent()
-      }
-      .tabBar('插画')
+    Column() {
+      SegmentedTabBar({
+        tabs: ['插画', '小说', '收藏插画', '收藏小说'],
+        currentIndex: this.currentTab,
+        onChange: (index: number): void => this.handleTabChange(index)
+      })
+      .padding({ left: 16, right: 16, top: 8, bottom: 4 })
 
-      TabContent() {
-        this.NovelTabContent()
-      }
-      .tabBar('小说')
+      Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
+        TabContent() {
+          this.IllustTabContent()
+        }
+        .tabBar('')
 
-      TabContent() {
-        this.BookmarkIllustTabContent()
-      }
-      .tabBar('收藏插画')
+        TabContent() {
+          this.NovelTabContent()
+        }
+        .tabBar('')
 
-      TabContent() {
-        this.BookmarkNovelTabContent()
+        TabContent() {
+          this.BookmarkIllustTabContent()
+        }
+        .tabBar('')
+
+        TabContent() {
+          this.BookmarkNovelTabContent()
+        }
+        .tabBar('')
       }
-      .tabBar('收藏小说')
+      .vertical(false)
+      .barWidth(0)
+      .barHeight(0)
+      .onChange((index: number) => {
+        animateTo({ curve: Curve.Friction, duration: 250 }, () => {
+          this.currentTab = index;
+        });
+        this.handleTabChange(index);
+      })
+      .layoutWeight(1)
     }
-    .vertical(false)
-    .onChange((index: number) => { this.handleTabChange(index); })
     .width('100%')
-    .layoutWeight(1)
   }
 
   @Builder

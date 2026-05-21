@@ -25,21 +25,22 @@ export struct IllustCard {
         if (this.localUrl) {
           Image(this.localUrl)
             .width('100%')
-            .height(140)
+            .height(150)
             .objectFit(ImageFit.Cover)
-            .borderRadius({ topLeft: 8, topRight: 8 })
+            .borderRadius({ topLeft: 12, topRight: 12 })
         } else {
           Column()
             .width('100%')
-            .height(140)
+            .height(150)
             .backgroundColor($r('app.color.loading_card'))
-            .borderRadius({ topLeft: 8, topRight: 8 })
+            .borderRadius({ topLeft: 12, topRight: 12 })
         }
         Text(this.item.title)
-          .fontSize(12)
+          .fontSize(13)
+          .fontWeight(FontWeight.Medium)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .padding({ left: 6, right: 6, top: 4 })
+          .padding({ left: 10, right: 10, top: 8 })
       }
       .width('100%')
       .onClick(() => {
@@ -50,11 +51,11 @@ export struct IllustCard {
       })
 
       Text(this.item.userName)
-        .fontSize(10)
+        .fontSize(11)
         .fontColor($r('app.color.tab_selected'))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .padding({ left: 6, right: 6, top: 2, bottom: 6 })
+        .padding({ left: 10, right: 10, top: 2, bottom: 10 })
         .width('100%')
         .onClick(() => {
           router.pushUrl({
@@ -67,7 +68,8 @@ export struct IllustCard {
         })
     }
     .width('100%')
-    .backgroundColor($r('app.color.loading_card'))
-    .borderRadius(8)
+    .backgroundColor($r('app.color.card_bg'))
+    .borderRadius(12)
+    .shadow({ radius: 8, color: $r('app.color.card_shadow'), offsetY: 2 })
   }
 }

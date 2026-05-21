@@ -2,6 +2,7 @@ import { PixivService, IllustBookmark, NovelBookmark, UserSearchResult } from '.
 import { IllustCard } from '../../components/IllustCard';
 import { NovelCard } from '../../components/NovelCard';
 import { UserCard } from '../../components/UserCard';
+import { SegmentedTabBar } from '../../components/SegmentedTabBar';
 import inputMethod from '@ohos.inputMethod';
 import preferences from '@ohos.data.preferences';
 import common from '@ohos.app.ability.common';
@@ -272,11 +273,11 @@ export struct SearchPage {
     Row() {
       TextInput({ placeholder: '搜索插画/小说/用户...', text: this.keyword })
         .layoutWeight(1)
-        .height(40)
+        .height(44)
         .fontSize(14)
-        .borderRadius(20)
+        .borderRadius(22)
         .backgroundColor($r('app.color.surface_secondary'))
-        .padding({ left: 16, right: 16 })
+        .padding({ left: 18, right: 18 })
         .onChange((val: string) => { this.keyword = val; })
         .onSubmit(() => { this.onSearch(); })
         .onClick(() => {
@@ -286,20 +287,20 @@ export struct SearchPage {
         })
 
       Blank()
-        .width(8)
+        .width(10)
 
       Button('搜索')
         .fontSize(14)
         .fontColor(Color.White)
         .backgroundColor($r('app.color.tab_selected'))
-        .borderRadius(20)
-        .height(40)
-        .padding({ left: 20, right: 20 })
+        .borderRadius(22)
+        .height(44)
+        .padding({ left: 24, right: 24 })
         .onClick(() => { this.onSearch(); })
     }
     .width('100%')
-    .padding({ left: 12, right: 12, top: 8, bottom: 8 })
-    .backgroundColor($r('app.color.surface_secondary'))
+    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+    .backgroundColor($r('app.color.glass_bg'))
   }
 
   @Builder
@@ -315,12 +316,16 @@ export struct SearchPage {
           .fontColor($r('app.color.tab_selected'))
           .onClick(() => { this.clearHistory(); })
       }
-      .padding({ left: 16, right: 16, top: 12, bottom: 8 })
+      .padding({ left: 20, right: 20, top: 16, bottom: 8 })
 
       List() {
         ForEach(this.searchHistory, (item: string) => {
           ListItem() {
             Row() {
+              Text('◉')
+                .fontSize(12)
+                .fontColor($r('app.color.text_secondary'))
+                .margin({ right: 12 })
               Text(item)
                 .fontSize(14)
                 .textAlign(TextAlign.Start)
@@ -331,7 +336,7 @@ export struct SearchPage {
                 .padding({ left: 12, right: 4 })
                 .onClick(() => { this.removeFromHistory(item); })
             }
-            .padding({ left: 16, right: 16, top: 10, bottom: 10 })
+            .padding({ left: 20, right: 20, top: 12, bottom: 12 })
             .width('100%')
             .onClick(() => {
               this.keyword = item;
@@ -361,26 +366,42 @@ export struct SearchPage {
 
   @Builder
   TabsSection() {
-    Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
-      TabContent() {
-        this.IllustContent()
-      }
-      .tabBar('插画')
+    Column() {
+      SegmentedTabBar({
+        tabs: ['插画', '小说', '用户'],
+        currentIndex: this.currentTab,
+        onChange: (index: number): void => this.handleTabChange(index)
+      })
+      .padding({ left: 16, right: 16, top: 8, bottom: 4 })
 
-      TabContent() {
-        this.NovelContent()
-      }
-      .tabBar('小说')
+      Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
+        TabContent() {
+          this.IllustContent()
+        }
+        .tabBar('')
 
-      TabContent() {
-        this.UserContent()
+        TabContent() {
+          this.NovelContent()
+        }
+        .tabBar('')
+
+        TabContent() {
+          this.UserContent()
+        }
+        .tabBar('')
       }
-      .tabBar('用户')
+      .vertical(false)
+      .barWidth(0)
+      .barHeight(0)
+      .onChange((index: number) => {
+        animateTo({ curve: Curve.Friction, duration: 250 }, () => {
+          this.currentTab = index;
+        });
+        this.handleTabChange(index);
+      })
+      .layoutWeight(1)
     }
-    .vertical(false)
-    .onChange((index: number) => { this.handleTabChange(index); })
     .width('100%')
-    .layoutWeight(1)
   }
 
   @Builder

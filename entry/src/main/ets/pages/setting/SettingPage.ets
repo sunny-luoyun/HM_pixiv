@@ -38,16 +38,16 @@ export struct SettingPage {
   @Builder
   MenuSection() {
     Column() {
-      this.MenuItem('我的关注', () => {
+      this.MenuItem('◉', '我的关注', () => {
         router.pushUrl({ url: 'pages/setting/FollowingPage' });
       })
-      this.MenuItem('我的缓存', () => {
+      this.MenuItem('◎', '我的缓存', () => {
         router.pushUrl({ url: 'pages/settings/CachedNovelsPage' });
       })
-      this.MenuItem('我的收藏', () => {
+      this.MenuItem('✦', '我的收藏', () => {
         router.pushUrl({ url: 'pages/favorites/FavoritesPage' });
       })
-      this.MenuItem('设置', () => {
+      this.MenuItem('⚙', '设置', () => {
         router.pushUrl({ url: 'pages/settings/SettingsPage' });
       })
     }
@@ -57,22 +57,29 @@ export struct SettingPage {
   }
 
   @Builder
-  MenuItem(title: string, action: () => void) {
+  MenuItem(icon: string, title: string, action: () => void) {
     Row() {
+      Text(icon)
+        .fontSize(18)
+        .fontColor($r('app.color.tab_selected'))
+        .width(28)
+        .textAlign(TextAlign.Center)
       Text(title)
         .fontSize(16)
         .fontColor($r('app.color.user_name'))
+        .margin({ left: 12 })
       Blank()
       Text('›')
         .fontSize(20)
         .fontColor($r('app.color.text_secondary'))
     }
     .width('100%')
-    .height(50)
+    .height(54)
     .padding({ left: 16, right: 16 })
-    .backgroundColor($r('app.color.loading_card'))
-    .borderRadius(12)
-    .margin({ bottom: 10 })
+    .backgroundColor($r('app.color.card_bg'))
+    .borderRadius(14)
+    .margin({ bottom: 10})
+    .shadow({ radius: 4, color: $r('app.color.card_shadow'), offsetY: 1 })
     .onClick(action)
   }
 
@@ -101,8 +108,9 @@ export struct SettingPage {
         }
         .width('100%')
         .padding(16)
-        .backgroundColor($r('app.color.loading_card'))
-        .borderRadius(12)
+        .backgroundColor($r('app.color.card_bg'))
+        .borderRadius(14)
+        .shadow({ radius: 4, color: $r('app.color.card_shadow'), offsetY: 1 })
       } else {
         Row() {
           this.UserAvatar()
@@ -125,8 +133,9 @@ export struct SettingPage {
         }
         .width('100%')
         .padding(16)
-        .backgroundColor($r('app.color.loading_card'))
-        .borderRadius(12)
+        .backgroundColor($r('app.color.card_bg'))
+        .borderRadius(14)
+        .shadow({ radius: 4, color: $r('app.color.card_shadow'), offsetY: 1 })
       }
     }
     .margin({ top: 16, left: 16, right: 16 })
