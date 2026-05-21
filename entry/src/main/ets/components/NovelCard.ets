@@ -301,8 +301,6 @@ export struct NovelCard {
           .fontColor(this.hasTitleTranslation && !this.showOriginalTitle
             ? $r('app.color.tab_selected') : $r('app.color.user_name'))
           .layoutWeight(1)
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
           .onClick(() => this.handleTitleClick())
 
         if (this.hasTitleTranslation) {
