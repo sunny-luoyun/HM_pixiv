@@ -17,6 +17,7 @@ struct IllustDetailPage {
   @State downloadSuccess: boolean = false;
   @State downloadFail: boolean = false;
   @State illustPageCount: number = 1;
+  @State isActive: boolean = false;
 
   @State scaleValue: number = 1;
   @State translateX: number = 0;
@@ -31,6 +32,7 @@ struct IllustDetailPage {
   }
 
   async aboutToAppear() {
+    this.isActive = true;
     const params = router.getParams() as Record<string, Object>;
     this.illustId = params['id'] as string;
     if (!this.illustId) {
@@ -39,6 +41,11 @@ struct IllustDetailPage {
       return;
     }
     await this.loadDetail();
+  }
+
+  aboutToDisappear() {
+    this.isActive = false;
+    PixivService.cancelDownloadGroup(`detail_${this.illustId}`);
   }
 
   async loadDetail() {
@@ -52,19 +59,34 @@ struct IllustDetailPage {
         this.illustPageCount = pageCount;
         const urls = PixivService.generatePageUrls(res.body.urls.regular, pageCount);
         this.pageRegularUrls = urls;
-        const cachePromises = urls.map((url, i) =>
-          PixivService.cacheImage(url, `illust_${res.body.illustId}_pg${i}.jpg`)
-        );
-        const paths = await Promise.all(cachePromises);
-        this.localImageUrls = paths.filter(p => !!p) as string[];
+
+        this.localImageUrls = new Array<string>(pageCount).fill('');
+        this.isLoading = false;
+
+        if (!this.isActive) return;
+
+        const illustId = res.body.illustId;
+        const groupId = `detail_${illustId}`;
+        urls.forEach((url, i) => {
+          PixivService.cacheImage(url, `illust_${illustId}_pg${i}.jpg`, groupId)
+            .then((path) => {
+              if (this.isActive && path) {
+                const updated = [...this.localImageUrls];
+                updated[i] = path;
+                this.localImageUrls = updated;
+              }
+            })
+            .catch(() => {});
+        });
       } else {
         this.errorMsg = res.message || '获取详情失败';
+        this.isLoading = false;
       }
     } catch (err) {
       console.error('获取插画详情失败:', err);
       this.errorMsg = '加载失败，请检查网络';
+      this.isLoading = false;
     }
-    this.isLoading = false;
   }
 
   async handleDownload() {
@@ -130,35 +152,45 @@ struct IllustDetailPage {
       } else if (this.detail && this.localImageUrls.length > 0) {
         Stack() {
           Swiper(this.swiperController) {
-            ForEach(this.localImageUrls, (url: string) => {
-              Image(url)
+            ForEach(this.localImageUrls, (url: string, index: number) => {
+              if (url) {
+                Image(url)
+                  .width('100%')
+                  .height('100%')
+                  .objectFit(ImageFit.Contain)
+                  .scale({ x: this.scaleValue, y: this.scaleValue })
+                  .translate({ x: this.translateX, y: this.translateY })
+                  .gesture(
+                    GestureGroup(GestureMode.Parallel,
+                      PinchGesture()
+                        .onActionStart(() => {
+                          this.baseScale = this.scaleValue;
+                        })
+                        .onActionUpdate((event: PinchGestureEvent) => {
+                          this.scaleValue = Math.max(1, Math.min(5, this.baseScale * event.scale));
+                        }),
+                      TapGesture({ count: 2 })
+                        .onAction(() => {
+                          if (this.scaleValue > 1) {
+                            this.scaleValue = 1;
+                            this.translateX = 0;
+                            this.translateY = 0;
+                          } else {
+                            this.scaleValue = 2.5;
+                          }
+                        })
+                    )
+                  )
+              } else {
+                Stack() {
+                  LoadingProgress().width(30).height(30).color('#66FFFFFF')
+                }
                 .width('100%')
                 .height('100%')
-                .objectFit(ImageFit.Contain)
-                .scale({ x: this.scaleValue, y: this.scaleValue })
-                .translate({ x: this.translateX, y: this.translateY })
-                .gesture(
-                  GestureGroup(GestureMode.Parallel,
-                    PinchGesture()
-                      .onActionStart(() => {
-                        this.baseScale = this.scaleValue;
-                      })
-                      .onActionUpdate((event: PinchGestureEvent) => {
-                        this.scaleValue = Math.max(1, Math.min(5, this.baseScale * event.scale));
-                      }),
-                    TapGesture({ count: 2 })
-                      .onAction(() => {
-                        if (this.scaleValue > 1) {
-                          this.scaleValue = 1;
-                          this.translateX = 0;
-                          this.translateY = 0;
-                        } else {
-                          this.scaleValue = 2.5;
-                        }
-                      })
-                  )
-                )
-            }, (url: string) => url)
+                .backgroundColor(Color.Black)
+                .alignContent(Alignment.Center)
+              }
+            }, (url: string, index: number) => `${index}_${url}`)
           }
           .index(this.currentIndex)
           .autoPlay(false)

@@ -204,6 +204,7 @@ interface DownloadTask {
   resolve: (value: boolean) => void;
   url: string;
   savePath: string;
+  groupId?: string;
 }
 
 interface FollowLatestIllustThumbnails {
@@ -468,9 +469,9 @@ export class PixivService {
   private static readonly MIN_API_INTERVAL = 1200;
   private static readonly MAX_RETRIES = 2;
 
-  private static async enqueueDownload(url: string, savePath: string): Promise<boolean> {
+  private static async enqueueDownload(url: string, savePath: string, groupId?: string): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
-      PixivService.downloadQueue.push({ resolve, url, savePath });
+      PixivService.downloadQueue.push({ resolve, url, savePath, groupId });
       PixivService.processQueue();
     });
   }
@@ -744,15 +745,15 @@ export class PixivService {
     return PixivService.request<NovelBookmarkResponse>(path);
   }
 
-  static async downloadImage(imageUrl: string, savePath: string): Promise<boolean> {
-    return PixivService.enqueueDownload(imageUrl, savePath);
+  static async downloadImage(imageUrl: string, savePath: string, groupId?: string): Promise<boolean> {
+    return PixivService.enqueueDownload(imageUrl, savePath, groupId);
   }
 
   static async downloadImageDirect(imageUrl: string, savePath: string): Promise<boolean> {
     return PixivService.doDownload(imageUrl, savePath);
   }
 
-  static async cacheImage(url: string, fileName: string): Promise<string> {
+  static async cacheImage(url: string, fileName: string, groupId?: string): Promise<string> {
     const appContext = globalThis.appContext as common.UIAbilityContext;
     if (!appContext) return '';
     const cacheDir: string = appContext.cacheDir;
@@ -764,8 +765,20 @@ export class PixivService {
       return 'file://' + localPath;
     } catch (_) {}
 
-    const success = await PixivService.downloadImage(url, localPath);
+    const success = await PixivService.downloadImage(url, localPath, groupId);
     return success ? 'file://' + localPath : '';
+  }
+
+  static cancelDownloadGroup(groupId: string): void {
+    const remaining: Array<DownloadTask> = [];
+    for (const task of PixivService.downloadQueue) {
+      if (task.groupId === groupId) {
+        task.resolve(false);
+      } else {
+        remaining.push(task);
+      }
+    }
+    PixivService.downloadQueue = remaining;
   }
 
   static async fetchNovelText(novelId: string): Promise<string> {
