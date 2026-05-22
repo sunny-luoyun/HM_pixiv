@@ -387,8 +387,39 @@ export class PixivCacheDB {
     if (!this.rdbStore) return;
     try {
       await this.rdbStore.executeSql(SQL_CREATE_PROGRESS_TABLE);
+
+      try {
+        await this.rdbStore.executeSql(
+          "ALTER TABLE reading_progress ADD COLUMN is_translated INTEGER DEFAULT 0;"
+        );
+        await this.migrateProgressTable();
+      } catch (e) {
+        // is_translated 列已存在，无需迁移
+      }
     } catch (err) {
       console.error('[PixivCacheDB] 进度表初始化失败:', JSON.stringify(err));
+    }
+  }
+
+  private async migrateProgressTable(): Promise<void> {
+    try {
+      await this.rdbStore!.executeSql(
+        `CREATE TABLE IF NOT EXISTS reading_progress_new (
+          novel_id      TEXT    NOT NULL,
+          is_translated INTEGER DEFAULT 0,
+          scroll_y      INTEGER DEFAULT 0,
+          last_read_at  TEXT    DEFAULT '',
+          PRIMARY KEY (novel_id, is_translated)
+        );`
+      );
+      await this.rdbStore!.executeSql(
+        `INSERT OR IGNORE INTO reading_progress_new (novel_id, is_translated, scroll_y, last_read_at)
+         SELECT novel_id, 0, scroll_y, last_read_at FROM reading_progress;`
+      );
+      await this.rdbStore!.executeSql(`DROP TABLE IF EXISTS reading_progress;`);
+      await this.rdbStore!.executeSql(`ALTER TABLE reading_progress_new RENAME TO reading_progress;`);
+    } catch (e) {
+      console.error('[PixivCacheDB] 进度表迁移失败:', JSON.stringify(e));
     }
   }
 

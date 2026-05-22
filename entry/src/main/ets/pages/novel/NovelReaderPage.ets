@@ -120,7 +120,7 @@ struct NovelReaderPage {
   private scroller: Scroller = new Scroller();
   private saveProgressTimer: number = -1;
   private readonly PROGRESS_SAVE_DELAY = 800;
-  @State private hasRestoredPosition: boolean = false;
+  private pendingScrollY: number = 0;
 
   aboutToAppear(): void {
     this.params = router.getParams() as ReaderRouterParams;
@@ -143,12 +143,12 @@ struct NovelReaderPage {
   }
 
   aboutToDisappear(): void {
-    if (this.saveProgressTimer !== -1) {
-      clearTimeout(this.saveProgressTimer);
-    }
     if (this.params?.novelId && this.isCachedMode) {
       const yOffset = this.scroller.currentOffset().yOffset;
       pixivCacheDB.saveReadingProgress(this.params.novelId, Math.floor(yOffset), !this.showOriginal);
+    }
+    if (this.saveProgressTimer !== -1) {
+      clearTimeout(this.saveProgressTimer);
     }
   }
 
@@ -187,10 +187,7 @@ struct NovelReaderPage {
       if (this.renderBlocks.length > 0) {
         const savedY = await pixivCacheDB.getReadingProgress(novelId, !this.showOriginal);
         if (savedY > 0) {
-          setTimeout(() => {
-            this.scroller.scrollTo({ xOffset: 0, yOffset: savedY });
-            this.hasRestoredPosition = true;
-          }, 100);
+          this.pendingScrollY = savedY;
         }
       }
     } catch (e) {
@@ -198,6 +195,12 @@ struct NovelReaderPage {
       promptAction.showToast({ message: '加载失败，请重试' });
     } finally {
       this.isLoading = false;
+      if (this.pendingScrollY > 0) {
+        setTimeout(() => {
+          this.scroller.scrollTo({ xOffset: 0, yOffset: this.pendingScrollY });
+          this.pendingScrollY = 0;
+        }, 50);
+      }
     }
   }
 
@@ -584,8 +587,7 @@ struct NovelReaderPage {
       .layoutWeight(1)
       .onScroll((_x: number, _y: number) => {
         if (!this.isLoading && this.params?.novelId) {
-          const yOffset = this.scroller.currentOffset().yOffset;
-          this.debouncedSaveProgress(yOffset);
+          this.debouncedSaveProgress(_y);
         }
       })
     }
