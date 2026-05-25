@@ -23,11 +23,13 @@ export default class EntryAbility extends UIAbility {
     globalThis.appContext = this.context;
 
     globalThis.isDarkMode = this.context.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
+    AppStorage.SetOrCreate('isDarkMode', globalThis.isDarkMode);
   }
 
   onConfigurationUpdate(newConfig: Configuration): void {
     // 监听配置变化（包括颜色模式）
     globalThis.isDarkMode = newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
+    AppStorage.SetOrCreate('isDarkMode', globalThis.isDarkMode);
   }
 
   onWindowStageCreate(windowStage: window.WindowStage): void {

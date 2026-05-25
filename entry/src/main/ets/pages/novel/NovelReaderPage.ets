@@ -107,7 +107,7 @@ struct NovelReaderPage {
   @State private isLoading: boolean = true;
   @State private fontSize: number = 18;
   @State private showFontPanel: boolean = false;
-  @State private isDark: boolean = false;
+  @StorageProp('isDarkMode') isDark: boolean = false;
 
   @State private showTranslation: boolean = false;
   @State private isTranslating: boolean = false;
@@ -372,6 +372,8 @@ struct NovelReaderPage {
 
   private toggleDarkMode(): void {
     this.isDark = !this.isDark;
+    globalThis.isDarkMode = this.isDark;
+    AppStorage.Set('isDarkMode', this.isDark);
   }
 
   @Builder HeaderBar() {
