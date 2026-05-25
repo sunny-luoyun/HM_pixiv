@@ -3,6 +3,8 @@ import { NovelCard } from '../../components/NovelCard';
 import { IllustCard } from '../../components/IllustCard';
 import { PullToRefresh } from '../../components/PullToRefresh';
 import { SegmentedTabBar } from '../../components/SegmentedTabBar';
+import { pixivCacheDB } from '../../database/PixivCacheDB';
+import common from '@ohos.app.ability.common';
 
 @Component
 export struct LatestPage {
@@ -82,6 +84,27 @@ export struct LatestPage {
     this.isLoadingMoreIllust = false;
   }
 
+  async filterBlockedNovels(works: NovelBookmark[]): Promise<NovelBookmark[]> {
+    try {
+      const ctx = getContext(this) as common.UIAbilityContext;
+      await pixivCacheDB.init(ctx);
+      const blockedIds = await Promise.all([
+        pixivCacheDB.getAllBlockedAuthorIds(),
+        pixivCacheDB.getAllBlockedSeriesIds()
+      ]);
+      const blockedAuthorIds = blockedIds[0];
+      const blockedSeriesIds = blockedIds[1];
+      return works.filter(n => {
+        if (blockedAuthorIds.has(n.userId)) return false;
+        const sid = n.series?.id ?? n.seriesId;
+        if (sid && blockedSeriesIds.has(String(sid))) return false;
+        return true;
+      });
+    } catch (_) {
+      return works;
+    }
+  }
+
   async loadNovels() {
     this.isRefreshingNovel = true;
     this.isLoadingNovel = true;
@@ -91,7 +114,8 @@ export struct LatestPage {
     try {
       const res = await PixivService.getFollowLatestNovels(1, 'all');
       if (!res.error) {
-        this.novelWorks = res.body?.thumbnails?.novel ?? [];
+        const rawWorks = res.body?.thumbnails?.novel ?? [];
+        this.novelWorks = await this.filterBlockedNovels(rawWorks);
         this.novelPage = res.body?.page ?? 1;
         this.novelPages = res.body?.pages ?? 1;
       } else {
@@ -112,8 +136,9 @@ export struct LatestPage {
     try {
       const res = await PixivService.getFollowLatestNovels(nextPage, 'all');
       if (!res.error) {
-        const newWorks = res.body?.thumbnails?.novel ?? [];
-        this.novelWorks = [...this.novelWorks, ...newWorks];
+        const rawNew = res.body?.thumbnails?.novel ?? [];
+        const filteredNew = await this.filterBlockedNovels(rawNew);
+        this.novelWorks = [...this.novelWorks, ...filteredNew];
         this.novelPage = res.body?.page ?? nextPage;
         this.novelPages = res.body?.pages ?? this.novelPages;
       }

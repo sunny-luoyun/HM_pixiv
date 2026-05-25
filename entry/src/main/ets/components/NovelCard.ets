@@ -6,6 +6,11 @@ import { pixivCacheDB } from '../database/PixivCacheDB';
 import { CacheStatus, getCacheStatusDisplay, PixivTag } from '../models/PixivModels';
 import { getDeepSeekService } from '../services/DeepSeekService';
 
+interface DialogButton {
+  text: string;
+  color: string;
+}
+
 @Component
 export struct NovelCard {
   private item!: NovelBookmark;
@@ -149,6 +154,58 @@ export struct NovelCard {
     }
   }
 
+  showBlockOptions() {
+    const buttons: DialogButton[] = [
+      { text: '取消', color: '#666666' },
+      { text: `屏蔽作者「${this.item.userName}」`, color: '#FF4D4F' }
+    ];
+    const seriesTitle = this.item.seriesTitle || this.item.series?.title || '';
+    if (seriesTitle) {
+      buttons.push({ text: `屏蔽系列「${seriesTitle}」`, color: '#FF4D4F' });
+    }
+    promptAction.showDialog({
+      title: '屏蔽',
+      message: '屏蔽后，该内容将不会在发现页、最新页和搜索页显示',
+      buttons: buttons
+    }).then(async (data) => {
+      if (data.index === 1) {
+        await this.blockAuthor();
+      } else if (data.index === 2) {
+        await this.blockSeries();
+      }
+    });
+  }
+
+  async blockAuthor() {
+    try {
+      const ctx = getContext(this) as common.UIAbilityContext;
+      await pixivCacheDB.init(ctx);
+      await pixivCacheDB.addBlockedAuthor(this.item.userId, this.item.userName);
+      promptAction.showToast({ message: `已屏蔽作者「${this.item.userName}」` });
+    } catch (err) {
+      console.error(`屏蔽作者失败: ${err}`);
+      promptAction.showToast({ message: '屏蔽失败' });
+    }
+  }
+
+  async blockSeries() {
+    const seriesId = this.item.series?.id ?? this.item.seriesId;
+    const seriesTitle = this.item.seriesTitle || this.item.series?.title || '';
+    if (!seriesId) {
+      promptAction.showToast({ message: '无法获取系列信息' });
+      return;
+    }
+    try {
+      const ctx = getContext(this) as common.UIAbilityContext;
+      await pixivCacheDB.init(ctx);
+      await pixivCacheDB.addBlockedSeries(String(seriesId), seriesTitle, this.item.userId, this.item.userName);
+      promptAction.showToast({ message: `已屏蔽系列「${seriesTitle}」` });
+    } catch (err) {
+      console.error(`屏蔽系列失败: ${err}`);
+      promptAction.showToast({ message: '屏蔽失败' });
+    }
+  }
+
   async handleDeleteCache() {
     promptAction.showDialog({
       title: '删除缓存',
@@ -216,6 +273,10 @@ export struct NovelCard {
     .borderRadius(14)
     .margin({ bottom: 12 })
     .shadow({ radius: 8, color: $r('app.color.card_shadow'), offsetY: 2 })
+    .gesture(
+      LongPressGesture({ repeat: false, duration: 500 })
+        .onAction(() => { this.showBlockOptions(); })
+    )
   }
 
   @Builder

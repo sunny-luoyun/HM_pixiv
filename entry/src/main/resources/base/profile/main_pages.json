@@ -12,6 +12,7 @@
     "pages/settings/SeriesDetailPage",
     "pages/settings/CachedNovelsSimplePage",
     "pages/setting/FollowingPage",
+    "pages/setting/BlockedContentPage",
     "pages/user/UserProfilePage"
   ]
 }

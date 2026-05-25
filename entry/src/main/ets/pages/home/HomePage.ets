@@ -3,6 +3,8 @@ import { NovelCard } from '../../components/NovelCard';
 import { IllustCard } from '../../components/IllustCard';
 import { PullToRefresh } from '../../components/PullToRefresh';
 import { SegmentedTabBar } from '../../components/SegmentedTabBar';
+import { pixivCacheDB } from '../../database/PixivCacheDB';
+import common from '@ohos.app.ability.common';
 
 const PAGE_SIZE = 30;
 const MAX_EMPTY_RETRIES = 3;
@@ -89,6 +91,27 @@ export struct HomePage {
     this.isLoadingMoreIllust = false;
   }
 
+  async filterBlockedNovels(works: NovelBookmark[]): Promise<NovelBookmark[]> {
+    try {
+      const ctx = getContext(this) as common.UIAbilityContext;
+      await pixivCacheDB.init(ctx);
+      const blockedIds = await Promise.all([
+        pixivCacheDB.getAllBlockedAuthorIds(),
+        pixivCacheDB.getAllBlockedSeriesIds()
+      ]);
+      const blockedAuthorIds = blockedIds[0];
+      const blockedSeriesIds = blockedIds[1];
+      return works.filter(n => {
+        if (blockedAuthorIds.has(n.userId)) return false;
+        const sid = n.series?.id ?? n.seriesId;
+        if (sid && blockedSeriesIds.has(String(sid))) return false;
+        return true;
+      });
+    } catch (_) {
+      return works;
+    }
+  }
+
   async loadNovels() {
     this.isRefreshingNovel = true;
     this.isLoadingNovel = true;
@@ -98,7 +121,8 @@ export struct HomePage {
     try {
       const res = await PixivService.getDiscoveryNovels('all', PAGE_SIZE);
       if (!res.error) {
-        this.novelWorks = res.body?.thumbnails?.novel ?? [];
+        const rawWorks = res.body?.thumbnails?.novel ?? [];
+        this.novelWorks = await this.filterBlockedNovels(rawWorks);
       } else {
         this.novelError = '加载失败';
       }
@@ -116,9 +140,10 @@ export struct HomePage {
     try {
       const res = await PixivService.getDiscoveryNovels('all', PAGE_SIZE);
       if (!res.error) {
-        const newWorks = res.body?.thumbnails?.novel ?? [];
+        const rawNew = res.body?.thumbnails?.novel ?? [];
+        const filteredNew = await this.filterBlockedNovels(rawNew);
         const existingIds = new Set(this.novelWorks.map(w => w.id));
-        const uniqueNew = newWorks.filter(w => !existingIds.has(w.id));
+        const uniqueNew = filteredNew.filter(w => !existingIds.has(w.id));
 
         if (uniqueNew.length === 0) {
           this.novelEmptyRetries++;

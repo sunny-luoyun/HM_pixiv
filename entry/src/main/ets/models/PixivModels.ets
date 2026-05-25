@@ -167,3 +167,17 @@ export function formatPixivDate(isoDate: string): string {
 export function isReadableOffline(novel: PixivNovel): boolean {
   return novel.cacheStatus === CacheStatus.CACHED;
 }
+
+export interface BlockedAuthor {
+  authorId: string;
+  authorName: string;
+  blockedAt: string;
+}
+
+export interface BlockedSeries {
+  seriesId: string;
+  seriesTitle: string;
+  authorId: string;
+  authorName: string;
+  blockedAt: string;
+}

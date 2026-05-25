@@ -3,6 +3,7 @@ import { IllustCard } from '../../components/IllustCard';
 import { NovelCard } from '../../components/NovelCard';
 import { UserCard } from '../../components/UserCard';
 import { SegmentedTabBar } from '../../components/SegmentedTabBar';
+import { pixivCacheDB } from '../../database/PixivCacheDB';
 import inputMethod from '@ohos.inputMethod';
 import preferences from '@ohos.data.preferences';
 import common from '@ohos.app.ability.common';
@@ -92,6 +93,27 @@ export struct SearchPage {
     this.saveSearchHistory();
   }
 
+  async filterBlockedNovels(works: NovelBookmark[]): Promise<NovelBookmark[]> {
+    try {
+      const ctx = getContext(this) as common.UIAbilityContext;
+      await pixivCacheDB.init(ctx);
+      const blockedIds = await Promise.all([
+        pixivCacheDB.getAllBlockedAuthorIds(),
+        pixivCacheDB.getAllBlockedSeriesIds()
+      ]);
+      const blockedAuthorIds = blockedIds[0];
+      const blockedSeriesIds = blockedIds[1];
+      return works.filter(n => {
+        if (blockedAuthorIds.has(n.userId)) return false;
+        const sid = n.series?.id ?? n.seriesId;
+        if (sid && blockedSeriesIds.has(String(sid))) return false;
+        return true;
+      });
+    } catch (_) {
+      return works;
+    }
+  }
+
   async searchIllusts(page: number, reset: boolean = false) {
     if (!this.keyword.trim()) return;
     if (reset) {
@@ -147,10 +169,11 @@ export struct SearchPage {
             works.push(item);
           }
         }
+        const filtered = await this.filterBlockedNovels(works);
         if (reset) {
-          this.novelWorks = works;
+          this.novelWorks = filtered;
         } else {
-          this.novelWorks = [...this.novelWorks, ...works];
+          this.novelWorks = [...this.novelWorks, ...filtered];
         }
         const total = res.body?.novel?.total ?? 0;
         this.novelPage = page;

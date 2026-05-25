@@ -47,6 +47,9 @@ export struct SettingPage {
       this.MenuItem('✦', '我的收藏', () => {
         router.pushUrl({ url: 'pages/favorites/FavoritesPage' });
       })
+      this.MenuItem('🚫', '屏蔽内容', () => {
+        router.pushUrl({ url: 'pages/setting/BlockedContentPage' });
+      })
       this.MenuItem('⚙', '设置', () => {
         router.pushUrl({ url: 'pages/settings/SettingsPage' });
       })

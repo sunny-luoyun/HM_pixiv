@@ -1,10 +1,10 @@
 import relationalStore from '@ohos.data.relationalStore';
 import common from '@ohos.app.ability.common';
-import { PixivNovel, PixivTag, PixivSeries, CacheStatus } from '../models/PixivModels';
+import { PixivNovel, PixivTag, PixivSeries, CacheStatus, BlockedAuthor, BlockedSeries } from '../models/PixivModels';
 
 const DB_NAME = 'pixiv_cache.db';
 const TABLE_NOVELS = 'pixiv_novels';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 const SQL_CREATE_NOVELS_TABLE = `
   CREATE TABLE IF NOT EXISTS ${TABLE_NOVELS} (
@@ -67,6 +67,28 @@ const COL: ColumnMap = {
 };
 
 const ALL_COLUMNS: string[] = Object.values(COL);
+
+const TABLE_BLOCKED_AUTHORS = 'blocked_authors';
+const TABLE_BLOCKED_SERIES = 'blocked_series';
+
+const SQL_CREATE_BLOCKED_AUTHORS_TABLE = `
+  CREATE TABLE IF NOT EXISTS ${TABLE_BLOCKED_AUTHORS} (
+    author_id   TEXT    PRIMARY KEY,
+    author_name TEXT    NOT NULL,
+    blocked_at  TEXT    NOT NULL
+  )
+`;
+
+const SQL_CREATE_BLOCKED_SERIES_TABLE = `
+  CREATE TABLE IF NOT EXISTS ${TABLE_BLOCKED_SERIES} (
+    series_id   TEXT    PRIMARY KEY,
+    series_title TEXT   NOT NULL,
+    author_id   TEXT    NOT NULL,
+    author_name TEXT    NOT NULL,
+    blocked_at  TEXT    NOT NULL
+  )
+`;
+
 const SQL_CREATE_PROGRESS_TABLE = `
   CREATE TABLE IF NOT EXISTS reading_progress (
     novel_id      TEXT    NOT NULL,
@@ -95,11 +117,14 @@ export class PixivCacheDB {
 
       if (version === 0) {
         await this.rdbStore.executeSql(SQL_CREATE_NOVELS_TABLE);
+        await this.rdbStore.executeSql(SQL_CREATE_BLOCKED_AUTHORS_TABLE);
+        await this.rdbStore.executeSql(SQL_CREATE_BLOCKED_SERIES_TABLE);
         this.rdbStore.version = DB_VERSION;
       } else if (version < DB_VERSION) {
         await this.upgradeDatabase(version, DB_VERSION);
       }
 
+      await this.initBlocklistTables();
       await this.initProgressTable();
       this.initialized = true;
     } catch (err) {
@@ -352,6 +377,160 @@ export class PixivCacheDB {
     }
   }
 
+  private async initBlocklistTables(): Promise<void> {
+    if (!this.rdbStore) return;
+    try {
+      await this.rdbStore.executeSql(SQL_CREATE_BLOCKED_AUTHORS_TABLE);
+      await this.rdbStore.executeSql(SQL_CREATE_BLOCKED_SERIES_TABLE);
+    } catch (err) {
+      console.error('[PixivCacheDB] 屏蔽表初始化失败:', JSON.stringify(err));
+    }
+  }
+
+  async addBlockedAuthor(authorId: string, authorName: string): Promise<void> {
+    if (!this.checkReady()) return;
+    const values: relationalStore.ValuesBucket = {
+      'author_id': authorId,
+      'author_name': authorName,
+      'blocked_at': new Date().toISOString()
+    };
+    try {
+      await this.rdbStore!.insert(
+        TABLE_BLOCKED_AUTHORS, values,
+        relationalStore.ConflictResolution.ON_CONFLICT_REPLACE
+      );
+    } catch (err) {
+      console.error(`[PixivCacheDB] addBlockedAuthor 失败: ${JSON.stringify(err)}`);
+    }
+  }
+
+  async removeBlockedAuthor(authorId: string): Promise<void> {
+    if (!this.checkReady()) return;
+    const predicates = new relationalStore.RdbPredicates(TABLE_BLOCKED_AUTHORS);
+    predicates.equalTo('author_id', authorId);
+    try {
+      await this.rdbStore!.delete(predicates);
+    } catch (err) {
+      console.error(`[PixivCacheDB] removeBlockedAuthor 失败: ${JSON.stringify(err)}`);
+    }
+  }
+
+  async getAllBlockedAuthors(): Promise<BlockedAuthor[]> {
+    if (!this.checkReady()) return [];
+    const predicates = new relationalStore.RdbPredicates(TABLE_BLOCKED_AUTHORS);
+    predicates.orderByDesc('blocked_at');
+    try {
+      const result = await this.rdbStore!.query(predicates, ['author_id', 'author_name', 'blocked_at']);
+      const authors: BlockedAuthor[] = [];
+      while (result.goToNextRow()) {
+        authors.push({
+          authorId: result.getString(result.getColumnIndex('author_id')),
+          authorName: result.getString(result.getColumnIndex('author_name')),
+          blockedAt: result.getString(result.getColumnIndex('blocked_at'))
+        });
+      }
+      result.close();
+      return authors;
+    } catch (err) {
+      console.error(`[PixivCacheDB] getAllBlockedAuthors 失败: ${JSON.stringify(err)}`);
+      return [];
+    }
+  }
+
+  async getAllBlockedAuthorIds(): Promise<Set<string>> {
+    const authors = await this.getAllBlockedAuthors();
+    return new Set(authors.map(a => a.authorId));
+  }
+
+  async isAuthorBlocked(authorId: string): Promise<boolean> {
+    if (!this.checkReady()) return false;
+    const predicates = new relationalStore.RdbPredicates(TABLE_BLOCKED_AUTHORS);
+    predicates.equalTo('author_id', authorId);
+    try {
+      const result = await this.rdbStore!.query(predicates, ['author_id']);
+      const count = result.rowCount;
+      result.close();
+      return count > 0;
+    } catch (err) {
+      console.error(`[PixivCacheDB] isAuthorBlocked 失败: ${JSON.stringify(err)}`);
+      return false;
+    }
+  }
+
+  async addBlockedSeries(seriesId: string, seriesTitle: string, authorId: string, authorName: string): Promise<void> {
+    if (!this.checkReady()) return;
+    const values: relationalStore.ValuesBucket = {
+      'series_id': seriesId,
+      'series_title': seriesTitle,
+      'author_id': authorId,
+      'author_name': authorName,
+      'blocked_at': new Date().toISOString()
+    };
+    try {
+      await this.rdbStore!.insert(
+        TABLE_BLOCKED_SERIES, values,
+        relationalStore.ConflictResolution.ON_CONFLICT_REPLACE
+      );
+    } catch (err) {
+      console.error(`[PixivCacheDB] addBlockedSeries 失败: ${JSON.stringify(err)}`);
+    }
+  }
+
+  async removeBlockedSeries(seriesId: string): Promise<void> {
+    if (!this.checkReady()) return;
+    const predicates = new relationalStore.RdbPredicates(TABLE_BLOCKED_SERIES);
+    predicates.equalTo('series_id', seriesId);
+    try {
+      await this.rdbStore!.delete(predicates);
+    } catch (err) {
+      console.error(`[PixivCacheDB] removeBlockedSeries 失败: ${JSON.stringify(err)}`);
+    }
+  }
+
+  async getAllBlockedSeries(): Promise<BlockedSeries[]> {
+    if (!this.checkReady()) return [];
+    const predicates = new relationalStore.RdbPredicates(TABLE_BLOCKED_SERIES);
+    predicates.orderByDesc('blocked_at');
+    try {
+      const result = await this.rdbStore!.query(predicates, ['series_id', 'series_title', 'author_id', 'author_name', 'blocked_at']);
+      const series: BlockedSeries[] = [];
+      while (result.goToNextRow()) {
+        series.push({
+          seriesId: result.getString(result.getColumnIndex('series_id')),
+          seriesTitle: result.getString(result.getColumnIndex('series_title')),
+          authorId: result.getString(result.getColumnIndex('author_id')),
+          authorName: result.getString(result.getColumnIndex('author_name')),
+          blockedAt: result.getString(result.getColumnIndex('blocked_at'))
+        });
+      }
+      result.close();
+      return series;
+    } catch (err) {
+      console.error(`[PixivCacheDB] getAllBlockedSeries 失败: ${JSON.stringify(err)}`);
+      return [];
+    }
+  }
+
+  async getAllBlockedSeriesIds(): Promise<Set<string>> {
+    const series = await this.getAllBlockedSeries();
+    return new Set(series.map(s => s.seriesId));
+  }
+
+  async isSeriesBlocked(seriesId: string): Promise<boolean> {
+    if (!this.checkReady()) return false;
+    const predicates = new relationalStore.RdbPredicates(TABLE_BLOCKED_SERIES);
+    predicates.equalTo('series_id', seriesId);
+    try {
+      const result = await this.rdbStore!.query(predicates, ['series_id']);
+      const count = result.rowCount;
+      result.close();
+      return count > 0;
+    } catch (err) {
+      console.error(`[PixivCacheDB] isSeriesBlocked 失败: ${JSON.stringify(err)}`);
+      return false;
+    }
+  }
+
   private async upgradeDatabase(oldVersion: number, newVersion: number): Promise<void> {
     if (oldVersion < 2) {
       const alterQueries = [
@@ -368,6 +547,14 @@ export class PixivCacheDB {
         } catch (e) {
           console.warn(`[PixivCacheDB] ALTER TABLE 跳过: ${JSON.stringify(e)}`);
         }
+      }
+    }
+    if (oldVersion < 3) {
+      try {
+        await this.rdbStore!.executeSql(SQL_CREATE_BLOCKED_AUTHORS_TABLE);
+        await this.rdbStore!.executeSql(SQL_CREATE_BLOCKED_SERIES_TABLE);
+      } catch (e) {
+        console.warn(`[PixivCacheDB] 屏蔽表创建跳过: ${JSON.stringify(e)}`);
       }
     }
     this.rdbStore!.version = newVersion;
