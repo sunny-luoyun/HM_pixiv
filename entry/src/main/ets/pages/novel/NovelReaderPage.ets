@@ -144,8 +144,7 @@ struct NovelReaderPage {
 
   aboutToDisappear(): void {
     if (this.params?.novelId && this.isCachedMode) {
-      const yOffset = this.scroller.currentOffset().yOffset;
-      pixivCacheDB.saveReadingProgress(this.params.novelId, Math.floor(yOffset), !this.showOriginal);
+      this.saveProgressInternal(Math.floor(this.scroller.currentOffset().yOffset));
     }
     if (this.saveProgressTimer !== -1) {
       clearTimeout(this.saveProgressTimer);
@@ -204,13 +203,24 @@ struct NovelReaderPage {
     }
   }
 
+  private async saveProgressInternal(yOffset: number): Promise<void> {
+    if (this.params?.novelId) {
+      const resetOnReachEnd = AppStorage.get<boolean>('resetOnReachEnd') ?? false;
+      if (resetOnReachEnd && this.scroller.isAtEnd()) {
+        await pixivCacheDB.deleteReadingProgress(this.params.novelId, !this.showOriginal);
+      } else {
+        await pixivCacheDB.saveReadingProgress(this.params.novelId, yOffset, !this.showOriginal);
+      }
+    }
+  }
+
   private debouncedSaveProgress(yOffset: number): void {
     if (this.saveProgressTimer !== -1) {
       clearTimeout(this.saveProgressTimer);
     }
-    this.saveProgressTimer = setTimeout(() => {
+    this.saveProgressTimer = setTimeout(async () => {
       if (this.params?.novelId) {
-        pixivCacheDB.saveReadingProgress(this.params.novelId, Math.floor(yOffset), !this.showOriginal);
+        await this.saveProgressInternal(Math.floor(yOffset));
       }
     }, this.PROGRESS_SAVE_DELAY);
   }
@@ -427,10 +437,7 @@ struct NovelReaderPage {
         .onClick(() => {
           if (!this.params?.novelId) return;
 
-          const currentY = this.scroller.currentOffset().yOffset;
-          pixivCacheDB.saveReadingProgress(
-            this.params.novelId, Math.floor(currentY), !this.showOriginal
-          );
+          this.saveProgressInternal(Math.floor(this.scroller.currentOffset().yOffset));
 
           this.showOriginal = !this.showOriginal;
           this.showTranslation = !this.showOriginal;

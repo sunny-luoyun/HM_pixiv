@@ -29,4 +29,19 @@ export class TranslationStorage {
     await pref.delete(TranslationStorage.KEY_DEEPSEEK_API_KEY);
     await pref.flush();
   }
+
+  private static KEY_RESET_ON_REACH_END = 'reset_on_reach_end';
+
+  static async saveResetOnReachEnd(enabled: boolean): Promise<void> {
+    if (!TranslationStorage.context) return;
+    const pref = await preferences.getPreferences(TranslationStorage.context, TranslationStorage.PREFERENCES_NAME);
+    await pref.put(TranslationStorage.KEY_RESET_ON_REACH_END, enabled);
+    await pref.flush();
+  }
+
+  static async getResetOnReachEnd(): Promise<boolean> {
+    if (!TranslationStorage.context) return false;
+    const pref = await preferences.getPreferences(TranslationStorage.context, TranslationStorage.PREFERENCES_NAME);
+    return await pref.get(TranslationStorage.KEY_RESET_ON_REACH_END, false) as boolean;
+  }
 }

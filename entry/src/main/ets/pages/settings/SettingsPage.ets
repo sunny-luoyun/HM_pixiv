@@ -28,12 +28,14 @@ export struct SettingsPage {
   @State isLoadingCache: boolean = true;
   @State deepseekApiKey: string = '';
   @State showApiKeyText: boolean = false;
+  @State resetOnReachEnd: boolean = false;
   @State apiKeyCheckState: 'idle' | 'checking' | 'ok' | 'fail' = 'idle';
   @State balanceAmount: string = '';
   @State balanceFetchState: 'idle' | 'loading' | 'ok' | 'fail' = 'idle';
 
   aboutToAppear() {
     this.deepseekApiKey = AppStorage.get<string>('deepseekApiKey') ?? '';
+    this.resetOnReachEnd = AppStorage.get<boolean>('resetOnReachEnd') ?? false;
     this.initCache();
   }
 
@@ -193,8 +195,9 @@ export struct SettingsPage {
 
       Scroll() {
         Column() {
-          this.DeepSeekApiKeyCard()
-          this.CacheSection()
+        this.DeepSeekApiKeyCard()
+        this.ReadingSettingsCard()
+        this.CacheSection()
         }
         .width('100%')
         .padding({ top: 12 })
@@ -362,6 +365,40 @@ export struct SettingsPage {
           .fontColor($r('app.color.text_secondary'))
           .margin({ top: 8 })
       }
+    }
+    .width('100%')
+    .padding(16)
+    .backgroundColor($r('app.color.card_bg'))
+    .borderRadius(14)
+    .shadow({ radius: 4, color: $r('app.color.card_shadow'), offsetY: 1 })
+    .margin({ bottom: 12 })
+  }
+
+  @Builder
+  ReadingSettingsCard() {
+    Column() {
+      Row() {
+        Column() {
+          Text('到底重置进度')
+            .fontSize(15)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.user_name'))
+          Text('滑到小说底部后，不保存进度，下次从头开始阅读')
+            .fontSize(12)
+            .fontColor($r('app.color.text_secondary'))
+            .margin({ top: 2 })
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+
+        Toggle({ type: ToggleType.Switch, isOn: this.resetOnReachEnd })
+          .onChange((isOn: boolean) => {
+            this.resetOnReachEnd = isOn;
+            AppStorage.setOrCreate('resetOnReachEnd', isOn);
+            TranslationStorage.saveResetOnReachEnd(isOn);
+          })
+      }
+      .width('100%')
     }
     .width('100%')
     .padding(16)

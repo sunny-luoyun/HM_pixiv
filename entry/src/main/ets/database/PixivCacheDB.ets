@@ -318,6 +318,19 @@ export class PixivCacheDB {
     }
   }
 
+  async deleteReadingProgress(novelId: string, isTranslated: boolean = false): Promise<void> {
+    if (!this.checkReady() || !novelId) return;
+    const predicates = new relationalStore.RdbPredicates('reading_progress');
+    predicates.equalTo('novel_id', novelId)
+      .and()
+      .equalTo('is_translated', isTranslated ? 1 : 0);
+    try {
+      await this.rdbStore!.delete(predicates);
+    } catch (err) {
+      console.error(`[PixivCacheDB] 删除进度失败: ${JSON.stringify(err)}`);
+    }
+  }
+
   async getReadingProgress(novelId: string, isTranslated: boolean = false): Promise<number> {
     if (!this.checkReady() || !novelId) return 0;
     try {
