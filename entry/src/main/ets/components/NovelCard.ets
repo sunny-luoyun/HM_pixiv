@@ -93,16 +93,7 @@ export struct NovelCard {
     this.cacheColor = display.color;
   }
 
-  async handleCache() {
-    if (this.cacheStatus === CacheStatus.CACHED) {
-      this.handleDeleteCache();
-      return;
-    }
-    if (this.cacheStatus === CacheStatus.CACHING) {
-      promptAction.showToast({ message: '正在缓存中...' });
-      return;
-    }
-
+  private async doCache(): Promise<boolean> {
     try {
       this.cacheStatus = CacheStatus.CACHING;
       this.updateCacheDisplay();
@@ -146,11 +137,13 @@ export struct NovelCard {
       this.cacheStatus = CacheStatus.CACHED;
       this.updateCacheDisplay();
       promptAction.showToast({ message: '缓存完成 ✓' });
+      return true;
     } catch (err) {
       console.error(`缓存小说失败: ${err}`);
       this.cacheStatus = CacheStatus.CACHE_FAIL;
       this.updateCacheDisplay();
       promptAction.showToast({ message: `缓存失败: ${err}` });
+      return false;
     }
   }
 
@@ -231,22 +224,32 @@ export struct NovelCard {
     });
   }
 
-  handleRead() {
+  async handleRead() {
     if (this.cacheStatus === CacheStatus.CACHED) {
-      router.pushUrl({
-        url: 'pages/novel/NovelReaderPage',
-        params: {
-          novelId: this.item.id,
-          title: this.item.title,
-          author: this.item.userName,
-          cached: true,
-          translatedTitle: this.translatedTitle || '',
-          hasTitleTranslation: this.hasTitleTranslation
-        }
-      });
+      this.navigateToReader();
+    } else if (this.cacheStatus === CacheStatus.CACHING) {
+      promptAction.showToast({ message: '正在缓存中...' });
     } else {
-      promptAction.showToast({ message: '请先缓存小说' });
+      promptAction.showToast({ message: '正在缓存...' });
+      const success = await this.doCache();
+      if (success) {
+        this.navigateToReader();
+      }
     }
+  }
+
+  private navigateToReader() {
+    router.pushUrl({
+      url: 'pages/novel/NovelReaderPage',
+      params: {
+        novelId: this.item.id,
+        title: this.item.title,
+        author: this.item.userName,
+        cached: true,
+        translatedTitle: this.translatedTitle || '',
+        hasTitleTranslation: this.hasTitleTranslation
+      }
+    });
   }
 
   build() {
@@ -261,8 +264,8 @@ export struct NovelCard {
       Row() {
         this.CacheStatusTag()
         Blank()
+        this.DeleteCacheButton()
         this.ReadButton()
-        this.CacheButton()
       }
       .width('100%')
       .margin({ top: 12 })
@@ -308,16 +311,18 @@ export struct NovelCard {
   }
 
   @Builder
-  CacheButton() {
-    Button(this.cacheStatus === CacheStatus.CACHED ? '🗑 删除缓存' : '📥 缓存')
-      .fontSize(13)
-      .fontColor(Color.White)
-      .backgroundColor($r('app.color.tab_selected'))
-      .borderRadius(18)
-      .height(36)
-      .padding({ left: 16, right: 16 })
-      .enabled(this.cacheStatus !== CacheStatus.CACHING)
-      .onClick(() => this.handleCache())
+  DeleteCacheButton() {
+    if (this.cacheStatus === CacheStatus.CACHED) {
+      Button('🗑 删除缓存')
+        .fontSize(13)
+        .fontColor(Color.White)
+        .backgroundColor($r('app.color.tab_selected'))
+        .borderRadius(18)
+        .height(36)
+        .padding({ left: 16, right: 16 })
+        .margin({ right: 8 })
+        .onClick(() => this.handleDeleteCache())
+    }
   }
 
   @Builder
