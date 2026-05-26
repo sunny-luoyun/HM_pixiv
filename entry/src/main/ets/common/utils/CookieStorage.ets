@@ -70,8 +70,6 @@ export class CookieStorage {
     if (!CookieStorage.context) throw new Error('CookieStorage not initialized');
     const pref = await preferences.getPreferences(CookieStorage.context, CookieStorage.PREFERENCES_NAME);
     await pref.put(CookieStorage.KEY_PHPSESSID, phpsessid);
-    const cookie = `PHPSESSID=${phpsessid}`;
-    await pref.put(CookieStorage.KEY_COOKIE, cookie);
     await pref.flush();
   }
 

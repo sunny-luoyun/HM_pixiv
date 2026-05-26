@@ -57,7 +57,14 @@ export class CookieManager {
   }
 
   static async getFullCookie(): Promise<string> {
-    return await CookieStorage.getCookie();
+    const cookie = await CookieStorage.getCookie();
+    const phpsessid = await CookieStorage.getPhpSessId();
+    if (!phpsessid) return cookie;
+    const map = CookieManager.parseCookie(cookie);
+    map.set('PHPSESSID', phpsessid);
+    return Array.from(map.entries())
+      .map(entry => `${entry[0]}=${entry[1]}`)
+      .join('; ');
   }
 
   static async saveLoginCookie(cookieStr: string): Promise<void> {
