@@ -8,6 +8,7 @@ export struct IllustCard {
   @State localUrl: string = '';
   @State isCaching: boolean = true;
   @State isBookmarked: boolean = false;
+  @State isBookmarkLoading: boolean = false;
 
   async aboutToAppear() {
     if (!this.item.url) {
@@ -23,6 +24,8 @@ export struct IllustCard {
   }
 
   async toggleBookmark() {
+    if (this.isBookmarkLoading) return;
+    this.isBookmarkLoading = true;
     try {
       if (this.isBookmarked) {
         await PixivService.deleteIllustBookmark(this.item.id);
@@ -34,6 +37,7 @@ export struct IllustCard {
     } catch (err) {
       promptAction.showToast({ message: '操作失败: ' + String(err) });
     }
+    this.isBookmarkLoading = false;
   }
 
   build() {
@@ -97,11 +101,18 @@ export struct IllustCard {
             });
           })
 
-        Text(this.isBookmarked ? '❤' : '♡')
-          .fontSize(16)
-          .fontColor(this.isBookmarked ? '#FF4D4F' : $r('app.color.text_secondary'))
-          .padding({ right: 10 })
-          .onClick(() => this.toggleBookmark())
+        if (this.isBookmarkLoading) {
+          LoadingProgress()
+            .width(16).height(16)
+            .color('#FF4D4F')
+            .margin({ right: 10 })
+        } else {
+          Text(this.isBookmarked ? '❤' : '♡')
+            .fontSize(16)
+            .fontColor(this.isBookmarked ? '#FF4D4F' : $r('app.color.text_secondary'))
+            .padding({ right: 10 })
+            .onClick(() => this.toggleBookmark())
+        }
       }
       .padding({ left: 10, right: 0, top: 2, bottom: 10 })
       .width('100%')

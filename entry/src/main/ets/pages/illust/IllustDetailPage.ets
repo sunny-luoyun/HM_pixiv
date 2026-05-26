@@ -21,6 +21,7 @@ struct IllustDetailPage {
   @State isActive: boolean = false;
 
   @State isBookmarked: boolean = false;
+  @State isBookmarkLoading: boolean = false;
   @State scaleValue: number = 1;
   @State translateX: number = 0;
   @State translateY: number = 0;
@@ -133,6 +134,8 @@ struct IllustDetailPage {
   }
 
   async toggleBookmark() {
+    if (this.isBookmarkLoading) return;
+    this.isBookmarkLoading = true;
     try {
       if (this.isBookmarked) {
         await PixivService.deleteIllustBookmark(this.illustId);
@@ -144,6 +147,7 @@ struct IllustDetailPage {
     } catch (err) {
       promptAction.showToast({ message: '操作失败: ' + String(err) });
     }
+    this.isBookmarkLoading = false;
   }
 
   resetZoom() {
@@ -260,11 +264,18 @@ struct IllustDetailPage {
                 .onClick(() => this.handleDownload())
               }
 
-              Text(this.isBookmarked ? '❤' : '♡')
-                .fontSize(22)
-                .fontColor(this.isBookmarked ? '#FF4D4F' : Color.White)
-                .margin({ left: 12 })
-                .onClick(() => this.toggleBookmark())
+              if (this.isBookmarkLoading) {
+                LoadingProgress()
+                  .width(22).height(22)
+                  .color('#FF4D4F')
+                  .margin({ left: 12 })
+              } else {
+                Text(this.isBookmarked ? '❤' : '♡')
+                  .fontSize(22)
+                  .fontColor(this.isBookmarked ? '#FF4D4F' : Color.White)
+                  .margin({ left: 12 })
+                  .onClick(() => this.toggleBookmark())
+              }
             }
             .width('100%')
             .padding({ left: 16, right: 16, top: 8 })

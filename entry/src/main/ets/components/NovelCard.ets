@@ -23,6 +23,7 @@ export struct NovelCard {
   @State hasTitleTranslation: boolean = false;
   @State showOriginalTitle: boolean = true;
   @State isBookmarked: boolean = false;
+  @State isBookmarkLoading: boolean = false;
 
   async aboutToAppear() {
     if (!this.item.url) return;
@@ -241,6 +242,8 @@ export struct NovelCard {
   }
 
   async toggleBookmark() {
+    if (this.isBookmarkLoading) return;
+    this.isBookmarkLoading = true;
     try {
       if (this.isBookmarked) {
         await PixivService.deleteNovelBookmark(this.item.id);
@@ -252,6 +255,7 @@ export struct NovelCard {
     } catch (err) {
       promptAction.showToast({ message: '操作失败: ' + String(err) });
     }
+    this.isBookmarkLoading = false;
   }
 
   private navigateToReader() {
@@ -316,11 +320,18 @@ export struct NovelCard {
 
   @Builder
   BookmarkButton() {
-    Text(this.isBookmarked ? '❤' : '♡')
-      .fontSize(18)
-      .fontColor(this.isBookmarked ? '#FF4D4F' : $r('app.color.text_secondary'))
-      .margin({ right: 12 })
-      .onClick(() => this.toggleBookmark())
+    if (this.isBookmarkLoading) {
+      LoadingProgress()
+        .width(18).height(18)
+        .color('#FF4D4F')
+        .margin({ right: 12 })
+    } else {
+      Text(this.isBookmarked ? '❤' : '♡')
+        .fontSize(18)
+        .fontColor(this.isBookmarked ? '#FF4D4F' : $r('app.color.text_secondary'))
+        .margin({ right: 12 })
+        .onClick(() => this.toggleBookmark())
+    }
   }
 
   @Builder
