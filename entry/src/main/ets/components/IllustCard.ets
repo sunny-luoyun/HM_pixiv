@@ -1,4 +1,5 @@
 import router from '@ohos.router';
+import promptAction from '@ohos.promptAction';
 import { PixivService, IllustBookmark } from '../services/PixivService';
 
 @Component
@@ -6,6 +7,7 @@ export struct IllustCard {
   private item!: IllustBookmark;
   @State localUrl: string = '';
   @State isCaching: boolean = true;
+  @State isBookmarked: boolean = false;
 
   async aboutToAppear() {
     if (!this.item.url) {
@@ -17,6 +19,21 @@ export struct IllustCard {
       this.localUrl = path;
     }
     this.isCaching = false;
+    this.isBookmarked = !!this.item.bookmarkData;
+  }
+
+  async toggleBookmark() {
+    try {
+      if (this.isBookmarked) {
+        await PixivService.deleteIllustBookmark(this.item.id);
+        this.isBookmarked = false;
+      } else {
+        await PixivService.addIllustBookmark(this.item.id, 'public', []);
+        this.isBookmarked = true;
+      }
+    } catch (err) {
+      promptAction.showToast({ message: '操作失败: ' + String(err) });
+    }
   }
 
   build() {
@@ -63,22 +80,32 @@ export struct IllustCard {
         });
       })
 
-      Text(this.item.userName)
-        .fontSize(11)
-        .fontColor($r('app.color.tab_selected'))
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .padding({ left: 10, right: 10, top: 2, bottom: 10 })
-        .width('100%')
-        .onClick(() => {
-          router.pushUrl({
-            url: 'pages/user/UserProfilePage',
-            params: {
-              userId: this.item.userId,
-              userName: this.item.userName
-            }
-          });
-        })
+      Row() {
+        Text(this.item.userName)
+          .fontSize(11)
+          .fontColor($r('app.color.tab_selected'))
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .layoutWeight(1)
+          .onClick(() => {
+            router.pushUrl({
+              url: 'pages/user/UserProfilePage',
+              params: {
+                userId: this.item.userId,
+                userName: this.item.userName
+              }
+            });
+          })
+
+        Text(this.isBookmarked ? '❤' : '♡')
+          .fontSize(16)
+          .fontColor(this.isBookmarked ? '#FF4D4F' : $r('app.color.text_secondary'))
+          .padding({ right: 10 })
+          .onClick(() => this.toggleBookmark())
+      }
+      .padding({ left: 10, right: 0, top: 2, bottom: 10 })
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
     }
     .width('100%')
     .backgroundColor($r('app.color.card_bg'))

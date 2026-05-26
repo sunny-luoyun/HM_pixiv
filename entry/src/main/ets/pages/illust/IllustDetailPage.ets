@@ -1,5 +1,6 @@
 import router from '@ohos.router';
 import abilityAccessCtrl, { Permissions } from '@ohos.abilityAccessCtrl';
+import promptAction from '@ohos.promptAction';
 import { common } from '@kit.AbilityKit';
 import { PixivService, IllustDetailBody } from '../../services/PixivService';
 
@@ -19,6 +20,7 @@ struct IllustDetailPage {
   @State illustPageCount: number = 1;
   @State isActive: boolean = false;
 
+  @State isBookmarked: boolean = false;
   @State scaleValue: number = 1;
   @State translateX: number = 0;
   @State translateY: number = 0;
@@ -55,6 +57,7 @@ struct IllustDetailPage {
       const res = await PixivService.getIllustDetail(this.illustId);
       if (!res.error && res.body) {
         this.detail = res.body;
+        this.isBookmarked = !!res.body.bookmarkData;
         const pageCount = res.body.pageCount;
         this.illustPageCount = pageCount;
         const urls = PixivService.generatePageUrls(res.body.urls.regular, pageCount);
@@ -127,6 +130,20 @@ struct IllustDetailPage {
       this.downloadFail = true;
     }
     this.isDownloading = false;
+  }
+
+  async toggleBookmark() {
+    try {
+      if (this.isBookmarked) {
+        await PixivService.deleteIllustBookmark(this.illustId);
+        this.isBookmarked = false;
+      } else {
+        await PixivService.addIllustBookmark(this.illustId, 'public', []);
+        this.isBookmarked = true;
+      }
+    } catch (err) {
+      promptAction.showToast({ message: '操作失败: ' + String(err) });
+    }
   }
 
   resetZoom() {
@@ -242,6 +259,12 @@ struct IllustDetailPage {
                 .backgroundColor('#33FFFFFF')
                 .onClick(() => this.handleDownload())
               }
+
+              Text(this.isBookmarked ? '❤' : '♡')
+                .fontSize(22)
+                .fontColor(this.isBookmarked ? '#FF4D4F' : Color.White)
+                .margin({ left: 12 })
+                .onClick(() => this.toggleBookmark())
             }
             .width('100%')
             .padding({ left: 16, right: 16, top: 8 })

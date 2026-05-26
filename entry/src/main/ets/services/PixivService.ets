@@ -63,6 +63,7 @@ export interface IllustDetailBody {
   createDate: string;
   uploadDate: string;
   profileImageUrl: string;
+  bookmarkData?: BookmarkData | null;
 }
 
 export interface IllustDetailResponse {
@@ -198,6 +199,7 @@ interface NovelDetailBody {
   pageCount: number;
   wordCount: number;
   coverUrl: string;
+  bookmarkData?: BookmarkData | null;
 }
 
 interface DownloadTask {
@@ -454,6 +456,25 @@ interface AllImageCacheInfo {
   avatar: CacheCategoryInfo;
 }
 
+interface AddIllustBookmarkBody {
+  illust_id: string;
+  restrict: number;
+  tags: string[];
+}
+
+interface DeleteIllustBookmarkBody {
+  bookmark_id: string;
+}
+
+interface AddNovelBookmarkBody {
+  novel_id: string;
+  restrict: number;
+}
+
+interface DeleteNovelBookmarkBody {
+  novel_id: string;
+}
+
 export class PixivService {
   private static baseUrl = 'https://www.pixiv.net';
 
@@ -468,6 +489,56 @@ export class PixivService {
   private static lastApiRequestTime = 0;
   private static readonly MIN_API_INTERVAL = 1200;
   private static readonly MAX_RETRIES = 2;
+
+  // ---- CSRF Token ----
+  private static csrfToken: string = '';
+  private static csrfTokenExpiry: number = 0;
+
+  private static async fetchCsrfToken(): Promise<string> {
+    const now = Date.now();
+    if (PixivService.csrfToken && now < PixivService.csrfTokenExpiry) {
+      return PixivService.csrfToken;
+    }
+    try {
+      const httpRequest = http.createHttp();
+      const url = `${PixivService.baseUrl}/`;
+      const cookie = await CookieManager.getFullCookie();
+      const header: Record<string, string> = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Referer': 'https://www.pixiv.net/',
+      };
+      if (cookie) header['Cookie'] = cookie;
+
+      const resp = await httpRequest.request(url, {
+        method: http.RequestMethod.GET,
+        header,
+        connectTimeout: 10000,
+        readTimeout: 10000,
+      });
+      httpRequest.destroy();
+
+      if (resp.responseCode === 200) {
+        const body = String(resp.result);
+        let match = body.match(/\\"token\\"\s*:\s*\\"([a-f0-9]+)\\"?/);
+        if (!match) {
+          match = body.match(/"csrfToken"\s*:\s*"([a-f0-9]{32})"/);
+        }
+        if (match) {
+          PixivService.csrfToken = match[1];
+          PixivService.csrfTokenExpiry = now + 3600000;
+          return PixivService.csrfToken;
+        }
+      }
+      throw new Error('无法获取 CSRF token');
+    } catch (err) {
+      console.error('获取 CSRF token 失败:', err);
+      throw new Error(`CSRF token 获取失败: ${String(err)}`);
+    }
+  }
+
+  private static async ensureCsrfToken(): Promise<string> {
+    return PixivService.fetchCsrfToken();
+  }
 
   private static async enqueueDownload(url: string, savePath: string, groupId?: string): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
@@ -608,6 +679,15 @@ export class PixivService {
 
     if (!cookie && !accessToken) {
       console.warn('⚠️ 无认证信息(Cookie/Token)，请求可能失败');
+    }
+
+    if (options?.header) {
+      const customHeaders = options.header as Record<string, string>;
+      const keys = Object.keys(customHeaders);
+      for (let i = 0; i < keys.length; i++) {
+        const key = keys[i];
+        header[key] = customHeaders[key];
+      }
     }
 
     const finalOptions: http.HttpRequestOptions = {
@@ -1076,5 +1156,70 @@ export class PixivService {
     await PixivService.clearCategoryCache('novel_');
     await PixivService.clearCategoryCache('user_');
     await PixivService.clearCategoryCache('avatar_');
+  }
+
+  // ---- 收藏 (Cookie-based Web API) ----
+
+  static async addIllustBookmark(illustId: string, restrict: string = 'public', tags: string[] = []): Promise<void> {
+    const csrfToken = await PixivService.ensureCsrfToken();
+    const body: AddIllustBookmarkBody = {
+      illust_id: illustId,
+      restrict: restrict === 'public' ? 0 : 1,
+      tags: tags,
+    };
+    await PixivService.request<object>('/ajax/illusts/bookmarks/add', {
+      method: http.RequestMethod.POST,
+      extraData: JSON.stringify(body),
+      header: {
+        'X-Csrf-Token': csrfToken,
+        'Content-Type': 'application/json',
+      },
+    });
+  }
+
+  static async deleteIllustBookmark(illustId: string): Promise<void> {
+    const csrfToken = await PixivService.ensureCsrfToken();
+    const detail = await PixivService.getIllustDetail(illustId);
+    const bmData = detail.body?.bookmarkData as BookmarkData | undefined;
+    if (!bmData) {
+      throw new Error('该作品未被收藏');
+    }
+    const formData = `bookmark_id=${encodeURIComponent(bmData.id)}`;
+    await PixivService.request<object>('/ajax/illusts/bookmarks/delete', {
+      method: http.RequestMethod.POST,
+      extraData: formData,
+      header: {
+        'X-Csrf-Token': csrfToken,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
+  }
+
+  static async addNovelBookmark(novelId: string, restrict: string = 'public'): Promise<void> {
+    const csrfToken = await PixivService.ensureCsrfToken();
+    const body: AddNovelBookmarkBody = {
+      novel_id: novelId,
+      restrict: restrict === 'public' ? 0 : 1,
+    };
+    await PixivService.request<object>('/ajax/novels/bookmarks/add', {
+      method: http.RequestMethod.POST,
+      extraData: JSON.stringify(body),
+      header: {
+        'X-Csrf-Token': csrfToken,
+        'Content-Type': 'application/json',
+      },
+    });
+  }
+
+  static async deleteNovelBookmark(novelId: string): Promise<void> {
+    const csrfToken = await PixivService.ensureCsrfToken();
+    await PixivService.request<object>('/ajax/novels/bookmarks/delete', {
+      method: http.RequestMethod.POST,
+      extraData: JSON.stringify({ novel_id: novelId }),
+      header: {
+        'X-Csrf-Token': csrfToken,
+        'Content-Type': 'application/json',
+      },
+    });
   }
 }

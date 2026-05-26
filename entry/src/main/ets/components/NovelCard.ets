@@ -1,7 +1,7 @@
 import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
 import common from '@ohos.app.ability.common';
-import { NovelBookmark, PixivService } from '../services/PixivService';
+import { NovelBookmark, PixivService, BookmarkData } from '../services/PixivService';
 import { pixivCacheDB } from '../database/PixivCacheDB';
 import { CacheStatus, getCacheStatusDisplay, PixivTag } from '../models/PixivModels';
 import { getDeepSeekService } from '../services/DeepSeekService';
@@ -22,6 +22,7 @@ export struct NovelCard {
   @State translatedTitle: string = '';
   @State hasTitleTranslation: boolean = false;
   @State showOriginalTitle: boolean = true;
+  @State isBookmarked: boolean = false;
 
   async aboutToAppear() {
     if (!this.item.url) return;
@@ -29,6 +30,7 @@ export struct NovelCard {
     if (path) {
       this.localCoverPath = path;
     }
+    this.isBookmarked = !!this.item.bookmarkData;
     await this.checkCacheStatus();
   }
 
@@ -238,6 +240,20 @@ export struct NovelCard {
     }
   }
 
+  async toggleBookmark() {
+    try {
+      if (this.isBookmarked) {
+        await PixivService.deleteNovelBookmark(this.item.id);
+        this.isBookmarked = false;
+      } else {
+        await PixivService.addNovelBookmark(this.item.id, 'public');
+        this.isBookmarked = true;
+      }
+    } catch (err) {
+      promptAction.showToast({ message: '操作失败: ' + String(err) });
+    }
+  }
+
   private navigateToReader() {
     router.pushUrl({
       url: 'pages/novel/NovelReaderPage',
@@ -263,6 +279,7 @@ export struct NovelCard {
 
       Row() {
         this.CacheStatusTag()
+        this.BookmarkButton()
         Blank()
         this.DeleteCacheButton()
         this.ReadButton()
@@ -295,6 +312,15 @@ export struct NovelCard {
       .borderRadius(10)
       .height(22)
     }
+  }
+
+  @Builder
+  BookmarkButton() {
+    Text(this.isBookmarked ? '❤' : '♡')
+      .fontSize(18)
+      .fontColor(this.isBookmarked ? '#FF4D4F' : $r('app.color.text_secondary'))
+      .margin({ right: 12 })
+      .onClick(() => this.toggleBookmark())
   }
 
   @Builder
