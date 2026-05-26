@@ -246,8 +246,8 @@ export class AppApiService {
         const options: http.HttpRequestOptions = {
           method,
           header,
-          connectTimeout: 10000,
-          readTimeout: 10000,
+          connectTimeout: 3000,
+          readTimeout: 3000,
         };
 
         if (data && method === http.RequestMethod.POST) {

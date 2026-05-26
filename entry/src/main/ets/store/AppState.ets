@@ -88,8 +88,8 @@ export class AppState {
       const response = await httpRequest.request(url, {
         method: http.RequestMethod.GET,
         header,
-        connectTimeout: 10000,
-        readTimeout: 10000,
+        connectTimeout: 3000,
+        readTimeout: 3000,
       });
       const statusCode: number = response.responseCode;
 

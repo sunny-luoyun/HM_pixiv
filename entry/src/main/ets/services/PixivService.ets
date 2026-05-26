@@ -512,8 +512,8 @@ export class PixivService {
       const resp = await httpRequest.request(url, {
         method: http.RequestMethod.GET,
         header,
-        connectTimeout: 10000,
-        readTimeout: 10000,
+        connectTimeout: 3000,
+        readTimeout: 3000,
       });
       httpRequest.destroy();
 
@@ -688,8 +688,8 @@ export class PixivService {
       method: options?.method || http.RequestMethod.GET,
       header,
       extraData: options?.extraData,
-      connectTimeout: 10000,
-      readTimeout: 10000,
+      connectTimeout: 3000,
+      readTimeout: 3000,
       usingCache: true,
     };
 

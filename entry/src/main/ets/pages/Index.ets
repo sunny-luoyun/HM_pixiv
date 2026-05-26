@@ -25,7 +25,7 @@ struct Index {
   private tabsController: TabsController = new TabsController();
 
   async aboutToAppear() {
-    await appState.checkLoginStatus();
+    await appState.checkLoginStatus(true);
     this.isLoggedIn = appState.isLoggedIn;
     this.isReady = true;
     console.info(`🔄 检查登录状态: ${appState.isLoggedIn ? '已登录' : '未登录'}`);
