@@ -7,6 +7,7 @@ import { CookieManager } from './CookieManager';
 import { PixivNovel, CacheStatus, PixivTag, PixivSeries, PixivSeriesResult, parsePixivNovelFromRaw, RawPixivNovelItem } from '../models/PixivModels';
 import photoAccessHelper from '@ohos.file.photoAccessHelper';
 import { Context } from '@kit.AbilityKit';
+import { ProxyService } from './ProxyService';
 export interface UserInfoBody {
   userId?: string;
   name: string;
@@ -509,11 +510,14 @@ export class PixivService {
       };
       if (cookie) header['Cookie'] = cookie;
 
+      const proxyConfig = await ProxyService.getRequestProxyConfig();
+
       const resp = await httpRequest.request(url, {
         method: http.RequestMethod.GET,
         header,
         connectTimeout: 3000,
         readTimeout: 3000,
+        usingProxy: proxyConfig || false,
       });
       httpRequest.destroy();
 
@@ -684,6 +688,8 @@ export class PixivService {
       }
     }
 
+    const proxyConfig = await ProxyService.getRequestProxyConfig();
+
     const finalOptions: http.HttpRequestOptions = {
       method: options?.method || http.RequestMethod.GET,
       header,
@@ -691,7 +697,12 @@ export class PixivService {
       connectTimeout: 3000,
       readTimeout: 3000,
       usingCache: true,
+      usingProxy: proxyConfig || false,
     };
+
+    if (proxyConfig) {
+      console.info(`🔗 通过代理 ${proxyConfig.host}:${proxyConfig.port} 请求: ${url}`);
+    }
 
     return PixivService.enqueueApiRequest<T>(async () => {
       const httpRequest = http.createHttp();

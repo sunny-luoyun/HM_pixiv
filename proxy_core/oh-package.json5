@@ -1,0 +1,11 @@
+{
+  "name": "proxy_core",
+  "version": "1.0.0",
+  "description": "Mihomo proxy core NAPI bridge",
+  "main": "Index.ets",
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "libproxy_core.so": "file:./src/main/cpp/types/libproxy_core"
+  }
+}

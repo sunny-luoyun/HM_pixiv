@@ -1,5 +1,6 @@
 import http from '@ohos.net.http';
 import { CookieManager } from './CookieManager';
+import { ProxyService } from './ProxyService';
 
 interface ApiResult<T> {
   error: boolean;
@@ -243,11 +244,15 @@ export class AppApiService {
         if (cookie) {
           header['Cookie'] = cookie;
         }
+
+        const proxyConfig = await ProxyService.getRequestProxyConfig();
+
         const options: http.HttpRequestOptions = {
           method,
           header,
           connectTimeout: 3000,
           readTimeout: 3000,
+          usingProxy: proxyConfig || false,
         };
 
         if (data && method === http.RequestMethod.POST) {

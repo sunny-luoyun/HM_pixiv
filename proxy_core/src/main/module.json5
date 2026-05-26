@@ -1,0 +1,12 @@
+{
+  "module": {
+    "name": "proxy_core",
+    "type": "har",
+    "description": "Mihomo proxy core NAPI bridge",
+    "deviceTypes": [
+      "phone",
+      "tablet",
+      "2in1"
+    ]
+  }
+}

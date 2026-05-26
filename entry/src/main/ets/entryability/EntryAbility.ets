@@ -3,12 +3,14 @@ import { window } from '@kit.ArkUI';
 import { ConfigurationConstant } from '@kit.AbilityKit';
 import { CookieStorage } from '../common/utils/CookieStorage';
 import { TranslationStorage } from '../common/utils/TranslationStorage';
+import { ProxyService } from '../services/ProxyService';
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     CookieStorage.init(this.context);
     TranslationStorage.init(this.context);
-    console.info('✅ CookieStorage + TranslationStorage 已初始化');
+    ProxyService.init(this.context);
+    console.info('✅ CookieStorage + TranslationStorage + ProxyService 已初始化');
 
     TranslationStorage.getDeepSeekApiKey().then((key: string) => {
       AppStorage.setOrCreate('deepseekApiKey', key);
@@ -37,5 +39,6 @@ export default class EntryAbility extends UIAbility {
         return;
       }
     });
+    ProxyService.tryAutoStart();
   }
 }

@@ -1,5 +1,6 @@
 import { CookieManager } from '../services/CookieManager';
 import { PixivService, UserInfoResponse } from '../services/PixivService';
+import { ProxyService } from '../services/ProxyService';
 import http from '@ohos.net.http';
 import fileIo from '@ohos.file.fs';
 import common from '@ohos.app.ability.common';
@@ -85,11 +86,13 @@ export class AppState {
       };
       if (cookieStr) header['Cookie'] = cookieStr;
 
+      const proxyConfig = await ProxyService.getRequestProxyConfig();
       const response = await httpRequest.request(url, {
         method: http.RequestMethod.GET,
         header,
         connectTimeout: 3000,
         readTimeout: 3000,
+        usingProxy: proxyConfig || false,
       });
       const statusCode: number = response.responseCode;
 
