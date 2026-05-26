@@ -472,7 +472,8 @@ interface AddNovelBookmarkBody {
 }
 
 interface DeleteNovelBookmarkBody {
-  novel_id: string;
+  del: string;
+  book_id: string;
 }
 
 export class PixivService {
@@ -1213,12 +1214,18 @@ export class PixivService {
 
   static async deleteNovelBookmark(novelId: string): Promise<void> {
     const csrfToken = await PixivService.ensureCsrfToken();
+    const detail = await PixivService.request<NovelAjaxResponse<NovelDetailBody>>(`/ajax/novel/${novelId}`);
+    const bmData = detail.body?.bookmarkData as BookmarkData | undefined;
+    if (!bmData) {
+      throw new Error('该作品未被收藏');
+    }
+    const formData = `del=1&book_id=${encodeURIComponent(bmData.id)}`;
     await PixivService.request<object>('/ajax/novels/bookmarks/delete', {
       method: http.RequestMethod.POST,
-      extraData: JSON.stringify({ novel_id: novelId }),
+      extraData: formData,
       header: {
         'X-Csrf-Token': csrfToken,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
     });
   }
