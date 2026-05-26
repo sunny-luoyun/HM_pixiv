@@ -30,6 +30,8 @@ interface ReaderColors {
   translationProgressBg: string;
   translationProgressFill: string;
   dangerText: string;
+  menuBg: string;
+  menuItemActive: string;
 }
 
 function getReaderColors(isDark: boolean): ReaderColors {
@@ -48,7 +50,9 @@ function getReaderColors(isDark: boolean): ReaderColors {
     translatedTextColor: isDark ? '#CCE5FF' : '#0055AA',
     translationProgressBg: isDark ? '#333333' : '#E5E5E5',
     translationProgressFill: '#007DFF',
-    dangerText: '#FF4D4F'
+    dangerText: '#FF4D4F',
+    menuBg: isDark ? '#CC1C1C1E' : '#E8F2F2F7',
+    menuItemActive: isDark ? '#3A3A3C' : '#DDDDDD'
   };
 }
 
@@ -106,7 +110,6 @@ struct NovelReaderPage {
   @State private contentBlocks: ContentBlock[] = [];
   @State private isLoading: boolean = true;
   @State private fontSize: number = 18;
-  @State private showFontPanel: boolean = false;
   @StorageProp('isDarkMode') isDark: boolean = false;
 
   @State private showTranslation: boolean = false;
@@ -117,10 +120,21 @@ struct NovelReaderPage {
   @State private showOriginal: boolean = true;
   @State private renderBlocks: ContentBlock[] = [];
 
+  @State private isAutoReading: boolean = false;
+  @State private autoReadSpeedIndex: number = 5;
+  @State private showFloatingMenu: boolean = false;
+  @State private activeSubMenuIndex: number = -1;
+  private touchStartY: number = 0;
+  private touchStartTime: number = 0;
+
   private scroller: Scroller = new Scroller();
   private saveProgressTimer: number = -1;
   private readonly PROGRESS_SAVE_DELAY = 800;
   private pendingScrollY: number = 0;
+  private autoReadTimerId: number = -1;
+  private isProgrammaticScroll: boolean = false;
+  private readonly AUTO_READ_BASE_SPEED = 20;
+  private readonly AUTO_READ_TICK_INTERVAL = 30;
 
   aboutToAppear(): void {
     this.params = router.getParams() as ReaderRouterParams;
@@ -143,6 +157,7 @@ struct NovelReaderPage {
   }
 
   aboutToDisappear(): void {
+    this.stopAutoRead();
     if (this.params?.novelId && this.isCachedMode) {
       this.saveProgressInternal(Math.floor(this.scroller.currentOffset().yOffset));
     }
@@ -376,6 +391,70 @@ struct NovelReaderPage {
     AppStorage.Set('isDarkMode', this.isDark);
   }
 
+  private getSpeedMultiplier(): number {
+    return 0.5 + this.autoReadSpeedIndex * 0.1;
+  }
+
+  private startAutoRead(): void {
+    this.stopAutoRead();
+    this.isAutoReading = true;
+
+    this.autoReadTimerId = setInterval(() => {
+      if (this.scroller.isAtEnd()) {
+        this.stopAutoRead();
+        promptAction.showToast({ message: '已到达底部' });
+        return;
+      }
+
+      const delta = this.AUTO_READ_BASE_SPEED * this.getSpeedMultiplier()
+        * this.AUTO_READ_TICK_INTERVAL / 1000;
+      this.isProgrammaticScroll = true;
+      this.scroller.scrollBy(0, delta);
+      this.isProgrammaticScroll = false;
+    }, this.AUTO_READ_TICK_INTERVAL);
+  }
+
+  private stopAutoRead(): void {
+    if (this.autoReadTimerId !== -1) {
+      clearInterval(this.autoReadTimerId);
+      this.autoReadTimerId = -1;
+    }
+    this.isAutoReading = false;
+  }
+
+  private toggleAutoRead(): void {
+    if (this.isAutoReading) {
+      this.stopAutoRead();
+    } else {
+      this.startAutoRead();
+    }
+  }
+
+  private dismissFloatingMenu(): void {
+    this.showFloatingMenu = false;
+    this.activeSubMenuIndex = -1;
+  }
+
+  private async toggleTranslationView(showTranslated: boolean): Promise<void> {
+    if (!this.params?.novelId) return;
+
+    await this.saveProgressInternal(Math.floor(this.scroller.currentOffset().yOffset));
+
+    this.showOriginal = !showTranslated;
+    this.showTranslation = showTranslated;
+    this.renderBlocks = showTranslated ? this.translatedBlocks : this.contentBlocks;
+    this.saveViewPreference(showTranslated);
+
+    setTimeout(async () => {
+      const targetY = await pixivCacheDB.getReadingProgress(
+        this.params!.novelId, showTranslated
+      );
+      this.scroller.scrollTo({
+        xOffset: 0, yOffset: targetY > 0 ? targetY : 0
+      });
+    }, 50);
+  }
+
   @Builder HeaderBar() {
     Row() {
       Button({ type: ButtonType.Circle }) {
@@ -385,7 +464,10 @@ struct NovelReaderPage {
       }
       .width(40).height(40)
       .backgroundColor(this.getColors().iconBtnBg)
-      .onClick(() => router.back())
+      .onClick(() => {
+        this.stopAutoRead();
+        router.back();
+      })
 
       Column() {
         if (this.showTranslation && this.translatedTitle) {
@@ -425,86 +507,6 @@ struct NovelReaderPage {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
       .padding({ left: 12, right: 12 })
-
-      if (this.isCachedMode) {
-        Button({ type: ButtonType.Circle }) {
-          Text(this.showOriginal ? '译' : '原')
-            .fontSize(16)
-            .fontColor(this.getColors().translateBtnText)
-        }
-        .width(40).height(40)
-        .backgroundColor(this.getColors().iconBtnBg)
-        .margin({ right: 8 })
-        .enabled(this.translatedBlocks.length > 0)
-        .onClick(() => {
-          if (!this.params?.novelId) return;
-
-          this.saveProgressInternal(Math.floor(this.scroller.currentOffset().yOffset));
-
-          this.showOriginal = !this.showOriginal;
-          this.showTranslation = !this.showOriginal;
-          this.renderBlocks = this.showOriginal
-            ? this.contentBlocks
-            : this.translatedBlocks;
-          this.saveViewPreference(!this.showOriginal);
-
-          setTimeout(async () => {
-            const targetY = await pixivCacheDB.getReadingProgress(
-              this.params!.novelId, !this.showOriginal
-            );
-            this.scroller.scrollTo({
-              xOffset: 0, yOffset: targetY > 0 ? targetY : 0
-            });
-          }, 50);
-        })
-
-        Button({ type: ButtonType.Circle }) {
-          if (this.isTranslating) {
-            LoadingProgress()
-              .width(20).height(20)
-              .color(this.getColors().accentText)
-          } else {
-            Text('翻')
-              .fontSize(16)
-              .fontColor(this.translatedBlocks.length > 0
-                ? this.getColors().translatedTextColor
-                : this.getColors().translateBtnText)
-          }
-        }
-        .width(40).height(40)
-        .backgroundColor(this.getColors().iconBtnBg)
-        .margin({ right: 8 })
-        .onClick(() => {
-          if (this.translatedBlocks.length > 0) {
-            this.showTranslation = !this.showTranslation;
-            this.showOriginal = !this.showTranslation;
-            this.renderBlocks = this.showTranslation
-              ? this.translatedBlocks
-              : this.contentBlocks;
-          } else {
-            this.translateFullText();
-          }
-        })
-      }
-
-      Button({ type: ButtonType.Circle }) {
-        Text(this.isDark ? '☀' : '☾')
-          .fontSize(16)
-          .fontColor(this.getColors().iconBtnText)
-      }
-      .width(40).height(40)
-      .backgroundColor(this.getColors().iconBtnBg)
-      .margin({ right: 8 })
-      .onClick(() => this.toggleDarkMode())
-
-      Button({ type: ButtonType.Circle }) {
-        Text('A')
-          .fontSize(16)
-          .fontColor(this.getColors().iconBtnText)
-      }
-      .width(40).height(40)
-      .backgroundColor(this.getColors().iconBtnBg)
-      .onClick(() => { this.showFontPanel = !this.showFontPanel; })
     }
     .width('100%')
     .padding({ left: 16, right: 16, top: 12, bottom: 12 })
@@ -599,6 +601,18 @@ struct NovelReaderPage {
           this.debouncedSaveProgress(_y);
         }
       })
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.touchStartY = event.touches[0].y;
+          this.touchStartTime = Date.now();
+        } else if (event.type === TouchType.Up) {
+          const dy = Math.abs(event.touches[0].y - this.touchStartY);
+          const dt = Date.now() - this.touchStartTime;
+          if (dy < 10 && dt < 300 && !this.showFloatingMenu) {
+            this.showFloatingMenu = true;
+          }
+        }
+      })
     }
 
     if (this.isTranslating) {
@@ -628,35 +642,103 @@ struct NovelReaderPage {
     }
   }
 
-  @Builder FontSizePanel() {
-    Column() {
-      Blank()
-        .layoutWeight(1)
-        .width('100%')
-        .onClick(() => { this.showFontPanel = false; })
+  @Builder FloatingMenuBar() {
+    Row() {
+      this.FloatingTabItem('外观', 0)
+      this.FloatingTabItem('翻译', 1)
+      this.FloatingTabItem('自动阅读', 2)
+    }
+    .height(50)
+    .padding({ left: 4, right: 4 })
+    .width('85%')
+    .backgroundColor(this.getColors().menuBg)
+    .borderRadius(25)
+  }
 
-      Column() {
-        Text('字体大小')
-          .fontSize(14)
-          .fontColor(this.getColors().secondaryText)
-          .margin({ bottom: 12 })
+  @Builder FloatingTabItem(label: string, index: number) {
+    Column() {
+      Text(label)
+        .fontSize(15)
+        .fontColor(this.activeSubMenuIndex === index
+          ? this.getColors().primaryText
+          : this.getColors().secondaryText)
+        .fontWeight(this.activeSubMenuIndex === index ? FontWeight.Medium : FontWeight.Normal)
+      if (this.activeSubMenuIndex === index) {
+        Column()
+          .width(20).height(3)
+          .backgroundColor(this.getColors().accentText)
+          .borderRadius(1.5)
+          .margin({ top: 6 })
+      }
+    }
+    .layoutWeight(1)
+    .padding({ top: 10, bottom: 8 })
+    .alignItems(HorizontalAlign.Center)
+    .onClick(() => { this.activeSubMenuIndex = index; })
+  }
+
+  @Builder SubMenuPanel() {
+    Column() {
+      Row() {
+        Button({ type: ButtonType.Circle }) {
+          Text('←')
+            .fontSize(18)
+            .fontColor(this.getColors().iconBtnText)
+        }
+        .width(32).height(32)
+        .backgroundColor(this.getColors().iconBtnBg)
+        .onClick(() => { this.activeSubMenuIndex = -1; })
+
+        Text(this.activeSubMenuIndex === 0 ? '外观'
+          : this.activeSubMenuIndex === 1 ? '翻译'
+          : '自动阅读')
+          .fontSize(17)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(this.getColors().primaryText)
+          .margin({ left: 10 })
+      }
+      .width('100%')
+      .margin({ bottom: 16 })
+
+      if (this.activeSubMenuIndex === 0) {
+        Row() {
+          Text(this.isDark ? '☀' : '☾')
+            .fontSize(18)
+            .margin({ right: 8 })
+          Text('深色模式')
+            .fontSize(15)
+            .fontColor(this.getColors().primaryText)
+          Blank()
+          Toggle({ type: ToggleType.Switch, isOn: this.isDark })
+            .onChange((value: boolean) => {
+              this.isDark = value;
+              globalThis.isDarkMode = value;
+              AppStorage.Set('isDarkMode', value);
+            })
+        }
+        .width('100%')
+        .height(40)
 
         Row() {
+          Text('字号')
+            .fontSize(15)
+            .fontColor(this.getColors().primaryText)
+          Blank()
           Button('A-')
             .fontSize(16)
             .fontColor(this.getColors().iconBtnText)
             .backgroundColor(this.getColors().iconBtnBg)
             .borderRadius(8)
-            .height(40)
-            .padding({ left: 20, right: 20 })
+            .height(36)
+            .padding({ left: 16, right: 16 })
             .onClick(() => {
               if (this.fontSize > 12) this.fontSize -= 2;
             })
 
           Text(`${this.fontSize}px`)
-            .fontSize(16)
+            .fontSize(14)
             .fontColor(this.getColors().primaryText)
-            .width(80)
+            .width(60)
             .textAlign(TextAlign.Center)
 
           Button('A+')
@@ -664,23 +746,89 @@ struct NovelReaderPage {
             .fontColor(this.getColors().iconBtnText)
             .backgroundColor(this.getColors().iconBtnBg)
             .borderRadius(8)
-            .height(40)
-            .padding({ left: 20, right: 20 })
+            .height(36)
+            .padding({ left: 16, right: 16 })
             .onClick(() => {
               if (this.fontSize < 32) this.fontSize += 2;
             })
         }
         .width('100%')
-        .justifyContent(FlexAlign.Center)
+        .height(44)
+      } else if (this.activeSubMenuIndex === 1) {
+        if (this.translatedBlocks.length > 0) {
+          Row() {
+            Text('显示译文')
+              .fontSize(15)
+              .fontColor(this.getColors().primaryText)
+            Blank()
+            Toggle({ type: ToggleType.Switch, isOn: !this.showOriginal })
+              .onChange((value: boolean) => {
+                this.toggleTranslationView(value);
+              })
+          }
+          .width('100%')
+          .height(40)
+        } else {
+          Button('翻译全文')
+            .fontSize(15)
+            .fontColor('#FFFFFF')
+            .backgroundColor(this.getColors().accentText)
+            .borderRadius(8)
+            .height(40)
+            .width('100%')
+            .onClick(() => { this.translateFullText(); })
+        }
+      } else if (this.activeSubMenuIndex === 2) {
+        Row() {
+          Text('自动阅读')
+            .fontSize(15)
+            .fontColor(this.getColors().primaryText)
+          Blank()
+          Toggle({ type: ToggleType.Switch, isOn: this.isAutoReading })
+            .onChange((value: boolean) => {
+              if (value) {
+                this.startAutoRead();
+              } else {
+                this.stopAutoRead();
+              }
+            })
+        }
+        .width('100%')
+        .height(40)
+
+        Row() {
+          Text('速度')
+            .fontSize(15)
+            .fontColor(this.getColors().primaryText)
+          Blank()
+          Slider({
+            value: this.autoReadSpeedIndex,
+            min: 0,
+            max: 10,
+            step: 1,
+            style: SliderStyle.InSet
+          })
+            .width(160)
+            .onChange((value: number) => {
+              this.autoReadSpeedIndex = value;
+              if (this.isAutoReading) {
+                this.startAutoRead();
+              }
+            })
+          Text(`${this.getSpeedMultiplier().toFixed(1)}x`)
+            .fontSize(14)
+            .fontColor(this.getColors().primaryText)
+            .width(40)
+            .textAlign(TextAlign.End)
+        }
+        .width('100%')
+        .height(44)
       }
-      .width('100%')
-      .padding(20)
-      .backgroundColor(this.getColors().headerBg)
-      .borderRadius({ topLeft: 16, topRight: 16 })
-      .shadow({ radius: 16, color: '#00000033', offsetY: -4 })
     }
-    .width('100%')
-    .height('100%')
+    .width('85%')
+    .padding(16)
+    .backgroundColor(this.getColors().menuBg)
+    .borderRadius(20)
   }
 
   build() {
@@ -698,8 +846,28 @@ struct NovelReaderPage {
       .height('100%')
       .backgroundColor(this.getColors().pageBg)
 
-      if (this.showFontPanel) {
-        this.FontSizePanel()
+      if (this.showFloatingMenu) {
+        Column() {
+          Column()
+            .layoutWeight(1)
+            .width('100%')
+
+          if (this.activeSubMenuIndex !== -1) {
+            Column() { this.SubMenuPanel() }
+              .margin({ bottom: 8 })
+              .transition(TransitionEffect.translate({ y: 20 })
+                .combine(TransitionEffect.OPACITY)
+                .animation({ duration: 250, curve: Curve.EaseOut }))
+          }
+
+          Column() { this.FloatingMenuBar() }
+            .margin({ bottom: 24 })
+        }
+        .width('100%')
+        .height('100%')
+        .backgroundColor('#30000000')
+        .onClick(() => { this.dismissFloatingMenu(); })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
       }
     }
     .width('100%')
