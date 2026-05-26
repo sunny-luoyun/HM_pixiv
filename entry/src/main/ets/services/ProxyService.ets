@@ -40,33 +40,17 @@ export class ProxyService {
   private static checkNativeAvailable() {
     try {
       const pingResp = nativePing() as string;
-      if (pingResp !== 'pong') {
-        ProxyService.nativeAvailable = false;
-        ProxyService.nativeErrorMessage = 'ping failed: ' + pingResp;
-        return;
-      }
-      const resp = nativeGetStatus() as string;
-      if (resp) {
-        const parsed = JSON.parse(resp) as Record<string, Object>;
-        if (parsed['success'] === true) {
-          ProxyService.nativeAvailable = true;
-          ProxyService.nativeErrorMessage = '';
-          console.info('✅ Mihomo 原生内核可用');
-        } else {
-          ProxyService.nativeAvailable = false;
-          ProxyService.nativeErrorMessage = String(parsed['dlopen_error'] ?? parsed['message'] ?? '');
-          console.warn('⚠️ Mihomo 内核不可用: ' + ProxyService.nativeErrorMessage);
-        }
+      ProxyService.nativeAvailable = (pingResp === 'pong');
+      if (ProxyService.nativeAvailable) {
+        console.info('✅ NAPI 桥接可用');
       } else {
-        ProxyService.nativeAvailable = false;
-        ProxyService.nativeErrorMessage = 'no response';
+        console.warn('⚠️ NAPI ping 返回异常');
       }
     } catch (_err) {
       ProxyService.nativeAvailable = false;
-      ProxyService.nativeErrorMessage = 'NAPI exception: ' + String(_err);
+      console.warn('⚠️ NAPI 桥接不可用');
     }
   }
-  // ... rest stays the same
 
   static isNativeAvailable(): boolean {
     return ProxyService.nativeAvailable;

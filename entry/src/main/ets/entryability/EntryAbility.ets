@@ -39,6 +39,8 @@ export default class EntryAbility extends UIAbility {
         return;
       }
     });
-    ProxyService.tryAutoStart();
+    setTimeout(() => {
+      ProxyService.tryAutoStart();
+    }, 3000);
   }
 }
