@@ -1,6 +1,5 @@
 import { CookieManager } from './CookieManager';
 import { PixivService } from './PixivService';
-import { OAuthService, TokenResponse } from './OAuthService';
 import { appState } from '../store/AppState';
 
 export interface LoginUserData {
@@ -78,61 +77,6 @@ export class LoginService {
     } catch (err) {
       console.error('❌ 保存用户信息失败:', err);
       throw new Error(String(err));
-    }
-  }
-
-  // ======== OAuth Login Flow ========
-
-  static async handleOAuthLoginSuccess(authCode: string): Promise<TokenResponse> {
-    const tokenResponse = await OAuthService.exchangeCodeForToken(authCode);
-    await CookieManager.saveTokens({
-      access_token: tokenResponse.access_token,
-      refresh_token: tokenResponse.refresh_token,
-      expires_in: tokenResponse.expires_in,
-      obtained_at: Date.now(),
-    });
-    if (tokenResponse.user) {
-      const userId = String(tokenResponse.user.id);
-      const userName = tokenResponse.user.name;
-      await CookieManager.saveUserInfo(userId, userName);
-      appState.userName = userName;
-      appState.userId = userId;
-      appState.isLoggedIn = true;
-    }
-    console.info('✅ OAuth token 已保存');
-    return tokenResponse;
-  }
-
-  static async refreshTokens(): Promise<boolean> {
-    try {
-      const refreshToken = await CookieManager.getRefreshToken();
-      if (!refreshToken) return false;
-      const tokenResponse = await OAuthService.refreshAccessToken(refreshToken);
-      await CookieManager.saveTokens({
-        access_token: tokenResponse.access_token,
-        refresh_token: tokenResponse.refresh_token,
-        expires_in: tokenResponse.expires_in,
-        obtained_at: Date.now(),
-      });
-      if (tokenResponse.user) {
-        const userId = String(tokenResponse.user.id);
-        const userName = tokenResponse.user.name;
-        await CookieManager.saveUserInfo(userId, userName);
-        appState.userName = userName;
-        appState.userId = userId;
-        appState.isLoggedIn = true;
-      }
-      console.info('✅ Token 刷新成功');
-      return true;
-    } catch (err) {
-      const msg = String(err);
-      if (msg.includes('INVALID_REFRESH_TOKEN')) {
-        console.warn('⚠️ refresh_token 已失效，需要重新登录');
-        await appState.logout();
-      } else {
-        console.error('❌ 刷新 Token 失败:', err);
-      }
-      return false;
     }
   }
 

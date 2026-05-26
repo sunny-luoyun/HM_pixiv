@@ -1,7 +1,6 @@
 import webview from '@ohos.web.webview';
 import router from '@ohos.router';
 import { LoginPageViewModel } from './LoginPageViewModel';
-import { OAuthService } from '../../services/OAuthService';
 
 @Entry
 @Component
@@ -10,12 +9,6 @@ struct LoginPage {
   private viewModel: LoginPageViewModel = new LoginPageViewModel();
   private isHandled: boolean = false;
   private loginUrl: string = 'https://accounts.pixiv.net/login';
-
-  aboutToAppear() {
-    this.viewModel.initOAuth().then(() => {
-      this.loginUrl = OAuthService.getLoginUrl();
-    });
-  }
 
   build() {
     Column() {
@@ -55,25 +48,10 @@ struct LoginPage {
       Web({ src: this.loginUrl, controller: this.controller })
         .javaScriptAccess(true)
         .domStorageAccess(true)
-        .onLoadIntercept((event) => {
-          const url = event?.data?.getRequestUrl?.() ?? '';
-          if (OAuthService.isCallbackUrl(url)) {
-            if (!this.isHandled) {
-              this.isHandled = true;
-              const code = OAuthService.extractCodeFromUrl(url);
-              if (code) {
-                console.info('✅ 拦截到OAuth回调，提取授权码');
-                this.handleOAuthCallback(code);
-              }
-            }
-            return true;
-          }
-          return false;
-        })
         .onPageEnd((event) => {
           if (!this.isHandled && event.url?.startsWith('https://www.pixiv.net/')) {
             this.isHandled = true;
-            console.info('✅ 检测到登录成功（回退方案），跳转到Pixiv首页');
+            console.info('✅ 检测到登录成功，跳转到Pixiv首页');
             this.handleLoginCompletion();
           }
         })
@@ -87,15 +65,6 @@ struct LoginPage {
     .width('100%')
     .height('100%')
     .backgroundColor($r('app.color.page_background'))
-  }
-
-  private async handleOAuthCallback(code: string): Promise<void> {
-    try {
-      await this.viewModel.onOAuthCodeReceived(code);
-      setTimeout(() => { router.back(); }, 1000);
-    } catch (err) {
-      console.error('❌ OAuth登录处理失败:', err);
-    }
   }
 
   private async handleLoginCompletion(): Promise<void> {

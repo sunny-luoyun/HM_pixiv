@@ -1,5 +1,5 @@
 import http from '@ohos.net.http';
-import { TokenStorage } from '../common/utils/TokenStorage';
+import { CookieManager } from './CookieManager';
 
 interface ApiResult<T> {
   error: boolean;
@@ -228,25 +228,24 @@ export class AppApiService {
     path: string,
     data?: object,
   ): Promise<T> {
-    const accessToken = await TokenStorage.getAccessToken();
-    if (!accessToken) {
-      throw new Error('No access token available');
-    }
+    const cookie = await CookieManager.getFullCookie();
 
     return AppApiService.enqueue<T>(async () => {
       const httpRequest = http.createHttp();
       try {
         const url = `${AppApiService.baseUrl}${path}`;
+        const header: Record<string, string> = {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Referer': 'https://www.pixiv.net/',
+          'Accept': 'application/json',
+          'Accept-Language': 'zh-CN,zh;q=0.9',
+        };
+        if (cookie) {
+          header['Cookie'] = cookie;
+        }
         const options: http.HttpRequestOptions = {
           method,
-          header: {
-            'Authorization': `Bearer ${accessToken}`,
-            'User-Agent': 'PixivIOSApp/7.13.4 (iOS 16.0.3; iPhone13,3)',
-            'App-OS': 'ios',
-            'App-OS-Version': '16.0.3',
-            'Accept': 'application/json',
-            'Accept-Language': 'zh-CN,zh;q=0.9',
-          },
+          header,
           connectTimeout: 10000,
           readTimeout: 10000,
         };

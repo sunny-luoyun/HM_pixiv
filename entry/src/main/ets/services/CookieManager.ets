@@ -1,6 +1,5 @@
 import webview from '@ohos.web.webview';
 import { CookieStorage } from '../common/utils/CookieStorage';
-import { TokenStorage, PixivTokens } from '../common/utils/TokenStorage';
 
 export class CookieManager {
   private static readonly DOMAINS = [
@@ -78,38 +77,7 @@ export class CookieManager {
     }
   }
 
-  // ======== OAuth Token Management ========
-
-  static async saveTokens(tokens: PixivTokens): Promise<void> {
-    await TokenStorage.saveTokens(tokens);
-  }
-
-  static async getTokens(): Promise<PixivTokens | null> {
-    return await TokenStorage.getTokens();
-  }
-
-  static async getAccessToken(): Promise<string> {
-    return await TokenStorage.getAccessToken();
-  }
-
-  static async getRefreshToken(): Promise<string> {
-    return await TokenStorage.getRefreshToken();
-  }
-
-  static async isTokenExpired(): Promise<boolean> {
-    return await TokenStorage.isTokenExpired();
-  }
-
-  static async hasTokens(): Promise<boolean> {
-    return await TokenStorage.hasTokens();
-  }
-
-  static async clearTokens(): Promise<void> {
-    await TokenStorage.clearTokens();
-  }
-
   static async clearAll(): Promise<void> {
     await CookieManager.clearCookies();
-    await CookieManager.clearTokens();
   }
 }

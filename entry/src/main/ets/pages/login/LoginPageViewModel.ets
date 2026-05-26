@@ -1,7 +1,6 @@
 import webview from '@ohos.web.webview';
 import { LoginService, LoginUserData } from '../../services/LoginService';
 import { PixivService } from '../../services/PixivService';
-import { OAuthService } from '../../services/OAuthService';
 import { CookieManager } from '../../services/CookieManager';
 import { appState } from '../../store/AppState';
 
@@ -9,34 +8,6 @@ export class LoginPageViewModel {
   isProcessing: boolean = false;
   statusMessage: string = '';
   errorMessage: string = '';
-
-  async initOAuth(): Promise<void> {
-    await OAuthService.generatePKCE();
-    console.info('🔐 PKCE 挑战已生成');
-  }
-
-  async onOAuthCodeReceived(code: string): Promise<void> {
-    try {
-      this.isProcessing = true;
-      this.statusMessage = '正在交换OAuth令牌...';
-      this.errorMessage = '';
-
-      const tokenResponse = await LoginService.handleOAuthLoginSuccess(code);
-
-      this.statusMessage = `登录成功！欢迎 ${tokenResponse.user?.name ?? ''}`;
-
-      await this.fetchAvatar(String(tokenResponse.user?.id ?? ''));
-
-      await CookieManager.collectLoginCookies();
-
-      this.isProcessing = false;
-    } catch (err) {
-      this.errorMessage = `OAuth登录失败: ${String(err)}`;
-      this.isProcessing = false;
-      console.error('❌ OAuth登录异常:', err);
-      throw new Error(String(err));
-    }
-  }
 
   async onLoginSuccess(webviewController: webview.WebviewController): Promise<void> {
     try {

@@ -2,15 +2,13 @@ import { AbilityConstant, UIAbility, Want, Configuration } from '@kit.AbilityKit
 import { window } from '@kit.ArkUI';
 import { ConfigurationConstant } from '@kit.AbilityKit';
 import { CookieStorage } from '../common/utils/CookieStorage';
-import { TokenStorage } from '../common/utils/TokenStorage';
 import { TranslationStorage } from '../common/utils/TranslationStorage';
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     CookieStorage.init(this.context);
-    TokenStorage.init(this.context);
     TranslationStorage.init(this.context);
-    console.info('✅ CookieStorage + TokenStorage + TranslationStorage 已初始化');
+    console.info('✅ CookieStorage + TranslationStorage 已初始化');
 
     TranslationStorage.getDeepSeekApiKey().then((key: string) => {
       AppStorage.setOrCreate('deepseekApiKey', key);

@@ -1,6 +1,5 @@
 import { CookieManager } from '../services/CookieManager';
 import { PixivService, UserInfoResponse } from '../services/PixivService';
-import { OAuthService } from '../services/OAuthService';
 import http from '@ohos.net.http';
 import fileIo from '@ohos.file.fs';
 import common from '@ohos.app.ability.common';
@@ -13,7 +12,6 @@ export class AppState {
   userId: string = '';
   userName: string = '';
   avatarUrl: string = '';
-  hasOAuthTokens: boolean = false;
 
   private constructor() {}
 
@@ -26,10 +24,8 @@ export class AppState {
 
   async checkLoginStatus(skipVerify: boolean = false) {
     try {
-      const hasTokens = await CookieManager.hasTokens();
       const cookieStr = await CookieManager.getFullCookie();
-      this.hasOAuthTokens = hasTokens;
-      this.isLoggedIn = hasTokens || cookieStr !== '';
+      this.isLoggedIn = cookieStr !== '';
 
       if (this.isLoggedIn) {
         const savedUserId = await CookieManager.getUserId();
@@ -45,30 +41,7 @@ export class AppState {
 
         if (!skipVerify) {
           try {
-            let isValid = false;
-
-            if (hasTokens) {
-              const expired = await CookieManager.isTokenExpired();
-              if (expired) {
-                console.info('⏰ Token可能已过期，尝试刷新...');
-                const refreshed = await this.tryRefreshToken();
-                isValid = refreshed;
-              } else {
-                isValid = true;
-              }
-            }
-
-            if (!isValid && cookieStr) {
-              try {
-                isValid = await this.verifyCookieWithUserId();
-              } catch (networkErr) {
-                if (hasTokens) {
-                  isValid = true;
-                } else {
-                  throw new Error(String(networkErr));
-                }
-              }
-            }
+            let isValid = await this.verifyCookieWithUserId();
 
             if (!isValid) {
               console.warn('⚠️ 认证验证失败，自动登出');
@@ -97,33 +70,6 @@ export class AppState {
     }
   }
 
-  async tryRefreshToken(): Promise<boolean> {
-    try {
-      const refreshToken = await CookieManager.getRefreshToken();
-      if (!refreshToken) return false;
-      const tokenResponse = await OAuthService.refreshAccessToken(refreshToken);
-      await CookieManager.saveTokens({
-        access_token: tokenResponse.access_token,
-        refresh_token: tokenResponse.refresh_token,
-        expires_in: tokenResponse.expires_in,
-        obtained_at: Date.now(),
-      });
-      if (tokenResponse.user) {
-        this.userId = String(tokenResponse.user.id);
-        this.userName = tokenResponse.user.name;
-        await CookieManager.saveUserInfo(this.userId, this.userName);
-      }
-      console.info('✅ Token 刷新成功');
-      return true;
-    } catch (err) {
-      const msg = String(err);
-      if (msg.includes('INVALID_REFRESH_TOKEN')) {
-        console.warn('⚠️ refresh_token 已失效');
-      }
-      return false;
-    }
-  }
-
   async verifyCookieWithUserId(): Promise<boolean> {
     if (!this.userId) {
       console.warn('用户ID为空，无法验证');
@@ -131,7 +77,6 @@ export class AppState {
     }
     const url = `https://www.pixiv.net/users/${this.userId}`;
     const cookieStr = await CookieManager.getFullCookie();
-    const accessToken = await CookieManager.getAccessToken();
     const httpRequest = http.createHttp();
     try {
       const header: Record<string, string> = {
@@ -139,7 +84,6 @@ export class AppState {
         'Referer': 'https://www.pixiv.net/',
       };
       if (cookieStr) header['Cookie'] = cookieStr;
-      if (accessToken) header['Authorization'] = `Bearer ${accessToken}`;
 
       const response = await httpRequest.request(url, {
         method: http.RequestMethod.GET,
@@ -189,7 +133,6 @@ export class AppState {
     this.userId = '';
     this.userName = '';
     this.avatarUrl = '';
-    this.hasOAuthTokens = false;
   }
 
   async cacheAvatar(): Promise<void> {
