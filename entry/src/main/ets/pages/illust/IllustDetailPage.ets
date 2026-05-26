@@ -2,6 +2,7 @@ import router from '@ohos.router';
 import abilityAccessCtrl, { Permissions } from '@ohos.abilityAccessCtrl';
 import promptAction from '@ohos.promptAction';
 import { common } from '@kit.AbilityKit';
+import { display } from '@kit.ArkUI';
 import { PixivService, IllustDetailBody } from '../../services/PixivService';
 
 @Entry
@@ -25,9 +26,13 @@ struct IllustDetailPage {
   @State scaleValue: number = 1;
   @State translateX: number = 0;
   @State translateY: number = 0;
+  @State private screenWidth: number = 0;
+  @State private screenHeight: number = 0;
   private baseScale: number = 1;
   private baseTranslateX: number = 0;
   private baseTranslateY: number = 0;
+  private lastTouchX: number = -1;
+  private lastTouchY: number = -1;
   private swiperController: SwiperController = new SwiperController();
 
   get pageCount(): number {
@@ -43,6 +48,9 @@ struct IllustDetailPage {
       this.isLoading = false;
       return;
     }
+    const defaultDisplay = display.getDefaultDisplaySync();
+    this.screenWidth = px2vp(defaultDisplay.width);
+    this.screenHeight = px2vp(defaultDisplay.height);
     await this.loadDetail();
   }
 
@@ -156,6 +164,18 @@ struct IllustDetailPage {
     this.translateY = 0;
   }
 
+  clampTranslate() {
+    if (this.scaleValue <= 1) {
+      this.translateX = 0;
+      this.translateY = 0;
+      return;
+    }
+    const maxX = (this.scaleValue - 1) * this.screenWidth / 2;
+    const maxY = (this.scaleValue - 1) * this.screenHeight / 2;
+    this.translateX = Math.max(-maxX, Math.min(maxX, this.translateX));
+    this.translateY = Math.max(-maxY, Math.min(maxY, this.translateY));
+  }
+
   build() {
     Column() {
       if (this.isLoading) {
@@ -189,7 +209,9 @@ struct IllustDetailPage {
                         })
                         .onActionUpdate((event: PinchGestureEvent) => {
                           this.scaleValue = Math.max(1, Math.min(5, this.baseScale * event.scale));
+                          this.clampTranslate();
                         }),
+                      PanGesture({ fingers: 1 }),
                       TapGesture({ count: 2 })
                         .onAction(() => {
                           if (this.scaleValue > 1) {
@@ -202,6 +224,28 @@ struct IllustDetailPage {
                         })
                     )
                   )
+                  .onTouch((event: TouchEvent) => {
+                    if (this.scaleValue <= 1) return;
+                    if (event.type === TouchType.Down && event.touches.length === 1) {
+                      this.baseTranslateX = this.translateX;
+                      this.baseTranslateY = this.translateY;
+                      this.lastTouchX = event.touches[0].x;
+                      this.lastTouchY = event.touches[0].y;
+                    } else if (event.type === TouchType.Move && event.touches.length === 1 && this.lastTouchX >= 0) {
+                      const dx = event.touches[0].x - this.lastTouchX;
+                      const dy = event.touches[0].y - this.lastTouchY;
+                      this.lastTouchX = event.touches[0].x;
+                      this.lastTouchY = event.touches[0].y;
+                      const speed = this.scaleValue * 0.6 + 0.4;
+                      const maxX = (this.scaleValue - 1) * this.screenWidth / 2;
+                      const maxY = (this.scaleValue - 1) * this.screenHeight / 2;
+                      this.translateX = Math.max(-maxX, Math.min(maxX, this.translateX + dx * speed));
+                      this.translateY = Math.max(-maxY, Math.min(maxY, this.translateY + dy * speed));
+                    } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                      this.lastTouchX = -1;
+                      this.lastTouchY = -1;
+                    }
+                  })
               } else {
                 Stack() {
                   LoadingProgress().width(30).height(30).color('#66FFFFFF')
