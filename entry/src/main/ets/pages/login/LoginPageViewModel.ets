@@ -27,10 +27,7 @@ export class LoginPageViewModel {
 
       await this.fetchAvatar(String(tokenResponse.user?.id ?? ''));
 
-      const cookieStr = await CookieManager.collectLoginCookies();
-      if (cookieStr) {
-        await CookieManager.saveLoginCookie(cookieStr);
-      }
+      await CookieManager.collectLoginCookies();
 
       this.isProcessing = false;
     } catch (err) {

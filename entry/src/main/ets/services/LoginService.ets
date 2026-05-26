@@ -18,7 +18,6 @@ export class LoginService {
       if (!cookieStr) {
         throw new Error('未能获取到登录Cookie，请重新登录');
       }
-      await CookieManager.saveLoginCookie(cookieStr);
       await appState.setLoginInfo(cookieStr, true);
       console.info('✅ Cookie 已保存');
     } catch (err) {
@@ -55,16 +54,12 @@ export class LoginService {
     } catch (apiErr) {
       console.warn('⚠️ API降级也失败:', apiErr);
     }
-    console.warn('⚠️ 尝试从Cookie中提取用户信息...');
-    const cookieStr = await CookieManager.getFullCookie();
-    if (cookieStr) {
-      const cookieMap = CookieManager.parseCookie(cookieStr);
-      const userId = cookieMap.get('user_id') || '';
-      const userName = cookieMap.get('user_name') || '';
-      if (userId && userName) {
-        console.info('✅ Cookie方案成功获取用户信息:', userName, userId);
-        return { userName, userId, success: true };
-      }
+    console.warn('⚠️ 尝试从存储中提取用户信息...');
+    const savedUserId = await CookieManager.getUserId();
+    const savedUserName = await CookieManager.getUserName();
+    if (savedUserId && savedUserName) {
+      console.info('✅ 存储方案成功获取用户信息:', savedUserName, savedUserId);
+      return { userName: savedUserName, userId: savedUserId, success: true };
     }
     throw new Error('所有方案都无法获取用户信息');
   }
@@ -144,10 +139,9 @@ export class LoginService {
   private static async fallbackToApiMethod(): Promise<LoginUserData> {
     try {
       console.info('🏠 调用PixivService API获取用户信息...');
-      const cookieStr = await CookieManager.getFullCookie();
-      const cookieUserId = cookieStr ? CookieManager.parseCookie(cookieStr).get('user_id') || '' : '';
+      const cookieUserId = await CookieManager.getUserId();
       if (!cookieUserId) {
-        throw new Error('Cookie中无user_id');
+        throw new Error('未找到用户ID');
       }
       const userInfo = await PixivService.getUserProfile(cookieUserId);
       if (userInfo && !userInfo.error && userInfo.body?.name) {

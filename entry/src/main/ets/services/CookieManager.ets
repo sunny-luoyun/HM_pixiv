@@ -30,7 +30,10 @@ export class CookieManager {
         cookieMap.set(key, value);
       });
     }
-    if (!cookieMap.has('PHPSESSID')) {
+    const phpsessid = cookieMap.get('PHPSESSID');
+    if (phpsessid) {
+      await CookieStorage.savePhpSessId(phpsessid);
+    } else {
       console.warn('未找到 PHPSESSID，登录可能失败');
     }
     return Array.from(cookieMap.entries())
@@ -38,37 +41,10 @@ export class CookieManager {
       .join('; ');
   }
 
-  static parseCookie(cookieStr: string): Map<string, string> {
-    const map = new Map<string, string>();
-    if (!cookieStr) return map;
-    cookieStr.split(';').forEach(pair => {
-      const trimmed = pair.trim();
-      if (!trimmed) return;
-      const eqIndex = trimmed.indexOf('=');
-      if (eqIndex === -1) return;
-      let key = trimmed.slice(0, eqIndex);
-      let value = trimmed.slice(eqIndex + 1);
-      try {
-        value = decodeURIComponent(value);
-      } catch (e) {}
-      map.set(key, value);
-    });
-    return map;
-  }
-
   static async getFullCookie(): Promise<string> {
-    const cookie = await CookieStorage.getCookie();
     const phpsessid = await CookieStorage.getPhpSessId();
-    if (!phpsessid) return cookie;
-    const map = CookieManager.parseCookie(cookie);
-    map.set('PHPSESSID', phpsessid);
-    return Array.from(map.entries())
-      .map(entry => `${entry[0]}=${entry[1]}`)
-      .join('; ');
-  }
-
-  static async saveLoginCookie(cookieStr: string): Promise<void> {
-    await CookieStorage.saveCookie(cookieStr);
+    if (!phpsessid) return '';
+    return `PHPSESSID=${phpsessid}`;
   }
 
   static async saveUserInfo(userId: string, userName: string): Promise<void> {

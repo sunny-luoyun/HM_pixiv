@@ -37,10 +37,6 @@ export class AppState {
         if (savedUserId && savedUserName) {
           this.userId = savedUserId;
           this.userName = savedUserName;
-        } else if (cookieStr) {
-          const cookieMap = CookieManager.parseCookie(cookieStr);
-          this.userId = cookieMap.get('user_id') || '';
-          this.userName = cookieMap.get('user_name') || '用户';
         }
         const savedAvatarUrl = await CookieManager.getAvatarUrl();
         if (savedAvatarUrl) {
@@ -183,8 +179,7 @@ export class AppState {
     }
   }
 
-  async setLoginInfo(cookieStr: string, skipVerify: boolean = false) {
-    await CookieManager.saveLoginCookie(cookieStr);
+  async setLoginInfo(_cookieStr: string, skipVerify: boolean = false) {
     await this.checkLoginStatus(skipVerify);
   }
 

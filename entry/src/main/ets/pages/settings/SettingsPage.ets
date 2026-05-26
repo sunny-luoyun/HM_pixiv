@@ -6,8 +6,6 @@ import { PixivService } from '../../services/PixivService';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { TranslationStorage } from '../../common/utils/TranslationStorage';
 import { getDeepSeekService } from '../../services/DeepSeekService';
-import { CookieStorage } from '../../common/utils/CookieStorage';
-
 function formatFileSize(bytes: number): string {
   if (bytes <= 0) return '0 B';
   if (bytes < 1024) return bytes + ' B';
@@ -34,22 +32,10 @@ export struct SettingsPage {
   @State apiKeyCheckState: 'idle' | 'checking' | 'ok' | 'fail' = 'idle';
   @State balanceAmount: string = '';
   @State balanceFetchState: 'idle' | 'loading' | 'ok' | 'fail' = 'idle';
-  @State phpsessid: string = '';
-  @State phpsessidSaved: boolean = false;
-
   aboutToAppear() {
     this.deepseekApiKey = AppStorage.get<string>('deepseekApiKey') ?? '';
     this.resetOnReachEnd = AppStorage.get<boolean>('resetOnReachEnd') ?? false;
     this.initCache();
-    this.loadPhpSessId();
-  }
-
-  async loadPhpSessId() {
-    const val = await CookieStorage.getPhpSessId();
-    if (val) {
-      this.phpsessid = val;
-      this.phpsessidSaved = true;
-    }
   }
 
   async checkApiKeyValidity(): Promise<void> {
@@ -229,101 +215,29 @@ export struct SettingsPage {
     Column() {
       Row() {
         Row() {
-          Text('Pixiv 登录设置')
+          Text('Pixiv 登录状态')
             .fontSize(16)
             .fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.user_name'))
 
-          if (this.phpsessidSaved) {
+          if (this.appState.isLoggedIn) {
             Text(' ●').fontSize(12).fontColor('#52C41A')
           }
         }.alignItems(VerticalAlign.Center)
 
         Blank()
 
-        if (this.phpsessidSaved) {
-          Text('已保存')
+        if (this.appState.isLoggedIn) {
+          Text('已登录')
             .fontSize(13)
             .fontColor('#52C41A')
-        }
-      }
-      .width('100%')
-      .margin({ bottom: 10 })
-
-      TextInput({
-        text: this.phpsessid,
-        placeholder: '粘贴 PHPSESSID ...'
-      })
-        .width('100%')
-        .height(44)
-        .fontSize(13)
-        .fontColor($r('app.color.user_name'))
-        .placeholderColor($r('app.color.text_secondary'))
-        .backgroundColor($r('app.color.page_background'))
-        .borderRadius(8)
-        .padding({ left: 12, right: 12 })
-        .border({
-          width: 1,
-          color: this.phpsessid.length === 0
-            ? $r('app.color.divider')
-            : this.phpsessidSaved
-              ? '#52C41A'
-              : $r('app.color.tab_selected'),
-          radius: 8
-        })
-        .type(InputType.Password)
-        .onChange((val: string): void => {
-          this.phpsessid = val;
-          this.phpsessidSaved = false;
-        })
-
-      Row() {
-        Button('保存 PHPSESSID')
-          .fontSize(13)
-          .height(36)
-          .layoutWeight(1)
-          .fontColor('#FFFFFF')
-          .backgroundColor($r('app.color.tab_selected'))
-          .borderRadius(8)
-          .enabled(this.phpsessid.length > 0)
-          .onClick(async () => {
-            try {
-              await CookieStorage.savePhpSessId(this.phpsessid);
-              this.phpsessidSaved = true;
-              promptAction.showToast({ message: 'PHPSESSID 已保存' });
-            } catch (err) {
-              promptAction.showToast({ message: '保存失败: ' + String(err) });
-            }
-          })
-
-        if (this.phpsessid.length > 0) {
-          Button('清除')
+        } else {
+          Text('未登录')
             .fontSize(13)
-            .height(36)
-            .fontColor('#FF4D4F')
-            .backgroundColor(Color.Transparent)
-            .borderRadius(8)
-            .margin({ left: 8 })
-            .onClick(async () => {
-              try {
-                await CookieStorage.savePhpSessId('');
-                this.phpsessid = '';
-                this.phpsessidSaved = false;
-                promptAction.showToast({ message: 'PHPSESSID 已清除' });
-              } catch (err) {
-                promptAction.showToast({ message: '清除失败: ' + String(err) });
-              }
-            })
+            .fontColor($r('app.color.text_secondary'))
         }
       }
       .width('100%')
-      .margin({ top: 12 })
-
-      Text('从浏览器 F12 → Application → Cookies → pixiv.net 复制 PHPSESSID 的值，用于收藏功能')
-        .fontSize(11)
-        .fontColor($r('app.color.text_secondary'))
-        .margin({ top: 10 })
-        .lineHeight(18)
     }
     .width('100%')
     .padding(16)

@@ -2,7 +2,6 @@ import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
 import common from '@ohos.app.ability.common';
 import { NovelBookmark, PixivService, BookmarkData } from '../services/PixivService';
-import { CookieStorage } from '../common/utils/CookieStorage';
 import { pixivCacheDB } from '../database/PixivCacheDB';
 import { CacheStatus, getCacheStatusDisplay, PixivTag } from '../models/PixivModels';
 import { getDeepSeekService } from '../services/DeepSeekService';
@@ -244,22 +243,6 @@ export struct NovelCard {
 
   async toggleBookmark() {
     if (this.isBookmarkLoading) return;
-    const phpsessid = await CookieStorage.getPhpSessId();
-    if (!phpsessid) {
-      promptAction.showDialog({
-        title: '需要配置',
-        message: '请先在设置中填入 PHPSESSID 后才能使用收藏功能',
-        buttons: [
-          { text: '取消', color: '#666666' },
-          { text: '去设置', color: '#FF4D4F' },
-        ]
-      }).then((data) => {
-        if (data.index === 1) {
-          router.pushUrl({ url: 'pages/settings/SettingsPage' });
-        }
-      });
-      return;
-    }
     this.isBookmarkLoading = true;
     try {
       if (this.isBookmarked) {
