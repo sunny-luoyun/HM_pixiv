@@ -756,8 +756,8 @@ export class PixivService {
       method: options?.method || http.RequestMethod.GET,
       header,
       extraData: options?.extraData,
-      connectTimeout: 3000,
-      readTimeout: 3000,
+      connectTimeout: options?.connectTimeout || 10000,
+      readTimeout: options?.readTimeout || 10000,
       usingCache: true,
       usingProxy: proxyConfig || false,
     };
