@@ -2,7 +2,6 @@
 import http from '@ohos.net.http';
 import fileIo from '@ohos.file.fs';
 import common from '@ohos.app.ability.common';
-import request from '@ohos.request';
 import { CookieManager } from './CookieManager';
 import { PixivNovel, CacheStatus, PixivTag, PixivSeries, PixivSeriesResult, parsePixivNovelFromRaw, RawPixivNovelItem } from '../models/PixivModels';
 import photoAccessHelper from '@ohos.file.photoAccessHelper';
@@ -151,6 +150,46 @@ export interface NovelBookmark {
   series?: NovelSeries;
   originalWork: boolean;
   aiType: number;
+}
+
+export function sanitizeNovelBookmark(item: NovelBookmark): NovelBookmark {
+  return {
+    id: item.id,
+    title: item.title ?? '',
+    tags: item.tags ?? [],
+    userId: item.userId,
+    userName: item.userName ?? '',
+    bookmarkData: item.bookmarkData,
+    profileImageUrl: item.profileImageUrl ?? '',
+    createDate: item.createDate ?? '',
+    updateDate: item.updateDate ?? '',
+    textCount: item.textCount,
+    wordCount: item.wordCount,
+    characterCount: item.characterCount,
+    readingTime: item.readingTime,
+    useWordCount: item.useWordCount,
+    url: item.url ?? '',
+    description: item.description ?? '',
+    pageCount: item.pageCount,
+    width: item.width,
+    height: item.height,
+    restrict: item.restrict,
+    xRestrict: item.xRestrict,
+    sl: item.sl,
+    isBookmarkable: item.isBookmarkable,
+    isUnlisted: item.isUnlisted,
+    isMasked: item.isMasked,
+    bookmarkCount: item.bookmarkCount,
+    commentCount: item.commentCount,
+    markerCount: item.markerCount,
+    seriesId: item.seriesId,
+    seriesTitle: item.seriesTitle ?? undefined,
+    seriesContentOrder: item.seriesContentOrder,
+    seriesOrder: item.seriesOrder,
+    series: item.series,
+    originalWork: item.originalWork,
+    aiType: item.aiType,
+  };
 }
 
 export interface NovelBookmarkResponseBody {
@@ -564,8 +603,6 @@ export class PixivService {
   }
 
   private static async doDownload(imageUrl: string, savePath: string): Promise<boolean> {
-    const context = globalThis.appContext as common.UIAbilityContext;
-    if (!context) return false;
     const cookie = await CookieManager.getFullCookie();
     try {
       const header: Record<string, string> = {
@@ -574,23 +611,48 @@ export class PixivService {
       };
       if (cookie) header['Cookie'] = cookie;
 
-      const downloadTask = await request.downloadFile(context, {
-        url: imageUrl,
-        filePath: savePath,
-        header,
-      });
-      return new Promise<boolean>((resolve) => {
-        downloadTask.on('complete', () => {
+      const proxyConfig = await ProxyService.getRequestProxyConfig();
+
+      const httpRequest = http.createHttp();
+      try {
+        const resp = await httpRequest.request(imageUrl, {
+          method: http.RequestMethod.GET,
+          header,
+          expectDataType: http.HttpDataType.ARRAY_BUFFER,
+          usingProxy: proxyConfig || false,
+          connectTimeout: 15000,
+          readTimeout: 30000,
+        });
+        if (resp.responseCode !== 200) {
+          console.error(`❌ 下载图片失败 HTTP ${resp.responseCode}:`, imageUrl);
+          return false;
+        }
+        const buf = resp.result as ArrayBuffer;
+        if (!buf || buf.byteLength === 0) {
+          console.error('❌ 下载图片为空:', imageUrl);
+          return false;
+        }
+        const file = fileIo.openSync(savePath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY);
+        fileIo.writeSync(file.fd, buf);
+        fileIo.closeSync(file);
+
+        const ext = PixivService.detectImageExt(savePath);
+        if (!ext) {
+          console.error('❌ 下载的文件不是有效图片，删除:', savePath);
+          try { fileIo.unlinkSync(savePath); } catch (_) {}
+          return false;
+        }
+        if (proxyConfig) {
+          console.info(`🔗 通过代理 ${proxyConfig.host}:${proxyConfig.port} 下载图片:`, savePath);
+        } else {
           console.info('✅ 图片下载完成:', savePath);
-          resolve(true);
-        });
-        downloadTask.on('fail', (err: number) => {
-          console.error('下载图片失败:', err);
-          resolve(false);
-        });
-      });
+        }
+        return true;
+      } finally {
+        httpRequest.destroy();
+      }
     } catch (err) {
-      console.error('下载图片启动失败:', err);
+      console.error('❌ 下载图片失败:', err);
       return false;
     }
   }
@@ -750,7 +812,11 @@ export class PixivService {
 
   static async getFollowLatestNovels(page: number = 1, mode: string = 'all'): Promise<FollowLatestNovelResponse> {
     const path = `/ajax/follow_latest/novel?mode=${mode}&p=${page}`;
-    return PixivService.request<FollowLatestNovelResponse>(path);
+    const resp = await PixivService.request<FollowLatestNovelResponse>(path);
+    if (!resp.error && resp.body?.thumbnails?.novel) {
+      resp.body.thumbnails.novel = resp.body.thumbnails.novel.map(sanitizeNovelBookmark);
+    }
+    return resp;
   }
 
   // ---- Discovery 发现页 ----
@@ -762,7 +828,11 @@ export class PixivService {
 
   static async getDiscoveryNovels(mode: string = 'all', limit: number = 60): Promise<DiscoveryNovelsResponse> {
     const path = `/ajax/discovery/novels?mode=${mode}&limit=${limit}&t=${Date.now()}`;
-    return PixivService.request<DiscoveryNovelsResponse>(path);
+    const resp = await PixivService.request<DiscoveryNovelsResponse>(path);
+    if (!resp.error && resp.body?.thumbnails?.novel) {
+      resp.body.thumbnails.novel = resp.body.thumbnails.novel.map(sanitizeNovelBookmark);
+    }
+    return resp;
   }
 
   static async getIllustBookmarks(userId: string, offset: number = 0, limit: number = 30, tag: string = '', rest: string = 'show'): Promise<IllustBookmarkResponse> {
@@ -772,7 +842,11 @@ export class PixivService {
 
   static async getNovelBookmarks(userId: string, offset: number = 0, limit: number = 30, tag: string = '', rest: string = 'show'): Promise<NovelBookmarkResponse> {
     const path = `/ajax/user/${userId}/novels/bookmarks?tag=${encodeURIComponent(tag)}&offset=${offset}&limit=${limit}&rest=${rest}`;
-    return PixivService.request<NovelBookmarkResponse>(path);
+    const resp = await PixivService.request<NovelBookmarkResponse>(path);
+    if (!resp.error && resp.body?.works) {
+      resp.body.works = resp.body.works.map(sanitizeNovelBookmark);
+    }
+    return resp;
   }
 
   static async downloadImage(imageUrl: string, savePath: string, groupId?: string): Promise<boolean> {
@@ -792,11 +866,19 @@ export class PixivService {
     try {
       const file = fileIo.openSync(localPath, fileIo.OpenMode.READ_ONLY);
       fileIo.closeSync(file);
-      return 'file://' + localPath;
+      const ext = PixivService.detectImageExt(localPath);
+      if (ext) {
+        return 'file://' + localPath;
+      }
+      fileIo.unlinkSync(localPath);
     } catch (_) {}
 
     const success = await PixivService.downloadImage(url, localPath, groupId);
-    return success ? 'file://' + localPath : '';
+    if (!success) {
+      try { fileIo.unlinkSync(localPath); } catch (_) {}
+      return '';
+    }
+    return 'file://' + localPath;
   }
 
   static cancelDownloadGroup(groupId: string): void {
@@ -840,7 +922,11 @@ export class PixivService {
   static async searchNovels(keyword: string, page: number = 1, sMode: string = 's_tag'): Promise<SearchNovelResponse> {
     const encoded = encodeURIComponent(keyword);
     const path = `/ajax/search/novels/${encoded}?word=${encoded}&order=date_d&mode=all&s_mode=${sMode}&include_translated_tags=1&p=${page}&type=novel&lang=zh`;
-    return PixivService.request<SearchNovelResponse>(path);
+    const resp = await PixivService.request<SearchNovelResponse>(path);
+    if (!resp.error && resp.body?.novel?.data) {
+      resp.body.novel.data = resp.body.novel.data.map(sanitizeNovelBookmark);
+    }
+    return resp;
   }
 
   static async searchUsers(keyword: string, page: number = 1): Promise<SearchUserResponse> {

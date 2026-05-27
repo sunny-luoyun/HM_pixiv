@@ -364,8 +364,8 @@ export struct NovelCard {
 
   @Builder
   CoverImage() {
-    if (this.localCoverPath || this.item.url) {
-      Image(this.localCoverPath || this.item.url)
+    if (this.localCoverPath) {
+      Image(this.localCoverPath)
         .width(80)
         .height(110)
         .objectFit(ImageFit.Cover)
@@ -397,8 +397,8 @@ export struct NovelCard {
             .margin({ right: 6 })
         }
         Text(
-          this.showOriginalTitle ? this.item.title
-            : (this.translatedTitle || this.item.title)
+          this.showOriginalTitle ? (this.item.title ?? '')
+            : (this.translatedTitle ?? this.item.title ?? '')
         )
           .fontSize(15)
           .fontWeight(FontWeight.Medium)
@@ -440,7 +440,7 @@ export struct NovelCard {
           })
       }
 
-      Text(this.item.userName)
+      Text(this.item.userName ?? '')
         .fontSize(12)
         .fontColor($r('app.color.tab_selected'))
         .maxLines(1)
