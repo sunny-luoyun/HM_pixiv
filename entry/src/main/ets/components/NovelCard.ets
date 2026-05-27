@@ -32,6 +32,13 @@ export struct NovelCard {
       this.localCoverPath = path;
     }
     this.isBookmarked = !!this.item.bookmarkData;
+
+    if (this.item.hasTitleTranslation && this.item.titleTranslated) {
+      this.translatedTitle = this.item.titleTranslated;
+      this.hasTitleTranslation = true;
+      this.showOriginalTitle = false;
+    }
+
     await this.checkCacheStatus();
   }
 
@@ -128,7 +135,9 @@ export struct NovelCard {
         bookmarkCount: this.item.bookmarkCount || 0,
         viewCount: 0,
         commentCount: this.item.commentCount || 0,
-        cacheStatus: CacheStatus.NOT_CACHED
+        cacheStatus: CacheStatus.NOT_CACHED,
+        titleTranslated: this.translatedTitle || undefined,
+        hasTitleTranslation: this.hasTitleTranslation
       });
 
       await pixivCacheDB.markCaching(this.item.id);

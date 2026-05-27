@@ -150,6 +150,8 @@ export interface NovelBookmark {
   series?: NovelSeries;
   originalWork: boolean;
   aiType: number;
+  titleTranslated?: string;
+  hasTitleTranslation?: boolean;
 }
 
 export function sanitizeNovelBookmark(item: NovelBookmark): NovelBookmark {
@@ -189,6 +191,8 @@ export function sanitizeNovelBookmark(item: NovelBookmark): NovelBookmark {
     series: item.series,
     originalWork: item.originalWork,
     aiType: item.aiType,
+    titleTranslated: item.titleTranslated,
+    hasTitleTranslation: item.hasTitleTranslation,
   };
 }
 

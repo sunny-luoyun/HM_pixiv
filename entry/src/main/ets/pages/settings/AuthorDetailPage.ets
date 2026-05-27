@@ -91,7 +91,9 @@ export struct AuthorDetailPage {
         novelId: novel.id,
         title: novel.title,
         author: novel.author,
-        cached: true
+        cached: true,
+        translatedTitle: novel.titleTranslated || '',
+        hasTitleTranslation: !!novel.hasTitleTranslation
       }
     });
   }

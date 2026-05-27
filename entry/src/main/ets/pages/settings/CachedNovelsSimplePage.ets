@@ -135,10 +135,10 @@ export struct CachedNovelsSimplePage {
       .margin({ right: 10 })
 
       Column() {
-        Text(novel.title)
+        Text(novel.hasTitleTranslation && novel.titleTranslated ? novel.titleTranslated : novel.title)
           .fontSize(15)
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.user_name'))
+          .fontColor(novel.hasTitleTranslation && novel.titleTranslated ? $r('app.color.tab_selected') : $r('app.color.user_name'))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')

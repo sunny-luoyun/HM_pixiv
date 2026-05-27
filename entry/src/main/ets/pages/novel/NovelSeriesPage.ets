@@ -49,7 +49,9 @@ function pixivNovelToBookmark(novel: PixivNovel, seriesTitle: string): NovelBook
     seriesTitle: novel.series?.title || seriesTitle,
     series: novel.series ? { id: Number(novel.series.id), title: novel.series.title || seriesTitle, order: novel.series.order } as NovelSeries : undefined,
     originalWork: false,
-    aiType: 0
+    aiType: 0,
+    titleTranslated: novel.titleTranslated,
+    hasTitleTranslation: novel.hasTitleTranslation
   };
 }
 
