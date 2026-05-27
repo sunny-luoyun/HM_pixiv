@@ -10,6 +10,7 @@ const PAGE_SIZE = 30;
 @Entry
 @Component
 struct FavoritesPage {
+  private isActive: boolean = true;
   @State currentTab: number = 0;
   @State illustWorks: IllustBookmark[] = [];
   @State novelWorks: NovelBookmark[] = [];
@@ -24,6 +25,10 @@ struct FavoritesPage {
   @State hasMoreNovel: boolean = true;
   @State illustOffset: number = 0;
   @State novelOffset: number = 0;
+
+  aboutToDisappear() {
+    this.isActive = false;
+  }
 
   async aboutToAppear() {
     if (!appState.isLoggedIn || !appState.userId) {
@@ -40,6 +45,7 @@ struct FavoritesPage {
     this.hasMoreIllust = true;
     try {
       const res = await PixivService.getIllustBookmarks(appState.userId, 0, PAGE_SIZE);
+      if (!this.isActive) return;
       if (!res.error) {
         this.illustWorks = res.body.works;
         this.illustOffset = this.illustWorks.length;
@@ -50,6 +56,7 @@ struct FavoritesPage {
         this.illustError = '加载失败';
       }
     } catch (err) {
+      if (!this.isActive) return;
       console.error('加载收藏插画失败:', err);
       this.illustError = '加载失败';
     }
@@ -61,6 +68,7 @@ struct FavoritesPage {
     this.isLoadingMoreIllust = true;
     try {
       const res = await PixivService.getIllustBookmarks(appState.userId, this.illustOffset, PAGE_SIZE);
+      if (!this.isActive) return;
       if (!res.error) {
         this.illustWorks = [...this.illustWorks, ...res.body.works];
         this.illustOffset += res.body.works.length;
@@ -69,6 +77,7 @@ struct FavoritesPage {
         }
       }
     } catch (err) {
+      if (!this.isActive) return;
       console.error('加载更多收藏插画失败:', err);
     }
     this.isLoadingMoreIllust = false;
@@ -81,6 +90,7 @@ struct FavoritesPage {
     this.hasMoreNovel = true;
     try {
       const res = await PixivService.getNovelBookmarks(appState.userId, 0, PAGE_SIZE);
+      if (!this.isActive) return;
       if (!res.error) {
         this.novelWorks = res.body.works;
         this.novelOffset = this.novelWorks.length;
@@ -91,6 +101,7 @@ struct FavoritesPage {
         this.novelError = '加载失败';
       }
     } catch (err) {
+      if (!this.isActive) return;
       console.error('加载收藏小说失败:', err);
       this.novelError = '加载失败';
     }
@@ -102,6 +113,7 @@ struct FavoritesPage {
     this.isLoadingMoreNovel = true;
     try {
       const res = await PixivService.getNovelBookmarks(appState.userId, this.novelOffset, PAGE_SIZE);
+      if (!this.isActive) return;
       if (!res.error) {
         this.novelWorks = [...this.novelWorks, ...res.body.works];
         this.novelOffset += res.body.works.length;
@@ -110,6 +122,7 @@ struct FavoritesPage {
         }
       }
     } catch (err) {
+      if (!this.isActive) return;
       console.error('加载更多收藏小说失败:', err);
     }
     this.isLoadingMoreNovel = false;

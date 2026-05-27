@@ -21,12 +21,17 @@ function toUserSearchResult(raw: FollowingUserRaw): UserSearchResult {
 @Entry
 @Component
 struct FollowingPage {
+  private isActive: boolean = true;
   @State users: UserSearchResult[] = [];
   @State isLoading: boolean = true;
   @State isLoadingMore: boolean = false;
   @State hasMore: boolean = true;
   @State error: string = '';
   @State currentOffset: number = 0;
+
+  aboutToDisappear() {
+    this.isActive = false;
+  }
 
   async aboutToAppear() {
     if (!appState.isLoggedIn || !appState.userId) {
@@ -44,6 +49,7 @@ struct FollowingPage {
     this.hasMore = true;
     try {
       const res = await PixivService.getFollowingList(appState.userId, 0, PAGE_LIMIT);
+      if (!this.isActive) return;
       if (!res.error) {
         this.users = res.body.users.map(toUserSearchResult);
         this.currentOffset += res.body.users.length;
@@ -54,6 +60,7 @@ struct FollowingPage {
         this.error = '加载失败';
       }
     } catch (err) {
+      if (!this.isActive) return;
       this.error = '网络错误，请重试';
     }
     this.isLoading = false;
@@ -64,6 +71,7 @@ struct FollowingPage {
     this.isLoadingMore = true;
     try {
       const res = await PixivService.getFollowingList(appState.userId, this.currentOffset, PAGE_LIMIT);
+      if (!this.isActive) return;
       if (!res.error) {
         this.users = [...this.users, ...res.body.users.map(toUserSearchResult)];
         this.currentOffset += res.body.users.length;
@@ -72,6 +80,7 @@ struct FollowingPage {
         }
       }
     } catch (err) {
+      if (!this.isActive) return;
       console.error('加载更多关注失败:', err);
     }
     this.isLoadingMore = false;

@@ -124,6 +124,12 @@ struct UserProfilePage {
   @State isLoadingMoreBookmarkNovel: boolean = false;
   @State bookmarkNovelError: string = '';
 
+  private isActive: boolean = true;
+
+  aboutToDisappear() {
+    this.isActive = false;
+  }
+
   async aboutToAppear() {
     const params = router.getParams() as Record<string, string>;
     this.userId = params['userId'];
@@ -143,6 +149,7 @@ struct UserProfilePage {
     let avatarUrl = '';
     try {
       const res = await AppApiService.getUserDetail(Number(this.userId)) as Record<string, Object>;
+      if (!this.isActive) return;
       const user = res['user'] as Record<string, Object>;
       const profile = res['profile'] as Record<string, Object>;
       if (user) {
@@ -155,6 +162,7 @@ struct UserProfilePage {
       console.error('加载作者资料失败:', err);
       try {
         const userInfo = await PixivService.getUserProfile(this.userId);
+        if (!this.isActive) return;
         if (userInfo && !userInfo.error && userInfo.body) {
           this.userName = userInfo.body.name || this.userName;
           if (userInfo.body.imageBig) avatarUrl = userInfo.body.imageBig;
@@ -164,6 +172,7 @@ struct UserProfilePage {
     }
     if (avatarUrl) {
       this.userAvatarUrl = await PixivService.cacheImage(avatarUrl, `user_${this.userId}.jpg`);
+      if (!this.isActive) return;
     }
     this.isLoadingProfile = false;
   }
@@ -174,8 +183,8 @@ struct UserProfilePage {
     this.illustOffset = 0;
     this.hasMoreIllust = true;
     try {
-      // Step 1: get all work IDs
       const allRes = await PixivService.getUserProfileAll(this.userId);
+      if (!this.isActive) return;
       if (allRes.error) {
         this.illustError = '加载失败';
         this.isLoadingIllust = false;
@@ -198,8 +207,8 @@ struct UserProfilePage {
         return;
       }
       allIds.sort((a, b) => Number(b) - Number(a));
-      // Step 2: fetch full data with ids[]
       const res = await PixivService.getUserProfileIllusts(this.userId, allIds);
+      if (!this.isActive) return;
       if (!res.error) {
         const workMap = res.body.works || {};
         const works: IllustBookmark[] = [];
@@ -216,6 +225,7 @@ struct UserProfilePage {
         this.illustError = '加载失败';
       }
     } catch (err) {
+      if (!this.isActive) return;
       console.error('加载作者插画失败:', err);
       this.illustError = '加载失败';
     }
@@ -234,8 +244,8 @@ struct UserProfilePage {
     this.novelPage = 1;
     this.allNovelIds = [];
     try {
-      // Step 1: get all work IDs
       const allRes = await PixivService.getUserProfileAll(this.userId);
+      if (!this.isActive) return;
       if (allRes.error) {
         this.novelError = '加载失败';
         this.isLoadingNovel = false;
@@ -250,9 +260,9 @@ struct UserProfilePage {
       }
       allIds.sort((a, b) => Number(b) - Number(a));
       this.allNovelIds = allIds;
-      // Step 2: fetch first page
       const pageIds = allIds.slice(0, PAGE_SIZE);
       const res = await PixivService.getUserProfileNovels(this.userId, pageIds);
+      if (!this.isActive) return;
       if (!res.error) {
         const workMap = extractNovelWorks(res.body as object);
         const works: NovelBookmark[] = [];
@@ -269,6 +279,7 @@ struct UserProfilePage {
         this.novelError = '加载失败';
       }
     } catch (err) {
+      if (!this.isActive) return;
       console.error('加载作者小说失败:', err);
       this.novelError = '加载失败';
     }
@@ -287,6 +298,7 @@ struct UserProfilePage {
         return;
       }
       const res = await PixivService.getUserProfileNovels(this.userId, pageIds);
+      if (!this.isActive) return;
       if (!res.error) {
         const workMap = extractNovelWorks(res.body as object);
         const works: NovelBookmark[] = [];
@@ -302,6 +314,7 @@ struct UserProfilePage {
         this.hasMoreNovel = start + PAGE_SIZE < this.allNovelIds.length;
       }
     } catch (err) {
+      if (!this.isActive) return;
       console.error('加载更多作者小说失败:', err);
     }
     this.isLoadingMoreNovel = false;
@@ -314,6 +327,7 @@ struct UserProfilePage {
     this.hasMoreBookmarkIllust = true;
     try {
       const res = await PixivService.getIllustBookmarks(this.userId, 0, PAGE_SIZE, '', 'show');
+      if (!this.isActive) return;
       if (!res.error) {
         this.bookmarkIllustWorks = res.body.works;
         this.bookmarkIllustOffset = this.bookmarkIllustWorks.length;
@@ -324,6 +338,7 @@ struct UserProfilePage {
         this.bookmarkIllustError = '加载失败';
       }
     } catch (err) {
+      if (!this.isActive) return;
       console.error('加载作者收藏插画失败:', err);
       this.bookmarkIllustError = '加载失败';
     }
@@ -335,6 +350,7 @@ struct UserProfilePage {
     this.isLoadingMoreBookmarkIllust = true;
     try {
       const res = await PixivService.getIllustBookmarks(this.userId, this.bookmarkIllustOffset, PAGE_SIZE, '', 'show');
+      if (!this.isActive) return;
       if (!res.error) {
         this.bookmarkIllustWorks = [...this.bookmarkIllustWorks, ...res.body.works];
         this.bookmarkIllustOffset += res.body.works.length;
@@ -343,6 +359,7 @@ struct UserProfilePage {
         }
       }
     } catch (err) {
+      if (!this.isActive) return;
       console.error('加载更多作者收藏插画失败:', err);
     }
     this.isLoadingMoreBookmarkIllust = false;
@@ -355,6 +372,7 @@ struct UserProfilePage {
     this.hasMoreBookmarkNovel = true;
     try {
       const res = await PixivService.getNovelBookmarks(this.userId, 0, PAGE_SIZE, '', 'show');
+      if (!this.isActive) return;
       if (!res.error) {
         this.bookmarkNovelWorks = res.body.works;
         this.bookmarkNovelOffset = this.bookmarkNovelWorks.length;
@@ -365,6 +383,7 @@ struct UserProfilePage {
         this.bookmarkNovelError = '加载失败';
       }
     } catch (err) {
+      if (!this.isActive) return;
       console.error('加载作者收藏小说失败:', err);
       this.bookmarkNovelError = '加载失败';
     }
@@ -376,6 +395,7 @@ struct UserProfilePage {
     this.isLoadingMoreBookmarkNovel = true;
     try {
       const res = await PixivService.getNovelBookmarks(this.userId, this.bookmarkNovelOffset, PAGE_SIZE, '', 'show');
+      if (!this.isActive) return;
       if (!res.error) {
         this.bookmarkNovelWorks = [...this.bookmarkNovelWorks, ...res.body.works];
         this.bookmarkNovelOffset += res.body.works.length;
@@ -384,6 +404,7 @@ struct UserProfilePage {
         }
       }
     } catch (err) {
+      if (!this.isActive) return;
       console.error('加载更多作者收藏小说失败:', err);
     }
     this.isLoadingMoreBookmarkNovel = false;

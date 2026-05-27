@@ -64,6 +64,7 @@ struct IllustDetailPage {
     this.errorMsg = '';
     try {
       const res = await PixivService.getIllustDetail(this.illustId);
+      if (!this.isActive) return;
       if (!res.error && res.body) {
         this.detail = res.body;
         this.isBookmarked = !!res.body.bookmarkData;
@@ -74,8 +75,6 @@ struct IllustDetailPage {
 
         this.localImageUrls = new Array<string>(pageCount).fill('');
         this.isLoading = false;
-
-        if (!this.isActive) return;
 
         const illustId = res.body.illustId;
         const groupId = `detail_${illustId}`;
@@ -95,6 +94,7 @@ struct IllustDetailPage {
         this.isLoading = false;
       }
     } catch (err) {
+      if (!this.isActive) return;
       console.error('获取插画详情失败:', err);
       this.errorMsg = '加载失败，请检查网络';
       this.isLoading = false;

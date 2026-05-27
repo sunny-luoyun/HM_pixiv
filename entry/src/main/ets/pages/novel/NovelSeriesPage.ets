@@ -56,6 +56,7 @@ function pixivNovelToBookmark(novel: PixivNovel, seriesTitle: string): NovelBook
 @Entry
 @Component
 struct NovelSeriesPage {
+  private isActive: boolean = true;
   @State seriesId: string = '';
   @State seriesTitle: string = '系列详情';
   @State seriesCaption: string = '';
@@ -88,10 +89,12 @@ struct NovelSeriesPage {
       await pixivCacheDB.init(ctx);
     }
 
+    if (!this.isActive) return;
     await this.loadSeriesNovels(1);
   }
 
   aboutToDisappear(): void {
+    this.isActive = false;
     const ctx = getContext(this) as common.UIAbilityContext;
     if (this.configCallbackId !== -1) {
       ctx.getApplicationContext().off('environment', this.configCallbackId);
@@ -101,6 +104,7 @@ struct NovelSeriesPage {
   private async loadCachedSeriesNovels(): Promise<void> {
     this.isOfflineMode = true;
     const cached = await pixivCacheDB.getNovelsBySeriesId(this.seriesId);
+    if (!this.isActive) return;
     cached.sort((a: PixivNovel, b: PixivNovel): number => {
       const orderA = a.series?.order ?? parseInt(a.id, 10);
       const orderB = b.series?.order ?? parseInt(b.id, 10);
@@ -116,6 +120,7 @@ struct NovelSeriesPage {
     if (!this.seriesId) return;
     this.isLoading = true;
     const result: PixivSeriesResult | null = await PixivService.fetchSeriesNovels(this.seriesId, page);
+    if (!this.isActive) return;
 
     if (result) {
       this.isOfflineMode = false;
@@ -151,11 +156,13 @@ struct NovelSeriesPage {
       this.currentPage = page;
 
       for (const novel of result.novels) {
+        if (!this.isActive) return;
         await pixivCacheDB.saveNovelMeta(novel);
       }
     } else {
       console.warn('[NovelSeriesPage] 网络请求失败，尝试加载本地缓存');
       await this.loadCachedSeriesNovels();
+      if (!this.isActive) return;
       if (this.bookmarks.length === 0) {
         promptAction.showToast({ message: '无网络且暂无缓存，请联网后重试' });
       }
