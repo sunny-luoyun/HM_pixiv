@@ -27,9 +27,9 @@ struct Index {
   async aboutToAppear() {
     await appState.checkLoginStatus(true);
     this.isLoggedIn = appState.isLoggedIn;
-    this.isReady = true;
     console.info(`🔄 检查登录状态: ${appState.isLoggedIn ? '已登录' : '未登录'}`);
     console.info(`👤 用户: ${appState.userName || '未知用户'} (${appState.userId || '无ID'})`);
+    this.isReady = true;
   }
 
   onPageShow() {

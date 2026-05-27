@@ -29,13 +29,15 @@ export struct HomePage {
 
   private illustEmptyRetries: number = 0;
   private novelEmptyRetries: number = 0;
+  private illustRetryTimer: number | null = null;
+  private illustRetryCount: number = 0;
 
   async aboutToAppear() {
     if (!this.isLoggedIn) {
       this.isLoadingIllust = false;
       return;
     }
-    await this.loadIllusts();
+    await this.loadIllusts(true);
   }
 
   onLoginStateChange() {
@@ -44,25 +46,51 @@ export struct HomePage {
     }
   }
 
-  async loadIllusts() {
+  async loadIllusts(isRetryable: boolean = false) {
+    if (this.illustRetryTimer !== null) {
+      clearTimeout(this.illustRetryTimer);
+      this.illustRetryTimer = null;
+    }
     this.isRefreshingIllust = true;
     this.isLoadingIllust = true;
     this.illustError = '';
     this.hasMoreIllust = true;
     this.illustEmptyRetries = 0;
+
+    let failed = false;
     try {
       const res = await PixivService.getDiscoveryIllusts('all', PAGE_SIZE);
       if (!res.error) {
         this.illustWorks = res.body?.thumbnails?.illust ?? [];
       } else {
-        this.illustError = '加载失败';
+        failed = true;
       }
     } catch (err) {
       console.error('加载发现页插画失败:', err);
-      this.illustError = '加载失败';
+      failed = true;
     }
+
+    if (!failed) {
+      this.illustRetryCount = 0;
+      this.isLoadingIllust = false;
+      this.isRefreshingIllust = false;
+      return;
+    }
+
+    if (isRetryable && this.illustRetryCount < 3) {
+      this.illustRetryCount++;
+      const self = this;
+      this.illustRetryTimer = setTimeout(() => {
+        self.illustRetryTimer = null;
+        self.loadIllusts(true);
+      }, 3500);
+      return;
+    }
+
+    this.illustError = '加载失败';
     this.isLoadingIllust = false;
     this.isRefreshingIllust = false;
+    this.illustRetryCount = 0;
   }
 
   async loadMoreIllusts() {
