@@ -19,6 +19,11 @@ export default class EntryAbility extends UIAbility {
       }
     });
 
+    TranslationStorage.getResetOnReachEnd().then((enabled: boolean) => {
+      AppStorage.setOrCreate('resetOnReachEnd', enabled);
+      console.info('✅ resetOnReachEnd 已从磁盘恢复: ' + enabled);
+    });
+
     this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
     globalThis.appContext = this.context;
 
