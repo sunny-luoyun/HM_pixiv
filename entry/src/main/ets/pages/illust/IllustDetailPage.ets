@@ -211,7 +211,6 @@ struct IllustDetailPage {
                           this.scaleValue = Math.max(1, Math.min(5, this.baseScale * event.scale));
                           this.clampTranslate();
                         }),
-                      PanGesture({ fingers: 1 }),
                       TapGesture({ count: 2 })
                         .onAction(() => {
                           if (this.scaleValue > 1) {
