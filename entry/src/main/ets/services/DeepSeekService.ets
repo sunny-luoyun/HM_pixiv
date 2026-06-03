@@ -1,5 +1,12 @@
 import http from '@ohos.net.http';
 import { BusinessError } from '@ohos.base';
+import common from '@ohos.app.ability.common';
+import preferences from '@ohos.data.preferences';
+import { DeepSeekTokenizer, getDeepSeekTokenizer } from './DeepSeekTokenizer';
+
+const PRICE_INPUT = 1.0;
+const PRICE_OUTPUT = 2.0;
+const PROMPT_OVERHEAD = 55;
 
 interface StatsResult {
   totalChars: number;
@@ -8,7 +15,11 @@ interface StatsResult {
 
 export interface TranslationUsage {
   totalChars: number;
+  inputTokens: number;
+  estimatedOutputTokens: number;
   estimatedCost?: number;
+  actualInputTokens?: number;
+  actualOutputTokens?: number;
 }
 
 export interface TranslationResult {
@@ -114,9 +125,33 @@ export class DeepSeekService {
 
   private totalTranslatedChars: number = 0;
   private totalRequests: number = 0;
+  private tokenizer: DeepSeekTokenizer | null = null;
+  private tokenizerInitPromise: Promise<void> | null = null;
+  private appContext: common.UIAbilityContext | null = null;
+  private adaptiveRatio: number = 0.65;
+  private ratioCount: number = 0;
 
   constructor(apiKey: string = '') {
     this.apiKey = apiKey;
+  }
+
+  private async loadRatioFromStorage(): Promise<void> {
+    if (!this.appContext) return;
+    const pref = await preferences.getPreferences(this.appContext, 'deepseek_translate');
+    const saved = (await pref.get('ratio', 0.65)) as number;
+    const count = (await pref.get('ratioCount', 0)) as number;
+    if (count > 0) {
+      this.adaptiveRatio = saved;
+      this.ratioCount = count;
+    }
+  }
+
+  private async saveRatioToStorage(): Promise<void> {
+    if (!this.appContext) return;
+    const pref = await preferences.getPreferences(this.appContext, 'deepseek_translate');
+    await pref.put('ratio', this.adaptiveRatio);
+    await pref.put('ratioCount', this.ratioCount);
+    await pref.flush();
   }
 
   updateApiKey(apiKey: string): void {
@@ -134,8 +169,49 @@ export class DeepSeekService {
     };
   }
 
-  estimateCost(charCount: number): number {
-    return (charCount / 536000);
+  async initTokenizer(context: common.UIAbilityContext): Promise<void> {
+    this.appContext = context;
+    await this.loadRatioFromStorage();
+    if (!this.tokenizerInitPromise) {
+      this.tokenizerInitPromise = getDeepSeekTokenizer(context).then(t => {
+        this.tokenizer = t;
+      }).catch(() => {
+        this.tokenizerInitPromise = null;
+        console.error('Tokenizer init failed');
+      });
+    }
+    return this.tokenizerInitPromise;
+  }
+
+  estimateTokens(text: string): number {
+    if (this.tokenizer) {
+      return this.tokenizer.countTokens(text);
+    }
+    return Math.round(text.length * 0.68);
+  }
+
+  getAdaptiveRatio(): number {
+    return this.adaptiveRatio;
+  }
+
+  getRatioCount(): number {
+    return this.ratioCount;
+  }
+
+  async recordUsage(actualInput: number, actualOutput: number): Promise<void> {
+    const ratio = actualOutput / actualInput;
+    const total = this.ratioCount + 1;
+    this.adaptiveRatio = (this.adaptiveRatio * this.ratioCount + ratio) / total;
+    this.ratioCount = Math.min(total, 50);
+    await this.saveRatioToStorage();
+  }
+
+  estimateCost(inputTokens: number): number {
+    const estimatedInput = inputTokens + PROMPT_OVERHEAD;
+    const estimatedOutput = Math.round(estimatedInput * this.adaptiveRatio);
+    const inputCost = estimatedInput * PRICE_INPUT / 1000000;
+    const outputCost = estimatedOutput * PRICE_OUTPUT / 1000000;
+    return inputCost + outputCost;
   }
 
   async fetchBalance(apiKey?: string): Promise<BalanceFetchResult> {
@@ -209,8 +285,8 @@ export class DeepSeekService {
     const requestBody: DeepSeekRequestBody = {
       model: this.model,
       messages: messages,
-      temperature: isTitle ? 0.8 : 1.3,
-      max_tokens: isTitle ? 100 : 8000,
+      temperature: isTitle ? 0.8 : 0.3,
+      max_tokens: isTitle ? 100 : 131072,
       thinking: { type: 'disabled' }
     };
 
@@ -225,7 +301,7 @@ export class DeepSeekService {
         },
         extraData: JSON.stringify(requestBody),
         connectTimeout: 30000,
-        readTimeout: 60000
+        readTimeout: 300000
       });
 
       const code = response.responseCode;
@@ -251,12 +327,24 @@ export class DeepSeekService {
         this.totalRequests++;
         this.totalTranslatedChars += text.length;
 
+        const actualInputTokens = data.usage?.prompt_tokens ?? this.estimateTokens(text);
+        const actualOutputTokens = data.usage?.completion_tokens ?? this.estimateTokens(translated);
+        const inputTokens = this.estimateTokens(text);
+
+        console.info(`[Translation] input=${actualInputTokens} output=${actualOutputTokens} total=${actualInputTokens + actualOutputTokens}`);
+
+        await this.recordUsage(actualInputTokens, actualOutputTokens);
+
         return {
           success: true,
           translatedText: translated,
           usage: {
             totalChars: text.length,
-            estimatedCost: this.estimateCost(text.length)
+            inputTokens: inputTokens,
+            estimatedOutputTokens: Math.round(inputTokens * this.adaptiveRatio),
+            estimatedCost: this.estimateCost(inputTokens),
+            actualInputTokens: actualInputTokens,
+            actualOutputTokens: actualOutputTokens
           }
         };
       } else {
@@ -352,6 +440,54 @@ export class DeepSeekService {
     dispatchNext();
     await finalPromise;
     return results;
+  }
+
+  private mergeShortParagraphs(paragraphs: string[], maxChars: number = 2000): string[] {
+    const merged: string[] = [];
+    let current = '';
+    for (const para of paragraphs) {
+      const text = para.trim();
+      if (!text) continue;
+      if (current && (current.length + text.length + 1) > maxChars) {
+        merged.push(current);
+        current = text;
+      } else {
+        current = current ? current + '\n' + text : text;
+      }
+    }
+    if (current) merged.push(current);
+    return merged;
+  }
+
+  async translateLongText(
+    text: string,
+    onProgress?: (current: number, total: number) => void
+  ): Promise<TranslationResult> {
+    const inputTokens = this.estimateTokens(text);
+    const estimatedTotal = inputTokens * 2;
+    const MAX_SAFE_TOKENS = 100000;
+
+    if (estimatedTotal < MAX_SAFE_TOKENS) {
+      const result = await this.translateText(text, false);
+      onProgress?.(1, 1);
+      return result;
+    }
+
+    const paragraphs = text.split('\n');
+    const merged = this.mergeShortParagraphs(paragraphs, 2000);
+    const results = await this.translateParagraphs(merged, (current, total) => {
+      onProgress?.(current, total);
+    });
+
+    const translated = results.map((r, i) => {
+      if (!merged[i]) return '';
+      return (r.success && r.translatedText) ? r.translatedText : merged[i];
+    });
+
+    return {
+      success: true,
+      translatedText: translated.join('\n')
+    };
   }
 }
 

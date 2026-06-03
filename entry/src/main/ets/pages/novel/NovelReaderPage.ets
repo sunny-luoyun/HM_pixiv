@@ -289,11 +289,15 @@ struct NovelReaderPage {
       return;
     }
 
-    const estimatedCost = service.estimateCost(originalText.length);
+    await service.initTokenizer(ctx);
+    const inputTokens = service.estimateTokens(originalText);
+    const estimatedCostYuan = service.estimateCost(inputTokens);
+    const ratio = service.getAdaptiveRatio();
+    const count = service.getRatioCount();
 
     promptAction.showDialog({
       title: '确认翻译全文',
-      message: `预计翻译 ${originalText.length} 字符，费用约 $${estimatedCost.toFixed(4)}（仅供参考）。\n是否继续？`,
+      message: `预计翻译 ${originalText.length} 字符 / ${inputTokens} tokens · 费用约 ¥${estimatedCostYuan.toFixed(4)}\n输出/输入比 ${ratio.toFixed(3)}（已校准 ${count} 次）\n是否继续？`,
       buttons: [
         { text: '取消', color: '#666666' },
         { text: '开始翻译', color: '#007DFF' }
@@ -305,23 +309,6 @@ struct NovelReaderPage {
     });
   }
 
-  private mergeShortParagraphs(paragraphs: string[], maxChars: number = 2000): string[] {
-    const merged: string[] = [];
-    let current = '';
-    for (const para of paragraphs) {
-      const text = para.trim();
-      if (!text) continue;
-      if (current && (current.length + text.length + 1) > maxChars) {
-        merged.push(current);
-        current = text;
-      } else {
-        current = current ? current + '\n' + text : text;
-      }
-    }
-    if (current) merged.push(current);
-    return merged;
-  }
-
   private async performFullTranslation(novelId: string, originalText: string): Promise<void> {
     this.isTranslating = true;
     this.showTranslation = true;
@@ -329,33 +316,43 @@ struct NovelReaderPage {
 
     await pixivCacheDB.updateTranslationProgress(novelId, 0, 'in_progress');
 
-    const paragraphs = originalText.split('\n');
-    const mergedParagraphs = this.mergeShortParagraphs(paragraphs, 2000);
     const service = getDeepSeekService();
 
-    const results = await service.translateParagraphs(
-      mergedParagraphs,
-      (current, total, _translated) => {
+    const result = await service.translateLongText(
+      originalText,
+      (current, total) => {
         this.translationProgress = Math.floor((current / total) * 100);
       }
     );
 
-    const translatedParagraphs = results.map((r, i) => {
-      if (!mergedParagraphs[i]) {
-        return '';
-      }
-      return (r.success && r.translatedText) ? r.translatedText : mergedParagraphs[i];
-    });
+    if (!result.success) {
+      this.isTranslating = false;
+      this.showTranslation = false;
+      this.translationProgress = 0;
+      await pixivCacheDB.updateTranslationProgress(novelId, 0, 'none');
+      promptAction.showDialog({
+        title: '翻译失败',
+        message: result.error || '网络请求失败，请稍后重试',
+        buttons: [
+          { text: '取消', color: '#666666' },
+          { text: '重新翻译', color: '#007DFF' }
+        ]
+      }).then((data) => {
+        if (data.index === 1) {
+          this.translateFullText();
+        }
+      });
+      return;
+    }
 
-    const fullTranslated = translatedParagraphs.join('\n');
-
-    const newBlocks = parsePixivBlocks(fullTranslated);
+    const translatedText = result.translatedText ?? originalText;
+    const newBlocks = parsePixivBlocks(translatedText);
     this.translatedBlocks = newBlocks;
     this.showOriginal = false;
     this.showTranslation = true;
     this.renderBlocks = newBlocks;
 
-    await pixivCacheDB.saveFullTextTranslation(novelId, fullTranslated);
+    await pixivCacheDB.saveFullTextTranslation(novelId, translatedText);
 
     this.isTranslating = false;
     promptAction.showToast({ message: '全文翻译完成' });
