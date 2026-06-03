@@ -166,7 +166,7 @@ export struct CachedNovelsSimplePage {
         Text('🗑').fontSize(15)
       }
       .width(34).height(34)
-      .backgroundColor('#FFF5F5')
+      .backgroundColor($r('app.color.danger_bg'))
       .borderRadius(17)
       .onClick(() => { this.deleteNovel(novel) })
     }

@@ -79,6 +79,62 @@
     {
       "name": "surface_primary",
       "value": "#FF1C1C1E"
+    },
+    {
+      "name": "success",
+      "value": "#49AA19"
+    },
+    {
+      "name": "success_bg",
+      "value": "#162312"
+    },
+    {
+      "name": "warning",
+      "value": "#D89614"
+    },
+    {
+      "name": "warning_bg",
+      "value": "#2B1D11"
+    },
+    {
+      "name": "danger",
+      "value": "#FF4D4F"
+    },
+    {
+      "name": "danger_bg",
+      "value": "#2C1618"
+    },
+    {
+      "name": "brand_accent",
+      "value": "#0A84FF"
+    },
+    {
+      "name": "orange",
+      "value": "#FA8C16"
+    },
+    {
+      "name": "info_bg",
+      "value": "#111D2C"
+    },
+    {
+      "name": "overlay",
+      "value": "#30000000"
+    },
+    {
+      "name": "overlay_dark",
+      "value": "#AA000000"
+    },
+    {
+      "name": "overlay_light",
+      "value": "#33FFFFFF"
+    },
+    {
+      "name": "overlay_medium",
+      "value": "#66000000"
+    },
+    {
+      "name": "overlay_heavy",
+      "value": "#80000000"
     }
   ]
 }

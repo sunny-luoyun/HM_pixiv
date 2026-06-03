@@ -17,7 +17,7 @@ export struct NovelCard {
   @State localCoverPath: string = '';
   @State cacheStatus: CacheStatus = CacheStatus.NOT_CACHED;
   @State cacheLabel: string = '缓存';
-  @State cacheColor: string = '#666666';
+  @State cacheColor: Resource = $r('app.color.text_secondary');
   @State translatingTitle: boolean = false;
   @State translatedTitle: string = '';
   @State hasTitleTranslation: boolean = false;
@@ -352,12 +352,12 @@ export struct NovelCard {
     if (this.isBookmarkLoading) {
       LoadingProgress()
         .width(18).height(18)
-        .color('#FF4D4F')
+        .color($r('app.color.danger'))
         .margin({ right: 12 })
     } else {
       Text(this.isBookmarked ? '❤' : '♡')
         .fontSize(18)
-        .fontColor(this.isBookmarked ? '#FF4D4F' : $r('app.color.text_secondary'))
+        .fontColor(this.isBookmarked ? $r('app.color.danger') : $r('app.color.text_secondary'))
         .margin({ right: 12 })
         .onClick(() => this.toggleBookmark())
     }
@@ -368,7 +368,7 @@ export struct NovelCard {
     Button('📖 阅读')
       .fontSize(13)
       .fontColor(Color.White)
-      .backgroundColor('#52C41A')
+      .backgroundColor($r('app.color.success'))
       .borderRadius(18)
       .height(36)
       .padding({ left: 16, right: 16 })
@@ -439,8 +439,8 @@ export struct NovelCard {
         if (this.hasTitleTranslation) {
           Text('译')
             .fontSize(9)
-            .fontColor('#52C41A')
-            .backgroundColor('#F6FFED')
+            .fontColor($r('app.color.success'))
+            .backgroundColor($r('app.color.success_bg'))
             .borderRadius(3)
             .padding({ left: 4, right: 4, top: 1, bottom: 1 })
             .margin({ left: 4 })

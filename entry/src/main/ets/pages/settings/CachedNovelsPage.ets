@@ -216,8 +216,8 @@ export struct CachedNovelsPage {
           if (ag.seriesMap.size > 0) {
             Text(`📚 ${ag.seriesMap.size} 系列`)
               .fontSize(11)
-              .fontColor('#52C41A')
-              .backgroundColor('#F6FFED')
+              .fontColor($r('app.color.success'))
+              .backgroundColor($r('app.color.success_bg'))
               .borderRadius(4)
               .padding({ left: 6, right: 6, top: 2, bottom: 2 })
           }
@@ -225,7 +225,7 @@ export struct CachedNovelsPage {
             Text(`📄 ${ag.standaloneNovels.length} 独立`)
               .fontSize(11)
               .fontColor($r('app.color.tab_selected'))
-              .backgroundColor('#E8F4FF')
+              .backgroundColor($r('app.color.info_bg'))
               .borderRadius(4)
               .padding({ left: 6, right: 6, top: 2, bottom: 2 })
           }
@@ -244,7 +244,7 @@ export struct CachedNovelsPage {
           Text('🗑').fontSize(15)
         }
         .width(34).height(34)
-        .backgroundColor('#FFF5F5')
+        .backgroundColor($r('app.color.danger_bg'))
         .borderRadius(17)
         .onClick(() => { this.deleteAuthorCache(ag) })
 

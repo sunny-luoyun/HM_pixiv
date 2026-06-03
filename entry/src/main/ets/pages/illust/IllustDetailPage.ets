@@ -247,7 +247,7 @@ struct IllustDetailPage {
                   })
               } else {
                 Stack() {
-                  LoadingProgress().width(30).height(30).color('#66FFFFFF')
+                  LoadingProgress().width(30).height(30).color(Color.White)
                 }
                 .width('100%')
                 .height('100%')
@@ -276,7 +276,7 @@ struct IllustDetailPage {
                   .fontColor(Color.White)
               }
               .width(40).height(40)
-              .backgroundColor('#33FFFFFF')
+              .backgroundColor($r('app.color.overlay_light'))
               .onClick(() => router.back())
 
               Blank()
@@ -285,7 +285,7 @@ struct IllustDetailPage {
                 Text(`${this.currentIndex + 1} / ${this.illustPageCount}`)
                   .fontSize(13)
                   .fontColor(Color.White)
-                  .backgroundColor('#66000000')
+                  .backgroundColor($r('app.color.overlay_medium'))
                   .borderRadius(10)
                   .padding({ left: 10, right: 10, top: 4, bottom: 4 })
               }
@@ -295,7 +295,7 @@ struct IllustDetailPage {
               if (this.isDownloading) {
                 LoadingProgress().width(20).height(20).color(Color.White)
               } else if (this.downloadSuccess) {
-                Text('✓ 已保存').fontSize(12).fontColor('#52C41A')
+                Text('✓ 已保存').fontSize(12).fontColor($r('app.color.success'))
               } else {
                 Button({ type: ButtonType.Circle }) {
                   Text('↓')
@@ -303,19 +303,19 @@ struct IllustDetailPage {
                     .fontColor(Color.White)
                 }
                 .width(40).height(40)
-                .backgroundColor('#33FFFFFF')
+                .backgroundColor($r('app.color.overlay_light'))
                 .onClick(() => this.handleDownload())
               }
 
               if (this.isBookmarkLoading) {
                 LoadingProgress()
                   .width(22).height(22)
-                  .color('#FF4D4F')
+                  .color($r('app.color.danger'))
                   .margin({ left: 12 })
               } else {
                 Text(this.isBookmarked ? '❤' : '♡')
                   .fontSize(22)
-                  .fontColor(this.isBookmarked ? '#FF4D4F' : Color.White)
+                  .fontColor(this.isBookmarked ? $r('app.color.danger') : Color.White)
                   .margin({ left: 12 })
                   .onClick(() => this.toggleBookmark())
               }
@@ -357,14 +357,14 @@ struct IllustDetailPage {
               .maxLines(1)
               .margin({ top: 2 })
             if (this.downloadFail) {
-              Text('保存失败').fontSize(12).fontColor('#FF4D4F').margin({ top: 4 })
+              Text('保存失败').fontSize(12).fontColor($r('app.color.danger')).margin({ top: 4 })
             }
           }
           .width('100%')
           .padding(16)
           .alignItems(HorizontalAlign.Start)
           .position({ bottom: 0 })
-          .backgroundColor('#80000000')
+          .backgroundColor($r('app.color.overlay_heavy'))
           .hitTestBehavior(HitTestMode.Transparent)
         }
         .width('100%')

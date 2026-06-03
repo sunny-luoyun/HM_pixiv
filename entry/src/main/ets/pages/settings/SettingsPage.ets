@@ -394,7 +394,7 @@ export struct SettingsPage {
             .fontColor($r('app.color.user_name'))
 
           if (this.appState.isLoggedIn) {
-            Text(' ●').fontSize(12).fontColor('#52C41A')
+            Text(' ●').fontSize(12).fontColor($r('app.color.success'))
           }
         }.alignItems(VerticalAlign.Center)
 
@@ -403,7 +403,7 @@ export struct SettingsPage {
         if (this.appState.isLoggedIn) {
           Text('已登录')
             .fontSize(13)
-            .fontColor('#52C41A')
+            .fontColor($r('app.color.success'))
         } else {
           Text('未登录')
             .fontSize(13)
@@ -431,11 +431,11 @@ export struct SettingsPage {
             .fontColor($r('app.color.user_name'))
 
           if (this.apiKeyCheckState === 'ok') {
-            Text(' ●').fontSize(12).fontColor('#52C41A')
+            Text(' ●').fontSize(12).fontColor($r('app.color.success'))
           } else if (this.apiKeyCheckState === 'fail') {
-            Text(' ●').fontSize(12).fontColor('#FF4D4F')
+            Text(' ●').fontSize(12).fontColor($r('app.color.danger'))
           } else if (this.deepseekApiKey.length > 0 && this.apiKeyCheckState === 'idle') {
-            Text(' ●').fontSize(12).fontColor('#FAAD14')
+            Text(' ●').fontSize(12).fontColor($r('app.color.warning'))
           }
         }.alignItems(VerticalAlign.Center)
 
@@ -467,10 +467,10 @@ export struct SettingsPage {
           width: 1,
           color: this.deepseekApiKey.length === 0
             ? $r('app.color.divider')
-            : this.apiKeyCheckState === 'ok'
-              ? '#52C41A'
-              : this.apiKeyCheckState === 'fail'
-                ? '#FF4D4F'
+              : this.apiKeyCheckState === 'ok'
+                ? $r('app.color.success')
+                : this.apiKeyCheckState === 'fail'
+                  ? $r('app.color.danger')
                 : $r('app.color.tab_selected'),
           radius: 8
         })
@@ -487,7 +487,7 @@ export struct SettingsPage {
           .fontSize(13)
           .height(36)
           .layoutWeight(1)
-          .fontColor('#FFFFFF')
+          .fontColor(Color.White)
           .backgroundColor($r('app.color.tab_selected'))
           .borderRadius(8)
           .enabled(this.apiKeyCheckState !== 'checking' && this.deepseekApiKey.length > 0)
@@ -497,7 +497,7 @@ export struct SettingsPage {
           Button('清除')
             .fontSize(13)
             .height(36)
-            .fontColor('#FF4D4F')
+            .fontColor($r('app.color.danger'))
             .backgroundColor(Color.Transparent)
             .borderRadius(8)
             .margin({ left: 8 })
@@ -535,7 +535,7 @@ export struct SettingsPage {
               Text('¥ ' + this.balanceAmount)
                 .fontSize(20)
                 .fontWeight(FontWeight.Bold)
-                .fontColor('#007DFF')
+                .fontColor($r('app.color.brand_accent'))
                 .margin({ top: 4 })
               Text('约可翻译 ' + (Math.floor(parseFloat(this.balanceAmount) * 53.63 * 10) / 10).toString() + ' 万字小说')
                 .fontSize(11)
@@ -544,7 +544,7 @@ export struct SettingsPage {
             } else if (this.balanceFetchState === 'fail') {
               Text('获取失败，请重试')
                 .fontSize(12)
-                .fontColor('#FF4D4F')
+                .fontColor($r('app.color.danger'))
                 .margin({ top: 4 })
             } else {
               Text('点击刷新查询余额')
@@ -630,11 +630,11 @@ export struct SettingsPage {
         if (this.proxyMode === 'subscription' && this.nativeRunning) {
           Text('● 内核运行中')
             .fontSize(12)
-            .fontColor('#52C41A')
+            .fontColor($r('app.color.success'))
         } else if (this.proxyMode !== 'off') {
           Text('● 代理已启用')
             .fontSize(12)
-            .fontColor('#52C41A')
+            .fontColor($r('app.color.success'))
         } else {
           Text('● 已关闭')
             .fontSize(12)
@@ -669,7 +669,7 @@ export struct SettingsPage {
             .fontSize(13)
             .height(36)
             .width('100%')
-            .fontColor('#FFFFFF')
+            .fontColor(Color.White)
             .backgroundColor($r('app.color.tab_selected'))
             .borderRadius(8)
             .enabled(this.proxyTestState !== 'testing')
@@ -679,12 +679,12 @@ export struct SettingsPage {
         if (this.proxyTestState === 'ok') {
           Text('✓ 连接成功')
             .fontSize(12)
-            .fontColor('#52C41A')
+            .fontColor($r('app.color.success'))
             .margin({ top: 6 })
         } else if (this.proxyTestState === 'fail') {
           Text('✗ ' + (this.proxyTestMessage || '连接失败'))
             .fontSize(12)
-            .fontColor('#FF4D4F')
+            .fontColor($r('app.color.danger'))
             .margin({ top: 6 })
         }
       }
@@ -769,7 +769,7 @@ export struct SettingsPage {
           .fontSize(13)
           .height(36)
           .layoutWeight(1)
-          .fontColor('#FFFFFF')
+          .fontColor(Color.White)
           .backgroundColor($r('app.color.tab_selected'))
           .borderRadius(8)
           .enabled(this.proxyFetchState !== 'fetching' && this.proxySubscriptionUrl.length > 0)
@@ -781,12 +781,12 @@ export struct SettingsPage {
       if (this.proxyFetchState === 'ok') {
         Text('✓ ' + this.proxyFetchMessage)
           .fontSize(12)
-          .fontColor('#52C41A')
+          .fontColor($r('app.color.success'))
           .margin({ top: 6 })
       } else if (this.proxyFetchState === 'fail') {
         Text('✗ ' + this.proxyFetchMessage)
           .fontSize(12)
-          .fontColor('#FF4D4F')
+          .fontColor($r('app.color.danger'))
           .margin({ top: 6 })
       }
 
@@ -819,11 +819,11 @@ export struct SettingsPage {
         if (this.nativeAvailable) {
           Text('● 原生内核可用')
             .fontSize(12)
-            .fontColor('#52C41A')
+            .fontColor($r('app.color.success'))
         } else {
           Text('● 原生内核不可用')
             .fontSize(12)
-            .fontColor('#FAAD14')
+            .fontColor($r('app.color.warning'))
         }
       }
       .margin({ bottom: 8 })
@@ -835,7 +835,7 @@ export struct SettingsPage {
               .fontSize(13)
               .height(36)
               .layoutWeight(1)
-              .fontColor('#FF4D4F')
+              .fontColor($r('app.color.danger'))
               .backgroundColor('#33FF4D4F')
               .borderRadius(8)
               .margin({ right: 6 })
@@ -843,14 +843,14 @@ export struct SettingsPage {
 
             Text('● 运行中')
               .fontSize(12)
-              .fontColor('#52C41A')
+              .fontColor($r('app.color.success'))
               .margin({ left: 6 })
           } else {
             Button('启动内核')
               .fontSize(13)
               .height(36)
               .layoutWeight(1)
-              .fontColor('#FFFFFF')
+              .fontColor(Color.White)
               .backgroundColor($r('app.color.tab_selected'))
               .borderRadius(8)
               .margin({ right: 6 })
@@ -869,7 +869,7 @@ export struct SettingsPage {
         if (ProxyService.nativeErrorMessage) {
           Text('✗ ' + ProxyService.nativeErrorMessage)
             .fontSize(11)
-            .fontColor('#FF4D4F')
+            .fontColor($r('app.color.danger'))
             .margin({ top: 6 })
             .lineHeight(18)
         } else {
@@ -952,7 +952,7 @@ export struct SettingsPage {
             })
           Button('清除全部')
             .fontSize(13)
-            .fontColor('#FF4D4F')
+            .fontColor($r('app.color.danger'))
             .backgroundColor('#33FF4D4F')
             .borderRadius(16)
             .height(32)
@@ -986,7 +986,7 @@ export struct SettingsPage {
         .margin({ right: 12 })
       Text('清除')
         .fontSize(13)
-        .fontColor('#FF4D4F')
+        .fontColor($r('app.color.danger'))
         .onClick(action)
     }
     .width('100%')

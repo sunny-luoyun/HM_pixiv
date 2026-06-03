@@ -244,8 +244,8 @@ export struct AuthorDetailPage {
         Row() {
           Text('系列')
             .fontSize(10)
-            .fontColor('#52C41A')
-            .backgroundColor('#F6FFED')
+            .fontColor($r('app.color.success'))
+            .backgroundColor($r('app.color.success_bg'))
             .borderRadius(4)
             .padding({ left: 5, right: 5, top: 2, bottom: 2 })
             .margin({ right: 8 })

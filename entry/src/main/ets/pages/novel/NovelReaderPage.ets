@@ -779,7 +779,7 @@ struct NovelReaderPage {
         } else {
           Button('翻译全文')
             .fontSize(15)
-            .fontColor('#FFFFFF')
+            .fontColor(Color.White)
             .backgroundColor(this.getColors().accentText)
             .borderRadius(8)
             .height(40)
@@ -875,7 +875,7 @@ struct NovelReaderPage {
         }
         .width('100%')
         .height('100%')
-        .backgroundColor('#30000000')
+        .backgroundColor($r('app.color.overlay'))
         .onClick(() => { this.dismissFloatingMenu(); })
         .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
       }

@@ -132,20 +132,20 @@ export interface PixivNovel {
 
 export interface CacheStatusDisplay {
   label: string;
-  color: string;
+  color: Resource;
 }
 
 export function getCacheStatusDisplay(status: CacheStatus): CacheStatusDisplay {
   switch (status) {
     case CacheStatus.CACHED:
-      return { label: '已缓存', color: '#52C41A' };
+      return { label: '已缓存', color: $r('app.color.success') };
     case CacheStatus.CACHING:
-      return { label: '缓存中', color: '#FAAD14' };
+      return { label: '缓存中', color: $r('app.color.warning') };
     case CacheStatus.CACHE_FAIL:
-      return { label: '缓存失败', color: '#FF4D4F' };
+      return { label: '缓存失败', color: $r('app.color.danger') };
     case CacheStatus.NOT_CACHED:
     default:
-      return { label: '未缓存', color: '#666666' };
+      return { label: '未缓存', color: $r('app.color.text_secondary') };
   }
 }
 

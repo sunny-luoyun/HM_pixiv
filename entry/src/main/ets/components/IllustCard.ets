@@ -62,7 +62,7 @@ export struct IllustCard {
               .fontSize(11)
               .fontColor(Color.White)
               .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-              .backgroundColor('#AA000000')
+              .backgroundColor($r('app.color.overlay_dark'))
               .borderRadius(8)
               .position({ top: 6, right: 6 })
           }
@@ -104,12 +104,12 @@ export struct IllustCard {
         if (this.isBookmarkLoading) {
           LoadingProgress()
             .width(16).height(16)
-            .color('#FF4D4F')
+            .color($r('app.color.danger'))
             .margin({ right: 10 })
         } else {
           Text(this.isBookmarked ? '❤' : '♡')
             .fontSize(16)
-            .fontColor(this.isBookmarked ? '#FF4D4F' : $r('app.color.text_secondary'))
+            .fontColor(this.isBookmarked ? $r('app.color.danger') : $r('app.color.text_secondary'))
             .padding({ right: 10 })
             .onClick(() => this.toggleBookmark())
         }

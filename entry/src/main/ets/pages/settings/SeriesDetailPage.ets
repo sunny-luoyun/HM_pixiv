@@ -137,7 +137,7 @@ export struct SeriesDetailPage {
       }
       .width(40).height(40)
       .borderRadius(8)
-      .backgroundColor('#E8F4FF')
+      .backgroundColor($r('app.color.info_bg'))
       .justifyContent(FlexAlign.Center)
       .alignItems(HorizontalAlign.Center)
       .margin({ right: 12 })

@@ -220,7 +220,7 @@ struct NovelSeriesPage {
             ? `  离线模式 · ${this.offlineCachedCount} 部已缓存`
             : '  离线模式 · 暂无缓存')
             .fontSize(13)
-            .fontColor('#D48806')
+            .fontColor($r('app.color.warning'))
             .layoutWeight(1)
           Text('重试')
             .fontSize(13)
@@ -233,7 +233,7 @@ struct NovelSeriesPage {
         }
         .width('100%')
         .padding({ left: 16, right: 16, top: 8, bottom: 8 })
-        .backgroundColor('#FFFBE6')
+        .backgroundColor($r('app.color.warning_bg'))
       }
 
       Column() {
