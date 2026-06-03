@@ -24,6 +24,7 @@ struct IllustDetailPage {
 
   @State isBookmarked: boolean = false;
   @State isBookmarkLoading: boolean = false;
+  @State bookmarkScale: number = 1;
   @State scaleValue: number = 1;
   @State translateX: number = 0;
   @State translateY: number = 0;
@@ -166,6 +167,19 @@ struct IllustDetailPage {
       promptAction.showToast({ message: '操作失败: ' + String(err) });
     }
     this.isBookmarkLoading = false;
+    animateTo({ curve: Curve.FastOutSlowIn, duration: 250 }, () => {
+      this.bookmarkScale = 1.35;
+    });
+    setTimeout(() => {
+      animateTo({ curve: Curve.Friction, duration: 250 }, () => {
+        this.bookmarkScale = 0.9;
+      });
+      setTimeout(() => {
+        animateTo({ curve: Curve.Friction, duration: 200 }, () => {
+          this.bookmarkScale = 1;
+        });
+      }, 250);
+    }, 250);
   }
 
   resetZoom() {
@@ -338,6 +352,7 @@ struct IllustDetailPage {
                   .fontSize(22)
                   .fontColor(this.isBookmarked ? $r('app.color.danger') : Color.White)
                   .margin({ left: 12 })
+                  .scale({ x: this.bookmarkScale, y: this.bookmarkScale })
                   .onClick(() => this.toggleBookmark())
               }
             }

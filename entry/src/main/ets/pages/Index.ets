@@ -22,6 +22,8 @@ struct Index {
   @State currentIndex: number = 0;
   @State isReady: boolean = false;
   @Provide('isLoggedIn') isLoggedIn: boolean = false;
+  @State bounceIndex: number = -1;
+  @State bounceScale: number = 1;
   private tabsController: TabsController = new TabsController();
 
   async aboutToAppear() {
@@ -108,6 +110,24 @@ struct Index {
     }
   }
 
+  triggerBounce(index: number) {
+    this.bounceIndex = index;
+    animateTo({ curve: Curve.FastOutSlowIn, duration: 250 }, () => {
+      this.bounceScale = 1.25;
+    });
+    setTimeout(() => {
+      animateTo({ curve: Curve.Friction, duration: 250 }, () => {
+        this.bounceScale = 0.9;
+      });
+      setTimeout(() => {
+        animateTo({ curve: Curve.Friction, duration: 200 }, () => {
+          this.bounceScale = 1;
+          this.bounceIndex = -1;
+        });
+      }, 250);
+    }, 250);
+  }
+
   @Builder
   TabItemView(item: TabItem, index: number) {
     Column() {
@@ -117,6 +137,10 @@ struct Index {
           ? $r('app.color.tab_selected')
           : $r('app.color.text_secondary'))
         .margin({ bottom: 2 })
+        .scale({
+          x: this.bounceIndex === index ? this.bounceScale : 1,
+          y: this.bounceIndex === index ? this.bounceScale : 1
+        })
 
       Text(item.label)
         .fontSize(10)
@@ -145,6 +169,7 @@ struct Index {
     .onClick(() => {
       this.currentIndex = index;
       this.tabsController.changeIndex(index);
+      this.triggerBounce(index);
     })
   }
 }

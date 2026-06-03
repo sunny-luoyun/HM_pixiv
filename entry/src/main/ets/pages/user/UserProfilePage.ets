@@ -559,9 +559,9 @@ struct UserProfilePage {
       Scroll() {
         Column() {
           Grid() {
-            ForEach(this.illustWorks, (item: IllustBookmark) => {
+            ForEach(this.illustWorks, (item: IllustBookmark, index?: number) => {
               GridItem() {
-                IllustCard({ item: item })
+                IllustCard({ item: item, index: index ?? 0 })
               }
             }, (item: IllustBookmark) => item.id)
           }
@@ -645,9 +645,9 @@ struct UserProfilePage {
       Scroll() {
         Column() {
           Grid() {
-            ForEach(this.bookmarkIllustWorks, (item: IllustBookmark) => {
+            ForEach(this.bookmarkIllustWorks, (item: IllustBookmark, index?: number) => {
               GridItem() {
-                IllustCard({ item: item })
+                IllustCard({ item: item, index: index ?? 0 })
               }
             }, (item: IllustBookmark) => item.id)
           }

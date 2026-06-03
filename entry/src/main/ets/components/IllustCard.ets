@@ -5,12 +5,23 @@ import { PixivService, IllustBookmark } from '../services/PixivService';
 @Component
 export struct IllustCard {
   private item!: IllustBookmark;
+  @Prop index: number = 0;
   @State localUrl: string = '';
   @State isCaching: boolean = true;
   @State isBookmarked: boolean = false;
   @State isBookmarkLoading: boolean = false;
+  @State cardOpacity: number = 0;
+  @State cardTranslateY: number = 20;
+  @State bookmarkScale: number = 1;
 
   async aboutToAppear() {
+    setTimeout(() => {
+      animateTo({ duration: 350, curve: Curve.EaseOut }, () => {
+        this.cardOpacity = 1;
+        this.cardTranslateY = 0;
+      });
+    }, this.index * 60);
+
     if (!this.item.url) {
       this.isCaching = false;
       return;
@@ -38,6 +49,19 @@ export struct IllustCard {
       promptAction.showToast({ message: '操作失败: ' + String(err) });
     }
     this.isBookmarkLoading = false;
+    animateTo({ curve: Curve.FastOutSlowIn, duration: 250 }, () => {
+      this.bookmarkScale = 1.35;
+    });
+    setTimeout(() => {
+      animateTo({ curve: Curve.Friction, duration: 250 }, () => {
+        this.bookmarkScale = 0.9;
+      });
+      setTimeout(() => {
+        animateTo({ curve: Curve.Friction, duration: 200 }, () => {
+          this.bookmarkScale = 1;
+        });
+      }, 250);
+    }, 250);
   }
 
   build() {
@@ -115,6 +139,7 @@ export struct IllustCard {
             .fontSize(16)
             .fontColor(this.isBookmarked ? $r('app.color.danger') : $r('app.color.text_secondary'))
             .padding({ right: 10 })
+            .scale({ x: this.bookmarkScale, y: this.bookmarkScale })
             .onClick(() => this.toggleBookmark())
         }
       }
@@ -126,5 +151,7 @@ export struct IllustCard {
     .backgroundColor($r('app.color.card_bg'))
     .borderRadius(12)
     .shadow({ radius: 8, color: $r('app.color.card_shadow'), offsetY: 2 })
+    .opacity(this.cardOpacity)
+    .translate({ y: this.cardTranslateY })
   }
 }
