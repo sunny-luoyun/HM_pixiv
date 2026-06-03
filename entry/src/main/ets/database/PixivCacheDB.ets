@@ -630,19 +630,57 @@ export class PixivCacheDB {
   }
 
   async saveTitleTranslation(novelId: string, translatedTitle: string): Promise<void> {
-    await this.updateCacheFields(novelId, {
+    if (!this.checkReady()) return;
+    const updated = await this.updateCacheFields(novelId, {
       'title_translated': translatedTitle,
       'has_title_translation': 1
     });
+    if (!updated) {
+      try {
+        await this.rdbStore!.insert(
+          TABLE_NOVELS,
+          {
+            'id': novelId,
+            'title': '',
+            'title_translated': translatedTitle,
+            'has_title_translation': 1,
+            'cache_status': CacheStatus.NOT_CACHED
+          },
+          relationalStore.ConflictResolution.ON_CONFLICT_REPLACE
+        );
+      } catch (err) {
+        console.error(`[PixivCacheDB] saveTitleTranslation 插入失败 id=${novelId}: ${JSON.stringify(err)}`);
+      }
+    }
   }
 
   async saveFullTextTranslation(novelId: string, translatedText: string): Promise<void> {
-    await this.updateCacheFields(novelId, {
+    if (!this.checkReady()) return;
+    const updated = await this.updateCacheFields(novelId, {
       'full_text_translated': translatedText,
       'has_full_translation': 1,
       'translation_status': 'completed',
       'translation_progress': 100
     });
+    if (!updated) {
+      try {
+        await this.rdbStore!.insert(
+          TABLE_NOVELS,
+          {
+            'id': novelId,
+            'title': '',
+            'full_text_translated': translatedText,
+            'has_full_translation': 1,
+            'translation_status': 'completed',
+            'translation_progress': 100,
+            'cache_status': CacheStatus.NOT_CACHED
+          },
+          relationalStore.ConflictResolution.ON_CONFLICT_REPLACE
+        );
+      } catch (err) {
+        console.error(`[PixivCacheDB] saveFullTextTranslation 插入失败 id=${novelId}: ${JSON.stringify(err)}`);
+      }
+    }
   }
 
   async updateTranslationProgress(novelId: string, progress: number, status: string): Promise<void> {
