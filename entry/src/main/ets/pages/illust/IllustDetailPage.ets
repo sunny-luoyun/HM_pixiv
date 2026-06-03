@@ -9,6 +9,7 @@ import { PixivService, IllustDetailBody } from '../../services/PixivService';
 @Component
 struct IllustDetailPage {
   @State illustId: string = '';
+  @State thumbnailLocalUrl: string = '';
   @State detail: IllustDetailBody | null = null;
   @State isLoading: boolean = true;
   @State errorMsg: string = '';
@@ -43,10 +44,15 @@ struct IllustDetailPage {
     this.isActive = true;
     const params = router.getParams() as Record<string, Object>;
     this.illustId = params['id'] as string;
+    this.thumbnailLocalUrl = params['thumbnailLocalUrl'] as string || '';
     if (!this.illustId) {
       this.errorMsg = '缺少插图ID';
       this.isLoading = false;
       return;
+    }
+    if (this.thumbnailLocalUrl) {
+      this.localImageUrls = [this.thumbnailLocalUrl];
+      this.illustPageCount = 1;
     }
     const defaultDisplay = display.getDefaultDisplaySync();
     this.screenWidth = px2vp(defaultDisplay.width);
@@ -73,7 +79,11 @@ struct IllustDetailPage {
         const urls = PixivService.generatePageUrls(res.body.urls.regular, pageCount);
         this.pageRegularUrls = urls;
 
-        this.localImageUrls = new Array<string>(pageCount).fill('');
+        const newUrls = new Array<string>(pageCount).fill('');
+        if (this.thumbnailLocalUrl) {
+          newUrls[0] = this.thumbnailLocalUrl;
+        }
+        this.localImageUrls = newUrls;
         this.isLoading = false;
 
         const illustId = res.body.illustId;
@@ -178,9 +188,7 @@ struct IllustDetailPage {
 
   build() {
     Column() {
-      if (this.isLoading) {
-        LoadingProgress().width(40).height(40)
-      } else if (this.errorMsg) {
+      if (this.errorMsg) {
         Column() {
           Text(this.errorMsg).fontSize(14).fontColor($r('app.color.text_secondary'))
           Button('重试').margin({ top: 12 }).onClick(() => this.loadDetail())
@@ -190,7 +198,7 @@ struct IllustDetailPage {
         .height('100%')
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
-      } else if (this.detail && this.localImageUrls.length > 0) {
+      } else if (this.thumbnailLocalUrl || (this.detail && this.localImageUrls.length > 0)) {
         Stack() {
           Swiper(this.swiperController) {
             ForEach(this.localImageUrls, (url: string, index: number) => {
@@ -199,6 +207,10 @@ struct IllustDetailPage {
                   .width('100%')
                   .height('100%')
                   .objectFit(ImageFit.Contain)
+                  .sharedTransition(index === 0 ? 'illust_' + this.illustId : '', {
+                    duration: 350,
+                    curve: Curve.Friction
+                  })
                   .scale({ x: this.scaleValue, y: this.scaleValue })
                   .translate({ x: this.translateX, y: this.translateY })
                   .gesture(
@@ -244,6 +256,15 @@ struct IllustDetailPage {
                       this.lastTouchX = -1;
                       this.lastTouchY = -1;
                     }
+                  })
+              } else if (index === 0 && this.thumbnailLocalUrl) {
+                Image(this.thumbnailLocalUrl)
+                  .width('100%')
+                  .height('100%')
+                  .objectFit(ImageFit.Contain)
+                  .sharedTransition('illust_' + this.illustId, {
+                    duration: 350,
+                    curve: Curve.Friction
                   })
               } else {
                 Stack() {
@@ -331,33 +352,35 @@ struct IllustDetailPage {
 
           // Bottom info bar
           Column() {
-            if (this.illustPageCount > 1) {
-              Row() {
-                ForEach(Array.from<undefined, number>({ length: this.illustPageCount }, (_, i) => i), (index: number) => {
-                  Circle()
-                    .width(6).height(6)
-                    .fill(index === this.currentIndex ? Color.White : '#66FFFFFF')
-                    .margin({ left: 3, right: 3 })
-                }, (index: number) => String(index))
+            if (this.detail) {
+              if (this.illustPageCount > 1) {
+                Row() {
+                  ForEach(Array.from<undefined, number>({ length: this.illustPageCount }, (_, i) => i), (index: number) => {
+                    Circle()
+                      .width(6).height(6)
+                      .fill(index === this.currentIndex ? Color.White : '#66FFFFFF')
+                      .margin({ left: 3, right: 3 })
+                  }, (index: number) => String(index))
+                }
+                .width('100%')
+                .justifyContent(FlexAlign.Center)
+                .padding({ bottom: 8 })
               }
-              .width('100%')
-              .justifyContent(FlexAlign.Center)
-              .padding({ bottom: 8 })
-            }
 
-            Text(this.detail.illustTitle)
-              .fontSize(14)
-              .fontWeight(FontWeight.Medium)
-              .fontColor(Color.White)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-            Text(this.detail.userName)
-              .fontSize(12)
-              .fontColor(Color.White)
-              .maxLines(1)
-              .margin({ top: 2 })
-            if (this.downloadFail) {
-              Text('保存失败').fontSize(12).fontColor($r('app.color.danger')).margin({ top: 4 })
+              Text(this.detail.illustTitle)
+                .fontSize(14)
+                .fontWeight(FontWeight.Medium)
+                .fontColor(Color.White)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+              Text(this.detail.userName)
+                .fontSize(12)
+                .fontColor(Color.White)
+                .maxLines(1)
+                .margin({ top: 2 })
+              if (this.downloadFail) {
+                Text('保存失败').fontSize(12).fontColor($r('app.color.danger')).margin({ top: 4 })
+              }
             }
           }
           .width('100%')
@@ -371,6 +394,8 @@ struct IllustDetailPage {
         .height('100%')
         .backgroundColor(Color.Black)
         .clip(true)
+      } else if (this.isLoading) {
+        LoadingProgress().width(40).height(40)
       }
     }
     .width('100%')

@@ -50,6 +50,7 @@ export struct IllustCard {
               .height(150)
               .objectFit(ImageFit.Cover)
               .borderRadius({ topLeft: 12, topRight: 12 })
+              .sharedTransition('illust_' + this.item.id, { duration: 350, curve: Curve.Friction })
           } else {
             Column()
               .width('100%')
@@ -80,7 +81,10 @@ export struct IllustCard {
       .onClick(() => {
         router.pushUrl({
           url: 'pages/illust/IllustDetailPage',
-          params: { id: this.item.id }
+          params: {
+            id: this.item.id,
+            thumbnailLocalUrl: this.localUrl
+          }
         });
       })
 
