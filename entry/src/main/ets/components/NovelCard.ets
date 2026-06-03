@@ -167,6 +167,7 @@ export struct NovelCard {
     const seriesTitle = this.item.seriesTitle || this.item.series?.title || '';
     if (seriesTitle) {
       buttons.push({ text: `屏蔽系列「${seriesTitle}」`, color: '#FF4D4F' });
+      buttons.push({ text: `屏蔽系列名称「${seriesTitle}」`, color: '#FF4D4F' });
     }
     promptAction.showDialog({
       title: '屏蔽',
@@ -177,6 +178,8 @@ export struct NovelCard {
         await this.blockAuthor();
       } else if (data.index === 2) {
         await this.blockSeries();
+      } else if (data.index === 3) {
+        await this.blockSeriesTitle();
       }
     });
   }
@@ -207,6 +210,23 @@ export struct NovelCard {
       promptAction.showToast({ message: `已屏蔽系列「${seriesTitle}」` });
     } catch (err) {
       console.error(`屏蔽系列失败: ${err}`);
+      promptAction.showToast({ message: '屏蔽失败' });
+    }
+  }
+
+  async blockSeriesTitle() {
+    const seriesTitle = this.item.seriesTitle || this.item.series?.title || '';
+    if (!seriesTitle) {
+      promptAction.showToast({ message: '无法获取系列名称' });
+      return;
+    }
+    try {
+      const ctx = getContext(this) as common.UIAbilityContext;
+      await pixivCacheDB.init(ctx);
+      await pixivCacheDB.addBlockedSeriesTitle(seriesTitle);
+      promptAction.showToast({ message: `已屏蔽系列名称「${seriesTitle}」` });
+    } catch (err) {
+      console.error(`屏蔽系列名称失败: ${err}`);
       promptAction.showToast({ message: '屏蔽失败' });
     }
   }

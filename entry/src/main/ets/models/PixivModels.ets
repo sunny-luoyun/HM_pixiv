@@ -181,3 +181,8 @@ export interface BlockedSeries {
   authorName: string;
   blockedAt: string;
 }
+
+export interface BlockedSeriesTitle {
+  title: string;
+  blockedAt: string;
+}

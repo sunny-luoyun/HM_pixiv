@@ -1,10 +1,10 @@
 import relationalStore from '@ohos.data.relationalStore';
 import common from '@ohos.app.ability.common';
-import { PixivNovel, PixivTag, PixivSeries, CacheStatus, BlockedAuthor, BlockedSeries } from '../models/PixivModels';
+import { PixivNovel, PixivTag, PixivSeries, CacheStatus, BlockedAuthor, BlockedSeries, BlockedSeriesTitle } from '../models/PixivModels';
 
 const DB_NAME = 'pixiv_cache.db';
 const TABLE_NOVELS = 'pixiv_novels';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 const SQL_CREATE_NOVELS_TABLE = `
   CREATE TABLE IF NOT EXISTS ${TABLE_NOVELS} (
@@ -70,6 +70,7 @@ const ALL_COLUMNS: string[] = Object.values(COL);
 
 const TABLE_BLOCKED_AUTHORS = 'blocked_authors';
 const TABLE_BLOCKED_SERIES = 'blocked_series';
+const TABLE_BLOCKED_SERIES_TITLES = 'blocked_series_titles';
 
 const SQL_CREATE_BLOCKED_AUTHORS_TABLE = `
   CREATE TABLE IF NOT EXISTS ${TABLE_BLOCKED_AUTHORS} (
@@ -86,6 +87,13 @@ const SQL_CREATE_BLOCKED_SERIES_TABLE = `
     author_id   TEXT    NOT NULL,
     author_name TEXT    NOT NULL,
     blocked_at  TEXT    NOT NULL
+  )
+`;
+
+const SQL_CREATE_BLOCKED_SERIES_TITLES_TABLE = `
+  CREATE TABLE IF NOT EXISTS ${TABLE_BLOCKED_SERIES_TITLES} (
+    title      TEXT    PRIMARY KEY,
+    blocked_at TEXT    NOT NULL
   )
 `;
 
@@ -382,6 +390,7 @@ export class PixivCacheDB {
     try {
       await this.rdbStore.executeSql(SQL_CREATE_BLOCKED_AUTHORS_TABLE);
       await this.rdbStore.executeSql(SQL_CREATE_BLOCKED_SERIES_TABLE);
+      await this.rdbStore.executeSql(SQL_CREATE_BLOCKED_SERIES_TITLES_TABLE);
     } catch (err) {
       console.error('[PixivCacheDB] 屏蔽表初始化失败:', JSON.stringify(err));
     }
@@ -531,6 +540,59 @@ export class PixivCacheDB {
     }
   }
 
+  async addBlockedSeriesTitle(title: string): Promise<void> {
+    if (!this.checkReady() || !title) return;
+    const values: relationalStore.ValuesBucket = {
+      'title': title,
+      'blocked_at': new Date().toISOString()
+    };
+    try {
+      await this.rdbStore!.insert(
+        TABLE_BLOCKED_SERIES_TITLES, values,
+        relationalStore.ConflictResolution.ON_CONFLICT_REPLACE
+      );
+    } catch (err) {
+      console.error(`[PixivCacheDB] addBlockedSeriesTitle 失败: ${JSON.stringify(err)}`);
+    }
+  }
+
+  async removeBlockedSeriesTitle(title: string): Promise<void> {
+    if (!this.checkReady() || !title) return;
+    const predicates = new relationalStore.RdbPredicates(TABLE_BLOCKED_SERIES_TITLES);
+    predicates.equalTo('title', title);
+    try {
+      await this.rdbStore!.delete(predicates);
+    } catch (err) {
+      console.error(`[PixivCacheDB] removeBlockedSeriesTitle 失败: ${JSON.stringify(err)}`);
+    }
+  }
+
+  async getAllBlockedSeriesTitles(): Promise<BlockedSeriesTitle[]> {
+    if (!this.checkReady()) return [];
+    const predicates = new relationalStore.RdbPredicates(TABLE_BLOCKED_SERIES_TITLES);
+    predicates.orderByDesc('blocked_at');
+    try {
+      const result = await this.rdbStore!.query(predicates, ['title', 'blocked_at']);
+      const titles: BlockedSeriesTitle[] = [];
+      while (result.goToNextRow()) {
+        titles.push({
+          title: result.getString(result.getColumnIndex('title')),
+          blockedAt: result.getString(result.getColumnIndex('blocked_at'))
+        });
+      }
+      result.close();
+      return titles;
+    } catch (err) {
+      console.error(`[PixivCacheDB] getAllBlockedSeriesTitles 失败: ${JSON.stringify(err)}`);
+      return [];
+    }
+  }
+
+  async getAllBlockedSeriesTitleSet(): Promise<Set<string>> {
+    const titles = await this.getAllBlockedSeriesTitles();
+    return new Set(titles.map(t => t.title.toLowerCase()));
+  }
+
   private async upgradeDatabase(oldVersion: number, newVersion: number): Promise<void> {
     if (oldVersion < 2) {
       const alterQueries = [
@@ -555,6 +617,13 @@ export class PixivCacheDB {
         await this.rdbStore!.executeSql(SQL_CREATE_BLOCKED_SERIES_TABLE);
       } catch (e) {
         console.warn(`[PixivCacheDB] 屏蔽表创建跳过: ${JSON.stringify(e)}`);
+      }
+    }
+    if (oldVersion < 4) {
+      try {
+        await this.rdbStore!.executeSql(SQL_CREATE_BLOCKED_SERIES_TITLES_TABLE);
+      } catch (e) {
+        console.warn(`[PixivCacheDB] 系列名称屏蔽表创建跳过: ${JSON.stringify(e)}`);
       }
     }
     this.rdbStore!.version = newVersion;

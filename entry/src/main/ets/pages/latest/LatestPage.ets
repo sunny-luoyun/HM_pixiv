@@ -90,14 +90,18 @@ export struct LatestPage {
       await pixivCacheDB.init(ctx);
       const blockedIds = await Promise.all([
         pixivCacheDB.getAllBlockedAuthorIds(),
-        pixivCacheDB.getAllBlockedSeriesIds()
+        pixivCacheDB.getAllBlockedSeriesIds(),
+        pixivCacheDB.getAllBlockedSeriesTitleSet()
       ]);
       const blockedAuthorIds = blockedIds[0];
       const blockedSeriesIds = blockedIds[1];
+      const blockedSeriesTitleSet = blockedIds[2] as Set<string>;
       return works.filter(n => {
         if (blockedAuthorIds.has(n.userId)) return false;
         const sid = n.series?.id ?? n.seriesId;
         if (sid && blockedSeriesIds.has(String(sid))) return false;
+        const seriesTitle = n.seriesTitle || n.series?.title || '';
+        if (seriesTitle && blockedSeriesTitleSet.has(seriesTitle.toLowerCase())) return false;
         return true;
       });
     } catch (_) {

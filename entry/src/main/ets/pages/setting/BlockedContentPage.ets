@@ -2,13 +2,14 @@ import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
 import common from '@ohos.app.ability.common';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
-import { BlockedAuthor, BlockedSeries } from '../../models/PixivModels';
+import { BlockedAuthor, BlockedSeries, BlockedSeriesTitle } from '../../models/PixivModels';
 
 @Entry
 @Component
 struct BlockedContentPage {
   @State blockedAuthors: BlockedAuthor[] = [];
   @State blockedSeries: BlockedSeries[] = [];
+  @State blockedSeriesTitles: BlockedSeriesTitle[] = [];
   @State isLoading: boolean = true;
 
   aboutToAppear() {
@@ -22,12 +23,15 @@ struct BlockedContentPage {
       await pixivCacheDB.init(ctx);
       const results = await Promise.all([
         pixivCacheDB.getAllBlockedAuthors(),
-        pixivCacheDB.getAllBlockedSeries()
+        pixivCacheDB.getAllBlockedSeries(),
+        pixivCacheDB.getAllBlockedSeriesTitles()
       ]);
       const authors = results[0];
       const series = results[1];
+      const titles = results[2];
       this.blockedAuthors = authors;
       this.blockedSeries = series;
+      this.blockedSeriesTitles = titles;
     } catch (err) {
       console.error('加载屏蔽内容失败:', err);
     }
@@ -86,6 +90,32 @@ struct BlockedContentPage {
     });
   }
 
+  async unblockSeriesTitle(title: string) {
+    try {
+      const ctx = globalThis.appContext as common.UIAbilityContext;
+      await pixivCacheDB.init(ctx);
+      await pixivCacheDB.removeBlockedSeriesTitle(title);
+      this.blockedSeriesTitles = this.blockedSeriesTitles.filter(t => t.title !== title);
+    } catch (err) {
+      console.error('取消屏蔽系列名称失败:', err);
+    }
+  }
+
+  confirmUnblockSeriesTitle(item: BlockedSeriesTitle) {
+    promptAction.showDialog({
+      title: '取消屏蔽',
+      message: `确定要取消屏蔽系列名称「${item.title}」吗？`,
+      buttons: [
+        { text: '取消', color: '#666666' },
+        { text: '确定', color: '#FF4D4F' }
+      ]
+    }).then((data) => {
+      if (data.index === 1) {
+        this.unblockSeriesTitle(item.title);
+      }
+    });
+  }
+
   build() {
     Column() {
       // Top bar
@@ -114,7 +144,7 @@ struct BlockedContentPage {
         .width('100%')
         .layoutWeight(1)
         .justifyContent(FlexAlign.Center)
-      } else if (this.blockedAuthors.length === 0 && this.blockedSeries.length === 0) {
+      } else if (this.blockedAuthors.length === 0 && this.blockedSeries.length === 0 && this.blockedSeriesTitles.length === 0) {
         Column() {
           Text('暂无屏蔽内容')
             .fontSize(16)
@@ -159,6 +189,24 @@ struct BlockedContentPage {
                 ForEach(this.blockedSeries, (series: BlockedSeries) => {
                   this.SeriesItem(series)
                 }, (series: BlockedSeries) => series.seriesId)
+              }
+              .width('100%')
+            }
+
+            // Blocked series titles section
+            if (this.blockedSeriesTitles.length > 0) {
+              Text(`🚫 已屏蔽的系列名称（${this.blockedSeriesTitles.length}）`)
+                .fontSize(15)
+                .fontWeight(FontWeight.Medium)
+                .fontColor($r('app.color.user_name'))
+                .width('100%')
+                .padding({ left: 4, bottom: 8 })
+                .margin({ top: 20 })
+
+              Column({ space: 8 }) {
+                ForEach(this.blockedSeriesTitles, (item: BlockedSeriesTitle) => {
+                  this.SeriesTitleItem(item)
+                }, (item: BlockedSeriesTitle) => item.title)
               }
               .width('100%')
             }
@@ -281,5 +329,48 @@ struct BlockedContentPage {
         }
       });
     })
+  }
+
+  @Builder
+  SeriesTitleItem(item: BlockedSeriesTitle) {
+    Row() {
+      Column() {
+        Text('T')
+          .fontSize(18)
+          .fontColor(Color.White)
+          .fontWeight(FontWeight.Bold)
+      }
+      .width(44).height(44)
+      .borderRadius(22)
+      .backgroundColor('#FA8C16')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
+      .margin({ right: 12 })
+
+      Column() {
+        Text(item.title)
+          .fontSize(15)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.user_name'))
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+      }
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
+
+      Button('取消屏蔽')
+        .fontSize(12)
+        .fontColor(Color.White)
+        .backgroundColor('#FF4D4F')
+        .borderRadius(16)
+        .height(32)
+        .padding({ left: 14, right: 14 })
+        .onClick(() => { this.confirmUnblockSeriesTitle(item); })
+    }
+    .width('100%')
+    .padding(12)
+    .backgroundColor($r('app.color.card_bg'))
+    .borderRadius(12)
   }
 }
