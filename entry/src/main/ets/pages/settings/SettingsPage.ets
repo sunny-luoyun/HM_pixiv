@@ -38,6 +38,8 @@ export struct SettingsPage {
   @State apiKeyCheckState: 'idle' | 'checking' | 'ok' | 'fail' = 'idle';
   @State balanceAmount: string = '';
   @State balanceFetchState: 'idle' | 'loading' | 'ok' | 'fail' = 'idle';
+  @State ratioValue: number = 0;
+  @State ratioCount: number = 0;
 
   @State proxyMode: ProxyMode = 'off';
   @State proxyHost: string = '';
@@ -62,6 +64,7 @@ export struct SettingsPage {
     this.proxySubscriptionUrl = AppStorage.get<string>('proxySubscriptionUrl') ?? '';
     this.nativeAvailable = ProxyService.isNativeAvailable();
     this.proxyAutoStart = AppStorage.get<boolean>('proxyAutoStart') ?? false;
+    this.loadRatioInfo();
     this.initCache();
     this.checkNativeRunning();
     this.restoreProxyContent();
@@ -76,6 +79,12 @@ export struct SettingsPage {
     }
     const status = await ProxyService.getNativeStatus();
     this.nativeRunning = status.running ?? false;
+  }
+
+  loadRatioInfo(): void {
+    const service = getDeepSeekService();
+    this.ratioValue = service.getAdaptiveRatio();
+    this.ratioCount = service.getRatioCount();
   }
 
   async checkApiKeyValidity(): Promise<void> {
@@ -574,6 +583,57 @@ export struct SettingsPage {
           .fontSize(10)
           .fontColor($r('app.color.text_secondary'))
           .margin({ top: 8 })
+
+        Divider()
+          .strokeWidth(1)
+          .color($r('app.color.divider'))
+          .margin({ top: 14, bottom: 14 })
+
+        Row() {
+          Column() {
+            Text('校准比例')
+              .fontSize(13)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.user_name'))
+            Text(`输出/输入比 ${this.ratioValue.toFixed(3)}（已校准 ${this.ratioCount} 次）`)
+              .fontSize(11)
+              .fontColor($r('app.color.text_secondary'))
+              .margin({ top: 2 })
+          }
+          .layoutWeight(1)
+          .alignItems(HorizontalAlign.Start)
+
+          Button('重置校准')
+            .fontSize(12)
+            .height(32)
+            .fontColor($r('app.color.danger'))
+            .backgroundColor(Color.Transparent)
+            .border({ width: 1, color: $r('app.color.danger'), radius: 8 })
+            .padding({ left: 14, right: 14 })
+            .onClick(() => {
+              AlertDialog.show({
+                title: '重置校准比例',
+                message: '确定要重置输出/输入校准比例吗？重置后将恢复默认值 0.650，之前的校准数据将被清除。',
+                autoCancel: true,
+                primaryButton: {
+                  value: '取消',
+                  action: () => {}
+                },
+                secondaryButton: {
+                  value: '重置',
+                  fontColor: '#FF4D4F',
+                  action: async () => {
+                    const service = getDeepSeekService();
+                    await service.resetAdaptiveRatio();
+                    this.loadRatioInfo();
+                    promptAction.showToast({ message: '校准比例已重置' });
+                  }
+                }
+              });
+            })
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
       }
     }
     .width('100%')

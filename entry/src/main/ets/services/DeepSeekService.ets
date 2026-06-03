@@ -198,6 +198,12 @@ export class DeepSeekService {
     return this.ratioCount;
   }
 
+  async resetAdaptiveRatio(): Promise<void> {
+    this.adaptiveRatio = 0.65;
+    this.ratioCount = 0;
+    await this.saveRatioToStorage();
+  }
+
   async recordUsage(actualInput: number, actualOutput: number): Promise<void> {
     const ratio = actualOutput / actualInput;
     const total = this.ratioCount + 1;
@@ -333,7 +339,9 @@ export class DeepSeekService {
 
         console.info(`[Translation] input=${actualInputTokens} output=${actualOutputTokens} total=${actualInputTokens + actualOutputTokens}`);
 
-        await this.recordUsage(actualInputTokens, actualOutputTokens);
+        if (!isTitle) {
+          await this.recordUsage(actualInputTokens, actualOutputTokens);
+        }
 
         return {
           success: true,
