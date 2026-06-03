@@ -7,6 +7,8 @@ import { PixivNovel, CacheStatus, PixivTag, PixivSeries, PixivSeriesResult, pars
 import photoAccessHelper from '@ohos.file.photoAccessHelper';
 import { Context } from '@kit.AbilityKit';
 import { ProxyService } from './ProxyService';
+import image from '@ohos.multimedia.image';
+
 export interface UserInfoBody {
   userId?: string;
   name: string;
@@ -1267,5 +1269,35 @@ export class PixivService {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
     });
+  }
+
+  static async extractDominantColor(filePath: string): Promise<string> {
+    try {
+      const imageSource = image.createImageSource(filePath);
+      const pixelMap = await imageSource.createPixelMap({
+        desiredSize: { width: 8, height: 8 }
+      });
+      const buffer = new ArrayBuffer(8 * 8 * 4);
+      await pixelMap.readPixelsToBuffer(buffer);
+
+      const pixels = new Uint8Array(buffer);
+      let r = 0, g = 0, b = 0, count = 0;
+      for (let i = 0; i < pixels.length; i += 4) {
+        r += pixels[i];
+        g += pixels[i + 1];
+        b += pixels[i + 2];
+        count++;
+      }
+      r = Math.round(r / count);
+      g = Math.round(g / count);
+      b = Math.round(b / count);
+
+      imageSource.release();
+      const toHex = (n: number): string => n.toString(16).padStart(2, '0');
+      return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    } catch (err) {
+      console.error('提取图片主色失败:', err);
+      return '';
+    }
   }
 }

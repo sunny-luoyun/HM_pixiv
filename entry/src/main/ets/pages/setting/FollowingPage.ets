@@ -86,6 +86,13 @@ struct FollowingPage {
     this.isLoadingMore = false;
   }
 
+  pageTransition() {
+    PageTransitionEnter({ duration: 300, curve: Curve.Friction })
+      .slide(SlideEffect.Right)
+    PageTransitionExit({ duration: 300, curve: Curve.Friction })
+      .slide(SlideEffect.Right)
+  }
+
   build() {
     Column() {
       this.TopBar()
@@ -105,9 +112,9 @@ struct FollowingPage {
         Scroll() {
           Column() {
             Grid() {
-              ForEach(this.users, (item: UserSearchResult) => {
+              ForEach(this.users, (item: UserSearchResult, index?: number) => {
                 GridItem() {
-                  UserCard({ item: item })
+                  UserCard({ item: item, index: index ?? 0 })
                 }
               }, (item: UserSearchResult) => item.userId)
             }

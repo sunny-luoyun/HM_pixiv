@@ -500,9 +500,9 @@ export struct SearchPage {
       Scroll() {
         Column() {
           List() {
-            ForEach(this.novelWorks, (item: NovelBookmark) => {
+            ForEach(this.novelWorks, (item: NovelBookmark, index?: number) => {
               ListItem() {
-                NovelCard({ item: item })
+                NovelCard({ item: item, index: index ?? 0 })
               }
             }, (item: NovelBookmark) => item.id)
           }
@@ -549,9 +549,9 @@ export struct SearchPage {
       Scroll() {
         Column() {
           Grid() {
-            ForEach(this.userWorks, (item: UserSearchResult) => {
+            ForEach(this.userWorks, (item: UserSearchResult, index?: number) => {
               GridItem() {
-                UserCard({ item: item })
+                UserCard({ item: item, index: index ?? 0 })
               }
             }, (item: UserSearchResult) => item.userId)
           }

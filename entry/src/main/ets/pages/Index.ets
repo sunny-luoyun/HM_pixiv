@@ -24,6 +24,8 @@ struct Index {
   @Provide('isLoggedIn') isLoggedIn: boolean = false;
   @State bounceIndex: number = -1;
   @State bounceScale: number = 1;
+  @State indicatorOffset: number = 0;
+  @State tabItemWidths: number[] = [42, 42, 42, 42];
   private tabsController: TabsController = new TabsController();
 
   async aboutToAppear() {
@@ -76,26 +78,46 @@ struct Index {
         .width('100%')
         .height('100%')
 
-        Column() {
+      Column() {
+        Row() {
           Row() {
-            Row() {
-              ForEach(TAB_ITEMS, (item: TabItem, index: number) => {
-                this.TabItemView(item, index)
-              }, (item: TabItem) => item.label)
-            }
-            .height(60)
-            .padding({ left: 6, right: 6 })
-            .width('92%')
-            .backgroundColor($r('app.color.tab_bar_bg'))
-            .borderRadius(30)
+            ForEach(TAB_ITEMS, (item: TabItem, index: number) => {
+              this.TabItemView(item, index)
+            }, (item: TabItem) => item.label)
           }
-          .width('100%')
-          .justifyContent(FlexAlign.Center)
+          .height(60)
+          .padding({ left: 6, right: 6 })
+          .width('92%')
+          .backgroundColor($r('app.color.tab_bar_bg'))
+          .borderRadius(30)
+          .overlay(() => {
+            Column()
+              .width(18)
+              .height(3)
+              .backgroundColor($r('app.color.tab_selected'))
+              .borderRadius(1.5)
+              .position({ x: this.indicatorOffset, y: 58 })
+          }, { align: Alignment.BottomStart })
+          .onAreaChange((_oldArea: Area, newArea: Area) => {
+            const w = newArea.width;
+            const width = Number(w);
+            if (width > 0) {
+              const tabW = (width - 12) / 4;
+              this.tabItemWidths = TAB_ITEMS.map(() => tabW);
+              const initialOffset = this.currentIndex * tabW + (tabW / 2 - 9);
+              if (this.indicatorOffset !== initialOffset) {
+                this.indicatorOffset = initialOffset;
+              }
+            }
+          })
         }
         .width('100%')
-        .height(80)
-        .justifyContent(FlexAlign.Start)
-        .position({ bottom: 0 })
+        .justifyContent(FlexAlign.Center)
+      }
+      .width('100%')
+      .height(80)
+      .justifyContent(FlexAlign.Start)
+      .position({ bottom: 0 })
       }
       .width('100%')
       .height('100%')
@@ -148,20 +170,6 @@ struct Index {
           ? $r('app.color.tab_selected')
           : $r('app.color.text_secondary'))
         .fontWeight(this.currentIndex === index ? FontWeight.Medium : FontWeight.Normal)
-
-      if (this.currentIndex === index) {
-        Column()
-          .width(18)
-          .height(3)
-          .backgroundColor($r('app.color.tab_selected'))
-          .borderRadius(1.5)
-          .margin({ top: 4 })
-      } else {
-        Column()
-          .width(18)
-          .height(3)
-          .margin({ top: 4 })
-      }
     }
     .layoutWeight(1)
     .padding({ top: 8, bottom: 6 })
@@ -170,6 +178,10 @@ struct Index {
       this.currentIndex = index;
       this.tabsController.changeIndex(index);
       this.triggerBounce(index);
+      const tabW = this.tabItemWidths[index] || 42;
+      animateTo({ curve: Curve.FastOutSlowIn, duration: 350 }, () => {
+        this.indicatorOffset = index * tabW + (tabW / 2 - 9);
+      });
     })
   }
 }

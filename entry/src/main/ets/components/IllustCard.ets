@@ -13,6 +13,7 @@ export struct IllustCard {
   @State cardOpacity: number = 0;
   @State cardTranslateY: number = 20;
   @State bookmarkScale: number = 1;
+  @State imageOpacity: number = 0;
 
   async aboutToAppear() {
     setTimeout(() => {
@@ -28,6 +29,7 @@ export struct IllustCard {
     }
     const path = await PixivService.cacheImage(this.item.url, `illust_${this.item.id}.jpg`);
     if (path) {
+      this.imageOpacity = 0;
       this.localUrl = path;
     }
     this.isCaching = false;
@@ -75,6 +77,12 @@ export struct IllustCard {
               .objectFit(ImageFit.Cover)
               .borderRadius({ topLeft: 12, topRight: 12 })
               .sharedTransition('illust_' + this.item.id, { duration: 350, curve: Curve.Friction })
+              .opacity(this.imageOpacity)
+              .onComplete(() => {
+                animateTo({ duration: 250, curve: Curve.EaseOut }, () => {
+                  this.imageOpacity = 1;
+                });
+              })
           } else {
             Column()
               .width('100%')

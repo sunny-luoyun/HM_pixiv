@@ -27,6 +27,11 @@ struct IllustDetailPage {
   @State bookmarkScale: number = 1;
   @State scaleValue: number = 1;
   @State translateX: number = 0;
+  @State imageOpacityArray: number[] = [];
+  @State backgroundImageUrl: string = '';
+  @State backgroundOpacity: number = 0;
+  @State dominantColor: string = '';
+  @State bgColor: string = '#000000';
   @State translateY: number = 0;
   @State private screenWidth: number = 0;
   @State private screenHeight: number = 0;
@@ -53,7 +58,12 @@ struct IllustDetailPage {
     }
     if (this.thumbnailLocalUrl) {
       this.localImageUrls = [this.thumbnailLocalUrl];
+      this.imageOpacityArray = [0];
+      this.backgroundImageUrl = this.thumbnailLocalUrl;
       this.illustPageCount = 1;
+      animateTo({ duration: 400, curve: Curve.EaseOut }, () => {
+        this.backgroundOpacity = 0.5;
+      });
     }
     const defaultDisplay = display.getDefaultDisplaySync();
     this.screenWidth = px2vp(defaultDisplay.width);
@@ -85,7 +95,20 @@ struct IllustDetailPage {
           newUrls[0] = this.thumbnailLocalUrl;
         }
         this.localImageUrls = newUrls;
+        this.imageOpacityArray = new Array<number>(pageCount).fill(0);
         this.isLoading = false;
+
+        if (this.thumbnailLocalUrl) {
+          PixivService.extractDominantColor(this.thumbnailLocalUrl)
+            .then((color: string) => {
+              if (color && this.isActive) {
+                this.dominantColor = color;
+                animateTo({ duration: 800, curve: Curve.EaseOut }, () => {
+                  this.bgColor = color;
+                });
+              }
+            });
+        }
 
         const illustId = res.body.illustId;
         const groupId = `detail_${illustId}`;
@@ -96,6 +119,9 @@ struct IllustDetailPage {
                 const updated = [...this.localImageUrls];
                 updated[i] = path;
                 this.localImageUrls = updated;
+                const opacityUpdated = [...this.imageOpacityArray];
+                opacityUpdated[i] = 0;
+                this.imageOpacityArray = opacityUpdated;
               }
             })
             .catch(() => {});
@@ -200,6 +226,13 @@ struct IllustDetailPage {
     this.translateY = Math.max(-maxY, Math.min(maxY, this.translateY));
   }
 
+  pageTransition() {
+    PageTransitionEnter({ duration: 300, curve: Curve.Friction })
+      .slide(SlideEffect.Right)
+    PageTransitionExit({ duration: 300, curve: Curve.Friction })
+      .slide(SlideEffect.Right)
+  }
+
   build() {
     Column() {
       if (this.errorMsg) {
@@ -214,6 +247,15 @@ struct IllustDetailPage {
         .alignItems(HorizontalAlign.Center)
       } else if (this.thumbnailLocalUrl || (this.detail && this.localImageUrls.length > 0)) {
         Stack() {
+          if (this.backgroundImageUrl) {
+            Image(this.backgroundImageUrl)
+              .width('100%')
+              .height('100%')
+              .objectFit(ImageFit.Cover)
+              .blur(40)
+              .scale({ x: 1.1, y: 1.1 })
+              .opacity(this.backgroundOpacity)
+          }
           Swiper(this.swiperController) {
             ForEach(this.localImageUrls, (url: string, index: number) => {
               if (url) {
@@ -224,6 +266,14 @@ struct IllustDetailPage {
                   .sharedTransition(index === 0 ? 'illust_' + this.illustId : '', {
                     duration: 350,
                     curve: Curve.Friction
+                  })
+                  .opacity(this.imageOpacityArray[index] ?? 0)
+                  .onComplete(() => {
+                    const updated = [...this.imageOpacityArray];
+                    updated[index] = 1;
+                    animateTo({ duration: 300, curve: Curve.EaseOut }, () => {
+                      this.imageOpacityArray = updated;
+                    });
                   })
                   .scale({ x: this.scaleValue, y: this.scaleValue })
                   .translate({ x: this.translateX, y: this.translateY })
@@ -300,6 +350,18 @@ struct IllustDetailPage {
             this.resetZoom();
             this.downloadSuccess = false;
             this.downloadFail = false;
+            const bgUrl = this.localImageUrls[index];
+            if (bgUrl && bgUrl !== this.backgroundImageUrl) {
+              animateTo({ duration: 200, curve: Curve.EaseOut }, () => {
+                this.backgroundOpacity = 0;
+              });
+              setTimeout(() => {
+                this.backgroundImageUrl = bgUrl;
+                animateTo({ duration: 400, curve: Curve.EaseOut }, () => {
+                  this.backgroundOpacity = 0.5;
+                });
+              }, 200);
+            }
           })
 
           // Top bar
@@ -407,7 +469,7 @@ struct IllustDetailPage {
         }
         .width('100%')
         .height('100%')
-        .backgroundColor(Color.Black)
+        .backgroundColor(this.bgColor)
         .clip(true)
       } else if (this.isLoading) {
         LoadingProgress().width(40).height(40)
@@ -415,6 +477,6 @@ struct IllustDetailPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(Color.Black)
+    .backgroundColor(this.bgColor)
   }
 }

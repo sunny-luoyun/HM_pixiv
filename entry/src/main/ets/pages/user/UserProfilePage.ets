@@ -423,6 +423,13 @@ struct UserProfilePage {
     }
   }
 
+  pageTransition() {
+    PageTransitionEnter({ duration: 300, curve: Curve.Friction })
+      .slide(SlideEffect.Right)
+    PageTransitionExit({ duration: 300, curve: Curve.Friction })
+      .slide(SlideEffect.Right)
+  }
+
   build() {
     Column() {
       this.TopBar()
@@ -605,8 +612,8 @@ struct UserProfilePage {
     } else {
       Scroll() {
         Column() {
-          ForEach(this.novelWorks, (item: NovelBookmark) => {
-            NovelCard({ item: item })
+          ForEach(this.novelWorks, (item: NovelBookmark, index?: number) => {
+            NovelCard({ item: item, index: index ?? 0 })
           }, (item: NovelBookmark) => item.id)
 
           if (this.isLoadingMoreNovel) {
@@ -691,8 +698,8 @@ struct UserProfilePage {
     } else {
       Scroll() {
         Column() {
-          ForEach(this.bookmarkNovelWorks, (item: NovelBookmark) => {
-            NovelCard({ item: item })
+          ForEach(this.bookmarkNovelWorks, (item: NovelBookmark, index?: number) => {
+            NovelCard({ item: item, index: index ?? 0 })
           }, (item: NovelBookmark) => item.id)
 
           if (this.isLoadingMoreBookmarkNovel) {

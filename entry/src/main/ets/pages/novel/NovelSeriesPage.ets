@@ -192,6 +192,13 @@ struct NovelSeriesPage {
     }
   }
 
+  pageTransition() {
+    PageTransitionEnter({ duration: 300, curve: Curve.Friction })
+      .slide(SlideEffect.Right)
+    PageTransitionExit({ duration: 300, curve: Curve.Friction })
+      .slide(SlideEffect.Right)
+  }
+
   build() {
     Column() {
       Row() {
@@ -283,8 +290,8 @@ struct NovelSeriesPage {
       } else if (this.bookmarks.length > 0) {
         Scroll() {
           Column() {
-            ForEach(this.bookmarks, (item: NovelBookmark): void => {
-              NovelCard({ item: item })
+            ForEach(this.bookmarks, (item: NovelBookmark, index?: number): void => {
+              NovelCard({ item: item, index: index ?? 0 })
             }, (item: NovelBookmark): string => item.id)
 
             if (this.hasMore) {

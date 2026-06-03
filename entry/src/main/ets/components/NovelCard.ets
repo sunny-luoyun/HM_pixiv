@@ -14,6 +14,10 @@ interface DialogButton {
 @Component
 export struct NovelCard {
   private item!: NovelBookmark;
+  @Prop index: number = 0;
+  @State cardOpacity: number = 0;
+  @State cardTranslateY: number = 20;
+  @State coverImageOpacity: number = 0;
   @State localCoverPath: string = '';
   @State cacheStatus: CacheStatus = CacheStatus.NOT_CACHED;
   @State cacheLabel: string = '缓存';
@@ -26,9 +30,17 @@ export struct NovelCard {
   @State isBookmarkLoading: boolean = false;
 
   async aboutToAppear() {
+    setTimeout(() => {
+      animateTo({ duration: 350, curve: Curve.EaseOut }, () => {
+        this.cardOpacity = 1;
+        this.cardTranslateY = 0;
+      });
+    }, this.index * 60);
+
     if (!this.item.url) return;
     const path = await PixivService.cacheImage(this.item.url, `novel_${this.item.id}.jpg`);
     if (path) {
+      this.coverImageOpacity = 0;
       this.localCoverPath = path;
     }
     this.isBookmarked = !!this.item.bookmarkData;
@@ -326,6 +338,8 @@ export struct NovelCard {
     .borderRadius(14)
     .margin({ bottom: 12 })
     .shadow({ radius: 8, color: $r('app.color.card_shadow'), offsetY: 2 })
+    .opacity(this.cardOpacity)
+    .translate({ y: this.cardTranslateY })
     .gesture(
       LongPressGesture({ repeat: false, duration: 500 })
         .onAction(() => { this.showBlockOptions(); })
@@ -400,6 +414,12 @@ export struct NovelCard {
         .objectFit(ImageFit.Cover)
         .borderRadius(8)
         .margin({ right: 14 })
+        .opacity(this.coverImageOpacity)
+        .onComplete(() => {
+          animateTo({ duration: 250, curve: Curve.EaseOut }, () => {
+            this.coverImageOpacity = 1;
+          });
+        })
     } else {
       Column() {
         Text('📄')

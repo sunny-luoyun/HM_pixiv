@@ -48,6 +48,13 @@ export struct CachedNovelsSimplePage {
     });
   }
 
+  pageTransition() {
+    PageTransitionEnter({ duration: 300, curve: Curve.Friction })
+      .slide(SlideEffect.Right)
+    PageTransitionExit({ duration: 300, curve: Curve.Friction })
+      .slide(SlideEffect.Right)
+  }
+
   build() {
     Column() {
       Row() {

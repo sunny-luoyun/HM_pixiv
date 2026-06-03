@@ -4,10 +4,21 @@ import { PixivService, UserSearchResult } from '../services/PixivService';
 @Component
 export struct UserCard {
   private item!: UserSearchResult;
+  @Prop index: number = 0;
+  @State cardOpacity: number = 0;
+  @State cardTranslateY: number = 20;
+  @State avatarOpacity: number = 0;
   @State localAvatar: string = '';
   @State isCaching: boolean = true;
 
   async aboutToAppear() {
+    setTimeout(() => {
+      animateTo({ duration: 350, curve: Curve.EaseOut }, () => {
+        this.cardOpacity = 1;
+        this.cardTranslateY = 0;
+      });
+    }, this.index * 60);
+
     const avatarUrl = this.item.imageBig || this.item.image;
     if (!avatarUrl) {
       this.isCaching = false;
@@ -15,6 +26,7 @@ export struct UserCard {
     }
     const path = await PixivService.cacheImage(avatarUrl, `user_${this.item.userId}.jpg`);
     if (path) {
+      this.avatarOpacity = 0;
       this.localAvatar = path;
     }
     this.isCaching = false;
@@ -28,6 +40,12 @@ export struct UserCard {
           .height(48)
           .objectFit(ImageFit.Cover)
           .borderRadius(24)
+          .opacity(this.avatarOpacity)
+          .onComplete(() => {
+            animateTo({ duration: 250, curve: Curve.EaseOut }, () => {
+              this.avatarOpacity = 1;
+            });
+          })
       } else {
         Text('👤')
           .fontSize(24)
@@ -65,6 +83,8 @@ export struct UserCard {
     .margin({ bottom: 10 })
     .alignItems(VerticalAlign.Center)
     .shadow({ radius: 8, color: $r('app.color.card_shadow'), offsetY: 2 })
+    .opacity(this.cardOpacity)
+    .translate({ y: this.cardTranslateY })
     .onClick(() => {
       router.pushUrl({
         url: 'pages/user/UserProfilePage',

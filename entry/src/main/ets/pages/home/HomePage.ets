@@ -335,9 +335,9 @@ export struct HomePage {
               Scroll() {
                 Column() {
                   List() {
-                    ForEach(this.novelWorks, (item: NovelBookmark) => {
+                    ForEach(this.novelWorks, (item: NovelBookmark, index?: number) => {
                     ListItem() {
-                      NovelCard({ item: item })
+                      NovelCard({ item: item, index: index ?? 0 })
                     }
                   }, (item: NovelBookmark) => item.id)
                 }

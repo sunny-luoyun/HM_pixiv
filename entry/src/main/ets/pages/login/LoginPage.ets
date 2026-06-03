@@ -10,6 +10,13 @@ struct LoginPage {
   private isHandled: boolean = false;
   private loginUrl: string = 'https://accounts.pixiv.net/login';
 
+  pageTransition() {
+    PageTransitionEnter({ duration: 300, curve: Curve.Friction })
+      .slide(SlideEffect.Right)
+    PageTransitionExit({ duration: 300, curve: Curve.Friction })
+      .slide(SlideEffect.Right)
+  }
+
   build() {
     Column() {
       if (this.viewModel.isProcessing) {
