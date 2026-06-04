@@ -137,8 +137,10 @@ struct FollowingPage {
             }
           }
           .width('100%')
+          .padding({ bottom: 120 })
         }
         .width('100%')
+        .edgeEffect(EdgeEffect.Spring)
         .onReachEnd(() => {
           if (this.hasMore && !this.isLoadingMore) {
             this.loadMoreUsers();

@@ -588,12 +588,14 @@ struct UserProfilePage {
               .fontColor($r('app.color.text_secondary'))
               .width('100%')
               .textAlign(TextAlign.Center)
-              .margin({ top: 8, bottom: 24 })
+              .margin({ top: 8, bottom: 48 })
           }
         }
         .width('100%')
+        .padding({ bottom: 120 })
       }
       .width('100%')
+      .edgeEffect(EdgeEffect.Spring)
       .onReachEnd(() => {
         if (this.hasMoreIllust && !this.isLoadingMoreIllust) {
           this.loadMoreIllusts();
@@ -630,9 +632,10 @@ struct UserProfilePage {
           }
         }
         .width('100%')
-        .padding(12)
+        .padding({ left: 12, right: 12, top: 12, bottom: 120 })
       }
       .width('100%')
+      .edgeEffect(EdgeEffect.Spring)
       .onReachEnd(() => {
         if (this.hasMoreNovel && !this.isLoadingMoreNovel) {
           this.loadMoreNovels();
@@ -674,12 +677,14 @@ struct UserProfilePage {
               .fontColor($r('app.color.text_secondary'))
               .width('100%')
               .textAlign(TextAlign.Center)
-              .margin({ top: 8, bottom: 24 })
+              .margin({ top: 8, bottom: 48 })
           }
         }
         .width('100%')
+        .padding({ bottom: 120 })
       }
       .width('100%')
+      .edgeEffect(EdgeEffect.Spring)
       .onReachEnd(() => {
         if (this.hasMoreBookmarkIllust && !this.isLoadingMoreBookmarkIllust) {
           this.loadMoreBookmarkIllusts();
@@ -716,9 +721,10 @@ struct UserProfilePage {
           }
         }
         .width('100%')
-        .padding(12)
+        .padding({ left: 12, right: 12, top: 12, bottom: 120 })
       }
       .width('100%')
+      .edgeEffect(EdgeEffect.Spring)
       .onReachEnd(() => {
         if (this.hasMoreBookmarkNovel && !this.isLoadingMoreBookmarkNovel) {
           this.loadMoreBookmarkNovels();

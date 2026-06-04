@@ -274,8 +274,10 @@ export struct LatestPage {
                 }
               }
               .width('100%')
+              .padding({ bottom: 120 })
             }
             .width('100%')
+            .edgeEffect(EdgeEffect.Spring)
             .onReachEnd(() => {
               if (!this.isLoadingMoreIllust && this.illustPage < this.illustPages) {
                 this.loadMoreIllusts();
@@ -328,8 +330,10 @@ export struct LatestPage {
                 }
               }
               .width('100%')
+              .padding({ bottom: 120 })
             }
             .width('100%')
+            .edgeEffect(EdgeEffect.Spring)
             .onReachEnd(() => {
               if (!this.isLoadingMoreNovel && this.novelPage < this.novelPages) {
                 this.loadMoreNovels();

@@ -245,8 +245,10 @@ struct FavoritesPage {
                 }
               }
               .width('100%')
+              .padding({ bottom: 120 })
             }
             .width('100%')
+            .edgeEffect(EdgeEffect.Spring)
             .onReachEnd(() => {
               if (this.hasMoreIllust && !this.isLoadingMoreIllust) {
                 this.loadMoreIllusts();
@@ -294,8 +296,10 @@ struct FavoritesPage {
                 }
               }
               .width('100%')
+              .padding({ bottom: 120 })
             }
             .width('100%')
+            .edgeEffect(EdgeEffect.Spring)
             .onReachEnd(() => {
               if (this.hasMoreNovel && !this.isLoadingMoreNovel) {
                 this.loadMoreNovels();

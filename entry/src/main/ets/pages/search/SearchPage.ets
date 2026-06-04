@@ -474,8 +474,10 @@ export struct SearchPage {
           }
         }
         .width('100%')
+        .padding({ bottom: 120 })
       }
       .width('100%')
+      .edgeEffect(EdgeEffect.Spring)
       .onReachEnd(() => {
         if (!this.isLoadingMoreIllust && this.illustPage < this.illustPages) {
           this.loadMoreIllusts();
@@ -523,8 +525,10 @@ export struct SearchPage {
           }
         }
         .width('100%')
+        .padding({ bottom: 120 })
       }
       .width('100%')
+      .edgeEffect(EdgeEffect.Spring)
       .onReachEnd(() => {
         if (!this.isLoadingMoreNovel && this.novelPage < this.novelPages) {
           this.loadMoreNovels();
@@ -575,8 +579,10 @@ export struct SearchPage {
           }
         }
         .width('100%')
+        .padding({ bottom: 120 })
       }
       .width('100%')
+      .edgeEffect(EdgeEffect.Spring)
       .onReachEnd(() => {
         if (!this.isLoadingMoreUser && this.userPage < this.userPages) {
           this.loadMoreUsers();

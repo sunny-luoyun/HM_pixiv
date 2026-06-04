@@ -310,10 +310,11 @@ struct NovelSeriesPage {
             }
           }
           .width('100%')
-          .padding(12)
+          .padding({ left: 12, right: 12, top: 12, bottom: 120 })
         }
         .width('100%')
         .layoutWeight(1)
+        .edgeEffect(EdgeEffect.Spring)
         .onReachEnd(() => {
           if (this.hasMore && !this.isLoading) {
             this.loadMore();
