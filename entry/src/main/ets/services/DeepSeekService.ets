@@ -130,6 +130,8 @@ export class DeepSeekService {
   private appContext: common.UIAbilityContext | null = null;
   private adaptiveRatio: number = 0.65;
   private ratioCount: number = 0;
+  private averageSpeed: number = 0;
+  private speedCount: number = 0;
 
   constructor(apiKey: string = '') {
     this.apiKey = apiKey;
@@ -154,6 +156,25 @@ export class DeepSeekService {
     await pref.flush();
   }
 
+  private async loadSpeedFromStorage(): Promise<void> {
+    if (!this.appContext) return;
+    const pref = await preferences.getPreferences(this.appContext, 'deepseek_translate');
+    const saved = (await pref.get('speed', 0)) as number;
+    const count = (await pref.get('speedCount', 0)) as number;
+    if (count > 0) {
+      this.averageSpeed = saved;
+      this.speedCount = count;
+    }
+  }
+
+  private async saveSpeedToStorage(): Promise<void> {
+    if (!this.appContext) return;
+    const pref = await preferences.getPreferences(this.appContext, 'deepseek_translate');
+    await pref.put('speed', this.averageSpeed);
+    await pref.put('speedCount', this.speedCount);
+    await pref.flush();
+  }
+
   updateApiKey(apiKey: string): void {
     this.apiKey = apiKey;
   }
@@ -172,6 +193,7 @@ export class DeepSeekService {
   async initTokenizer(context: common.UIAbilityContext): Promise<void> {
     this.appContext = context;
     await this.loadRatioFromStorage();
+    await this.loadSpeedFromStorage();
     if (!this.tokenizerInitPromise) {
       this.tokenizerInitPromise = getDeepSeekTokenizer(context).then(t => {
         this.tokenizer = t;
@@ -223,6 +245,13 @@ export class DeepSeekService {
     const inputCost = estimatedInput * PRICE_INPUT / 1000000;
     const outputCost = estimatedOutput * PRICE_OUTPUT / 1000000;
     return inputCost + outputCost;
+  }
+
+  estimateTime(inputTokens: number): number {
+    const estimatedOutput = Math.round(inputTokens * this.adaptiveRatio);
+    const estimatedTotalTokens = inputTokens + estimatedOutput;
+    const speed = this.averageSpeed > 0 ? this.averageSpeed : 300;
+    return Math.round((estimatedTotalTokens / speed) * 1000);
   }
 
   async fetchBalance(apiKey?: string): Promise<BalanceFetchResult> {
@@ -302,6 +331,7 @@ export class DeepSeekService {
     };
 
     const httpRequest = http.createHttp();
+    const startTime = Date.now();
 
     try {
       const response = await httpRequest.request(this.baseUrl, {
@@ -346,6 +376,16 @@ export class DeepSeekService {
 
         if (!isTitle) {
           await this.recordUsage(actualInputTokens, actualOutputTokens);
+        }
+
+        const elapsedMs = Date.now() - startTime;
+        if (elapsedMs > 100) {
+          const totalTokens = actualInputTokens + actualOutputTokens;
+          const speed = totalTokens / (elapsedMs / 1000);
+          const total = this.speedCount + 1;
+          this.averageSpeed = (this.averageSpeed * this.speedCount + speed) / total;
+          this.speedCount = Math.min(total, 10);
+          await this.saveSpeedToStorage();
         }
 
         return {
@@ -481,8 +521,23 @@ export class DeepSeekService {
     const MAX_SAFE_TOKENS = 100000;
 
     if (estimatedTotal < MAX_SAFE_TOKENS) {
-      const result = await this.translateText(text, false);
-      onProgress?.(1, 1);
+      const estimatedMs = this.estimateTime(inputTokens);
+      const startTime = Date.now();
+      const timerId = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const pct = Math.min(Math.floor((elapsed / estimatedMs) * 99), 99);
+        onProgress?.(pct, 100);
+      }, 200);
+
+      let result: TranslationResult = { success: false, error: '' };
+      try {
+        result = await this.translateText(text, false);
+      } finally {
+        clearInterval(timerId);
+        if (result.success) {
+          onProgress?.(100, 100);
+        }
+      }
       return result;
     }
 

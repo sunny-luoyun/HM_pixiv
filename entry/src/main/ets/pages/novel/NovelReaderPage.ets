@@ -292,13 +292,20 @@ struct NovelReaderPage {
 
     await service.initTokenizer(ctx);
     const inputTokens = service.estimateTokens(originalText);
+    const estimatedMs = service.estimateTime(inputTokens);
+    const totalSec = Math.round(estimatedMs / 1000);
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    const fmtTime = min > 0
+      ? (sec > 0 ? `约 ${min} 分 ${sec} 秒` : `约 ${min} 分`)
+      : `约 ${sec} 秒`;
     const estimatedCostYuan = service.estimateCost(inputTokens);
     const ratio = service.getAdaptiveRatio();
     const count = service.getRatioCount();
 
     promptAction.showDialog({
       title: '确认翻译全文',
-      message: `预计翻译 ${originalText.length} 字符 / ${inputTokens} tokens · 费用约 ¥${estimatedCostYuan.toFixed(4)}\n输出/输入比 ${ratio.toFixed(3)}（已校准 ${count} 次）\n是否继续？`,
+      message: `预计翻译 ${originalText.length} 字符 / ${inputTokens} tokens\n预计耗时 ${fmtTime}\n费用约 ¥${estimatedCostYuan.toFixed(4)}\n输出/输入比 ${ratio.toFixed(3)}（已校准 ${count} 次）\n是否继续？`,
       buttons: [
         { text: '取消', color: '#666666' },
         { text: '开始翻译', color: '#007DFF' }
