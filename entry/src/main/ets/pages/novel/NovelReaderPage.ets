@@ -312,6 +312,7 @@ struct NovelReaderPage {
       ]
     }).then((data) => {
       if (data.index === 1) {
+        this.dismissFloatingMenu();
         this.performFullTranslation(novelId, originalText);
       }
     });
