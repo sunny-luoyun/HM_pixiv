@@ -65,6 +65,9 @@ export struct SettingsPage {
     this.nativeAvailable = ProxyService.isNativeAvailable();
     this.proxyAutoStart = AppStorage.get<boolean>('proxyAutoStart') ?? false;
     this.loadRatioInfo();
+    if (this.deepseekApiKey.length > 0) {
+      this.fetchBalance();
+    }
     this.initCache();
     this.checkNativeRunning();
     this.restoreProxyContent();
@@ -81,10 +84,14 @@ export struct SettingsPage {
     this.nativeRunning = status.running ?? false;
   }
 
-  loadRatioInfo(): void {
-    const service = getDeepSeekService();
-    this.ratioValue = service.getAdaptiveRatio();
-    this.ratioCount = service.getRatioCount();
+  async loadRatioInfo(): Promise<void> {
+    const ctx = globalThis.appContext as common.UIAbilityContext;
+    if (ctx) {
+      const service = getDeepSeekService();
+      await service.loadRatio(ctx);
+      this.ratioValue = service.getAdaptiveRatio();
+      this.ratioCount = service.getRatioCount();
+    }
   }
 
   async checkApiKeyValidity(): Promise<void> {

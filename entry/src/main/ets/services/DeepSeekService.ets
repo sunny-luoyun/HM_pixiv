@@ -198,6 +198,11 @@ export class DeepSeekService {
     return this.ratioCount;
   }
 
+  async loadRatio(context: common.UIAbilityContext): Promise<void> {
+    this.appContext = context;
+    await this.loadRatioFromStorage();
+  }
+
   async resetAdaptiveRatio(): Promise<void> {
     this.adaptiveRatio = 0.65;
     this.ratioCount = 0;
