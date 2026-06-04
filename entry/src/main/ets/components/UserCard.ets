@@ -1,5 +1,7 @@
 import router from '@ohos.router';
+import { curves } from '@kit.ArkUI';
 import { PixivService, UserSearchResult } from '../services/PixivService';
+import { ShimmerLoading } from './ShimmerLoading';
 
 @Component
 export struct UserCard {
@@ -13,7 +15,7 @@ export struct UserCard {
 
   async aboutToAppear() {
     setTimeout(() => {
-      animateTo({ duration: 350, curve: Curve.EaseOut }, () => {
+      animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
         this.cardOpacity = 1;
         this.cardTranslateY = 0;
       });
@@ -42,18 +44,15 @@ export struct UserCard {
           .borderRadius(24)
           .opacity(this.avatarOpacity)
           .onComplete(() => {
-            animateTo({ duration: 250, curve: Curve.EaseOut }, () => {
+            animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
               this.avatarOpacity = 1;
             });
           })
       } else {
-        Text('👤')
-          .fontSize(24)
+        ShimmerLoading()
           .width(48)
           .height(48)
           .borderRadius(24)
-          .backgroundColor($r('app.color.loading_card'))
-          .textAlign(TextAlign.Center)
       }
 
       Column() {

@@ -1,3 +1,4 @@
+import { curves } from '@kit.ArkUI';
 import { HomePage } from './home/HomePage';
 import { LatestPage } from './latest/LatestPage';
 import { SearchPage } from './search/SearchPage';
@@ -138,11 +139,11 @@ struct Index {
       this.bounceScale = 1.25;
     });
     setTimeout(() => {
-      animateTo({ curve: Curve.Friction, duration: 250 }, () => {
+      animateTo({ curve: curves.springMotion(0.55, 0.65) }, () => {
         this.bounceScale = 0.9;
       });
       setTimeout(() => {
-        animateTo({ curve: Curve.Friction, duration: 200 }, () => {
+        animateTo({ curve: curves.springMotion(0.55, 0.65) }, () => {
           this.bounceScale = 1;
           this.bounceIndex = -1;
         });

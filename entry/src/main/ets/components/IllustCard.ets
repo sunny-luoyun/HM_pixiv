@@ -1,6 +1,8 @@
 import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
+import { curves } from '@kit.ArkUI';
 import { PixivService, IllustBookmark } from '../services/PixivService';
+import { ShimmerLoading } from './ShimmerLoading';
 
 @Component
 export struct IllustCard {
@@ -17,7 +19,7 @@ export struct IllustCard {
 
   async aboutToAppear() {
     setTimeout(() => {
-      animateTo({ duration: 350, curve: Curve.EaseOut }, () => {
+      animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
         this.cardOpacity = 1;
         this.cardTranslateY = 0;
       });
@@ -55,11 +57,11 @@ export struct IllustCard {
       this.bookmarkScale = 1.35;
     });
     setTimeout(() => {
-      animateTo({ curve: Curve.Friction, duration: 250 }, () => {
+      animateTo({ curve: curves.springMotion(0.55, 0.65) }, () => {
         this.bookmarkScale = 0.9;
       });
       setTimeout(() => {
-        animateTo({ curve: Curve.Friction, duration: 200 }, () => {
+        animateTo({ curve: curves.springMotion(0.55, 0.65) }, () => {
           this.bookmarkScale = 1;
         });
       }, 250);
@@ -79,16 +81,15 @@ export struct IllustCard {
               .sharedTransition('illust_' + this.item.id, { duration: 350, curve: Curve.Friction })
               .opacity(this.imageOpacity)
               .onComplete(() => {
-                animateTo({ duration: 250, curve: Curve.EaseOut }, () => {
+                animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
                   this.imageOpacity = 1;
                 });
               })
           } else {
-            Column()
-              .width('100%')
-              .height(150)
-              .backgroundColor($r('app.color.loading_card'))
-              .borderRadius({ topLeft: 12, topRight: 12 })
+      ShimmerLoading()
+        .width('100%')
+        .height(150)
+        .borderRadius({ topLeft: 12, topRight: 12 })
           }
           if (this.item.pageCount > 1) {
             Text(`${this.item.pageCount}页`)

@@ -2,7 +2,7 @@ import router from '@ohos.router';
 import abilityAccessCtrl, { Permissions } from '@ohos.abilityAccessCtrl';
 import promptAction from '@ohos.promptAction';
 import { common } from '@kit.AbilityKit';
-import { display } from '@kit.ArkUI';
+import { curves, display } from '@kit.ArkUI';
 import { PixivService, IllustDetailBody } from '../../services/PixivService';
 
 @Entry
@@ -61,7 +61,7 @@ struct IllustDetailPage {
       this.imageOpacityArray = [0];
       this.backgroundImageUrl = this.thumbnailLocalUrl;
       this.illustPageCount = 1;
-      animateTo({ duration: 400, curve: Curve.EaseOut }, () => {
+      animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
         this.backgroundOpacity = 0.5;
       });
     }
@@ -103,7 +103,7 @@ struct IllustDetailPage {
             .then((color: string) => {
               if (color && this.isActive) {
                 this.dominantColor = color;
-                animateTo({ duration: 800, curve: Curve.EaseOut }, () => {
+                animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
                   this.bgColor = color;
                 });
               }
@@ -197,11 +197,11 @@ struct IllustDetailPage {
       this.bookmarkScale = 1.35;
     });
     setTimeout(() => {
-      animateTo({ curve: Curve.Friction, duration: 250 }, () => {
+      animateTo({ curve: curves.springMotion(0.55, 0.65) }, () => {
         this.bookmarkScale = 0.9;
       });
       setTimeout(() => {
-        animateTo({ curve: Curve.Friction, duration: 200 }, () => {
+        animateTo({ curve: curves.springMotion(0.55, 0.65) }, () => {
           this.bookmarkScale = 1;
         });
       }, 250);
@@ -271,7 +271,7 @@ struct IllustDetailPage {
                   .onComplete(() => {
                     const updated = [...this.imageOpacityArray];
                     updated[index] = 1;
-                    animateTo({ duration: 300, curve: Curve.EaseOut }, () => {
+                    animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
                       this.imageOpacityArray = updated;
                     });
                   })
@@ -352,12 +352,12 @@ struct IllustDetailPage {
             this.downloadFail = false;
             const bgUrl = this.localImageUrls[index];
             if (bgUrl && bgUrl !== this.backgroundImageUrl) {
-              animateTo({ duration: 200, curve: Curve.EaseOut }, () => {
+              animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
                 this.backgroundOpacity = 0;
               });
               setTimeout(() => {
                 this.backgroundImageUrl = bgUrl;
-                animateTo({ duration: 400, curve: Curve.EaseOut }, () => {
+                animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
                   this.backgroundOpacity = 0.5;
                 });
               }, 200);

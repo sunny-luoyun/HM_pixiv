@@ -1,4 +1,5 @@
 import router from '@ohos.router';
+import { curves } from '@kit.ArkUI';
 import { PixivService, IllustBookmark, NovelBookmark } from '../../services/PixivService';
 import { NovelCard } from '../../components/NovelCard';
 import { IllustCard } from '../../components/IllustCard';
@@ -308,7 +309,7 @@ struct FavoritesPage {
       .barWidth(0)
       .barHeight(0)
       .onChange((index: number) => {
-        animateTo({ curve: Curve.Friction, duration: 250 }, () => {
+        animateTo({ curve: curves.springMotion(0.55, 0.65) }, () => {
           this.currentTab = index;
         });
         if (index === 1 && this.novelWorks.length === 0 && !this.isLoadingNovel) {

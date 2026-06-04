@@ -1,4 +1,5 @@
 import router from '@ohos.router';
+import { curves } from '@kit.ArkUI';
 import { AppApiService } from '../../services/AppApiService';
 import { PixivService, IllustBookmark, NovelBookmark, BookmarkData, ProfileIllust, ProfileNovel } from '../../services/PixivService';
 import { IllustCard } from '../../components/IllustCard';
@@ -544,7 +545,7 @@ struct UserProfilePage {
       .barWidth(0)
       .barHeight(0)
       .onChange((index: number) => {
-        animateTo({ curve: Curve.Friction, duration: 250 }, () => {
+        animateTo({ curve: curves.springMotion(0.55, 0.65) }, () => {
           this.currentTab = index;
         });
         this.handleTabChange(index);

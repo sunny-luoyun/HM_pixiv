@@ -1,3 +1,4 @@
+import { curves } from '@kit.ArkUI';
 import { PixivService, IllustBookmark, NovelBookmark, UserSearchResult } from '../../services/PixivService';
 import { IllustCard } from '../../components/IllustCard';
 import { NovelCard } from '../../components/NovelCard';
@@ -421,7 +422,7 @@ export struct SearchPage {
       .barWidth(0)
       .barHeight(0)
       .onChange((index: number) => {
-        animateTo({ curve: Curve.Friction, duration: 250 }, () => {
+        animateTo({ curve: curves.springMotion(0.55, 0.65) }, () => {
           this.currentTab = index;
         });
         this.handleTabChange(index);

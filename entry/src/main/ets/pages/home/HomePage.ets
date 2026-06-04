@@ -1,3 +1,4 @@
+import { curves } from '@kit.ArkUI';
 import { PixivService, IllustBookmark, NovelBookmark } from '../../services/PixivService';
 import { NovelCard } from '../../components/NovelCard';
 import { IllustCard } from '../../components/IllustCard';
@@ -26,6 +27,9 @@ export struct HomePage {
   @State isLoadingMoreNovel: boolean = false;
   @State hasMoreIllust: boolean = true;
   @State hasMoreNovel: boolean = true;
+
+  @State headerTranslateY: number = 0;
+  private lastScrollY: number = 0;
 
   private illustEmptyRetries: number = 0;
   private novelEmptyRetries: number = 0;
@@ -231,8 +235,24 @@ export struct HomePage {
     .justifyContent(FlexAlign.Center)
   }
 
+  handleHeaderScroll(yOffset: number) {
+    const delta = yOffset - this.lastScrollY;
+    this.lastScrollY = yOffset;
+
+    if (delta > 8 && this.headerTranslateY >= 0 && yOffset > 30) {
+      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+        this.headerTranslateY = -48;
+      });
+    } else if (delta < -8 && this.headerTranslateY < 0) {
+      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+        this.headerTranslateY = 0;
+      });
+    }
+  }
+
   handleTabChange(index: number) {
     this.currentTab = index;
+    this.lastScrollY = 0;
     if (index === 1 && this.novelWorks.length === 0 && !this.isLoadingNovel) {
       this.loadNovels();
     }
@@ -241,12 +261,18 @@ export struct HomePage {
   @Builder
   TabsSection() {
     Column() {
-      SegmentedTabBar({
-        tabs: ['插画', '小说'],
-        currentIndex: this.currentTab,
-        onChange: (index: number): void => this.handleTabChange(index)
-      })
-      .padding({ left: 16, right: 16, top: 8, bottom: 4 })
+      Column()
+        .width('100%')
+        .height(48)
+        .clip(true) {
+        SegmentedTabBar({
+          tabs: ['插画', '小说'],
+          currentIndex: this.currentTab,
+          onChange: (index: number): void => this.handleTabChange(index)
+        })
+        .padding({ left: 16, right: 16, top: 8, bottom: 4 })
+        .translate({ y: this.headerTranslateY })
+      }
 
       Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
         TabContent() {
@@ -312,6 +338,9 @@ export struct HomePage {
               if (this.hasMoreIllust && !this.isLoadingMoreIllust) {
                 this.loadMoreIllusts();
               }
+            })
+            .onScroll((_xOffset: number, yOffset: number) => {
+              this.handleHeaderScroll(yOffset);
             })
             }
           }
@@ -379,6 +408,9 @@ export struct HomePage {
                 this.loadMoreNovels();
               }
             })
+            .onScroll((_xOffset: number, yOffset: number) => {
+              this.handleHeaderScroll(yOffset);
+            })
             }
           }
         }
@@ -388,7 +420,7 @@ export struct HomePage {
       .barWidth(0)
       .barHeight(0)
       .onChange((index: number) => {
-        animateTo({ curve: Curve.Friction, duration: 250 }, () => {
+        animateTo({ curve: curves.springMotion(0.55, 0.65) }, () => {
           this.currentTab = index;
         });
         this.handleTabChange(index);

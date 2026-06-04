@@ -1,10 +1,12 @@
 import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
 import common from '@ohos.app.ability.common';
+import { curves } from '@kit.ArkUI';
 import { NovelBookmark, PixivService, BookmarkData } from '../services/PixivService';
 import { pixivCacheDB } from '../database/PixivCacheDB';
 import { CacheStatus, getCacheStatusDisplay, PixivTag } from '../models/PixivModels';
 import { getDeepSeekService } from '../services/DeepSeekService';
+import { ShimmerLoading } from './ShimmerLoading';
 
 interface DialogButton {
   text: string;
@@ -31,7 +33,7 @@ export struct NovelCard {
 
   async aboutToAppear() {
     setTimeout(() => {
-      animateTo({ duration: 350, curve: Curve.EaseOut }, () => {
+      animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
         this.cardOpacity = 1;
         this.cardTranslateY = 0;
       });
@@ -416,22 +418,16 @@ export struct NovelCard {
         .margin({ right: 14 })
         .opacity(this.coverImageOpacity)
         .onComplete(() => {
-          animateTo({ duration: 250, curve: Curve.EaseOut }, () => {
+          animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
             this.coverImageOpacity = 1;
           });
         })
     } else {
-      Column() {
-        Text('📄')
-          .fontSize(28)
-      }
-      .width(80)
-      .height(110)
-      .justifyContent(FlexAlign.Center)
-      .alignItems(HorizontalAlign.Center)
-      .backgroundColor($r('app.color.loading_card'))
-      .borderRadius(8)
-      .margin({ right: 14 })
+      ShimmerLoading()
+        .width(80)
+        .height(110)
+        .borderRadius(8)
+        .margin({ right: 14 })
     }
   }
 

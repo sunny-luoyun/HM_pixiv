@@ -1,3 +1,5 @@
+import { curves } from '@kit.ArkUI';
+
 @Component
 export struct SegmentedTabBar {
   private tabs: string[] = [];
@@ -17,7 +19,7 @@ export struct SegmentedTabBar {
       this.updatingFromClick = false;
       return;
     }
-    animateTo({ duration: 350, curve: Curve.EaseOut }, () => {
+    animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
       this.animIndex = this.currentIndex;
     });
   }
@@ -25,7 +27,7 @@ export struct SegmentedTabBar {
   handleClick(index: number) {
     if (index === this.animIndex) return;
     this.updatingFromClick = true;
-    animateTo({ duration: 350, curve: Curve.EaseOut }, () => {
+    animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
       this.animIndex = index;
     });
     this.onChange?.(index);

@@ -1,6 +1,7 @@
 import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
 import common from '@ohos.app.ability.common';
+import { curves } from '@kit.ArkUI';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { getDeepSeekService } from '../../services/DeepSeekService';
 import preferences from '@ohos.data.preferences';
@@ -874,7 +875,7 @@ struct NovelReaderPage {
               .margin({ bottom: 8 })
               .transition(TransitionEffect.translate({ y: 20 })
                 .combine(TransitionEffect.OPACITY)
-                .animation({ duration: 250, curve: Curve.EaseOut }))
+                .animation({ curve: curves.springMotion(0.4, 0.8) }))
           }
 
           Column() { this.FloatingMenuBar() }

@@ -1,3 +1,4 @@
+import { curves } from '@kit.ArkUI';
 import { PixivService, IllustBookmark, NovelBookmark } from '../../services/PixivService';
 import { NovelCard } from '../../components/NovelCard';
 import { IllustCard } from '../../components/IllustCard';
@@ -23,6 +24,9 @@ export struct LatestPage {
   @State illustPage: number = 1;
   @State illustPages: number = 0;
   @State isLoadingMoreIllust: boolean = false;
+
+  @State headerTranslateY: number = 0;
+  private lastScrollY: number = 0;
 
   // 小说分页
   @State novelPage: number = 1;
@@ -152,6 +156,21 @@ export struct LatestPage {
     this.isLoadingMoreNovel = false;
   }
 
+  handleHeaderScroll(yOffset: number) {
+    const delta = yOffset - this.lastScrollY;
+    this.lastScrollY = yOffset;
+
+    if (delta > 8 && this.headerTranslateY >= 0 && yOffset > 30) {
+      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+        this.headerTranslateY = -48;
+      });
+    } else if (delta < -8 && this.headerTranslateY < 0) {
+      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+        this.headerTranslateY = 0;
+      });
+    }
+  }
+
   build() {
     Column() {
       if (!this.isLoggedIn) {
@@ -193,17 +212,24 @@ export struct LatestPage {
   @Builder
   TabsSection() {
     Column() {
-      SegmentedTabBar({
-        tabs: ['插画', '小说'],
-        currentIndex: this.currentTab,
-        onChange: (index: number) => {
-          this.currentTab = index;
-          if (index === 1 && this.novelWorks.length === 0 && !this.isLoadingNovel) {
-            this.loadNovels();
+      Column()
+        .width('100%')
+        .height(48)
+        .clip(true) {
+        SegmentedTabBar({
+          tabs: ['插画', '小说'],
+          currentIndex: this.currentTab,
+          onChange: (index: number) => {
+            this.currentTab = index;
+            this.lastScrollY = 0;
+            if (index === 1 && this.novelWorks.length === 0 && !this.isLoadingNovel) {
+              this.loadNovels();
+            }
           }
-        }
-      })
-      .padding({ left: 16, right: 16, top: 8, bottom: 4 })
+        })
+        .padding({ left: 16, right: 16, top: 8, bottom: 4 })
+        .translate({ y: this.headerTranslateY })
+      }
 
       Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
         TabContent() {
@@ -254,6 +280,9 @@ export struct LatestPage {
               if (!this.isLoadingMoreIllust && this.illustPage < this.illustPages) {
                 this.loadMoreIllusts();
               }
+            })
+            .onScroll((_xOffset: number, yOffset: number) => {
+              this.handleHeaderScroll(yOffset);
             })
             }
           }
@@ -306,6 +335,9 @@ export struct LatestPage {
                 this.loadMoreNovels();
               }
             })
+            .onScroll((_xOffset: number, yOffset: number) => {
+              this.handleHeaderScroll(yOffset);
+            })
             }
           }
         }
@@ -315,7 +347,7 @@ export struct LatestPage {
       .barWidth(0)
       .barHeight(0)
       .onChange((index: number) => {
-        animateTo({ curve: Curve.Friction, duration: 250 }, () => {
+        animateTo({ curve: curves.springMotion(0.55, 0.65) }, () => {
           this.currentTab = index;
         });
         if (index === 1 && this.novelWorks.length === 0 && !this.isLoadingNovel) {
