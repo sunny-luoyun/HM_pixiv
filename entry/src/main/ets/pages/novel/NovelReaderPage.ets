@@ -127,8 +127,7 @@ struct NovelReaderPage {
   @State private activeSubMenuIndex: number = -1;
   private touchStartY: number = 0;
   private touchStartTime: number = 0;
-  private wasAutoReadingBeforeMenu: boolean = false;
-  private wasManuallyStopped: boolean = false;
+
 
   private scroller: Scroller = new Scroller();
   private saveProgressTimer: number = -1;
@@ -422,11 +421,15 @@ struct NovelReaderPage {
     }, this.AUTO_READ_TICK_INTERVAL);
   }
 
-  private stopAutoRead(): void {
+  private clearAutoReadTimer(): void {
     if (this.autoReadTimerId !== -1) {
       clearInterval(this.autoReadTimerId);
       this.autoReadTimerId = -1;
     }
+  }
+
+  private stopAutoRead(): void {
+    this.clearAutoReadTimer();
     this.isAutoReading = false;
   }
 
@@ -441,10 +444,9 @@ struct NovelReaderPage {
   private dismissFloatingMenu(): void {
     this.showFloatingMenu = false;
     this.activeSubMenuIndex = -1;
-    if (this.wasAutoReadingBeforeMenu && !this.wasManuallyStopped) {
+    if (this.isAutoReading) {
       this.startAutoRead();
     }
-    this.wasAutoReadingBeforeMenu = false;
   }
 
   private async toggleTranslationView(showTranslated: boolean): Promise<void> {
@@ -621,10 +623,8 @@ struct NovelReaderPage {
           const dy = Math.abs(event.touches[0].y - this.touchStartY);
           const dt = Date.now() - this.touchStartTime;
           if (dy < 10 && dt < 300 && !this.showFloatingMenu) {
-            this.wasAutoReadingBeforeMenu = this.isAutoReading;
-            this.wasManuallyStopped = false;
             if (this.isAutoReading) {
-              this.stopAutoRead();
+              this.clearAutoReadTimer();
             }
             this.showFloatingMenu = true;
           }
@@ -804,10 +804,8 @@ struct NovelReaderPage {
           Toggle({ type: ToggleType.Switch, isOn: this.isAutoReading })
             .onChange((value: boolean) => {
               if (value) {
-                this.wasManuallyStopped = false;
                 this.startAutoRead();
               } else {
-                this.wasManuallyStopped = true;
                 this.stopAutoRead();
               }
             })
