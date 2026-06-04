@@ -498,6 +498,7 @@ export struct SettingsPage {
           radius: 8
         })
         .type(this.showApiKeyText ? InputType.Normal : InputType.Password)
+        .enableAutoFill(false)
         .onChange((val: string): void => {
           this.deepseekApiKey = val;
           this.apiKeyCheckState = 'idle';
