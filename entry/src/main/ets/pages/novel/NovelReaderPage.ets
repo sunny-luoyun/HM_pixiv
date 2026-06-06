@@ -136,7 +136,7 @@ struct NovelReaderPage {
   private autoReadTimerId: number = -1;
   private isProgrammaticScroll: boolean = false;
   private readonly AUTO_READ_BASE_SPEED = 20;
-  private readonly AUTO_READ_TICK_INTERVAL = 30;
+  private readonly AUTO_READ_TICK_INTERVAL = 8;
 
   aboutToAppear(): void {
     this.params = router.getParams() as ReaderRouterParams;
@@ -399,7 +399,7 @@ struct NovelReaderPage {
   }
 
   private getSpeedMultiplier(): number {
-    return 0.5 + this.autoReadSpeedIndex * 0.1;
+    return 0.5 + this.autoReadSpeedIndex * 0.15;
   }
 
   private startAutoRead(): void {
