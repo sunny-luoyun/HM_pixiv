@@ -16,7 +16,7 @@ function fromBase64(str: string): Uint8Array {
 
 async function getKey(): Promise<cryptoFramework.SymKey> {
   const generator = cryptoFramework.createSymKeyGenerator('AES128');
-  return await generator.convertKey({ data: KEY_DATA, format: 'raw' });
+  return await generator.convertKey({ data: KEY_DATA });
 }
 
 export async function encryptAesGcm(plainText: string): Promise<string> {
@@ -27,14 +27,23 @@ export async function encryptAesGcm(plainText: string): Promise<string> {
   const ivBlob = await random.generateRandom(12);
   const iv = ivBlob.data as Uint8Array;
 
-  await cipher.init(cryptoFramework.CryptoMode.ENCRYPT_MODE, key, { iv: { data: iv } });
+  const gcmParams: cryptoFramework.GcmParamsSpec = {
+    iv: { data: iv },
+    aad: { data: new Uint8Array(0) },
+    authTag: { data: new Uint8Array(16) },
+    algName: 'GcmParamsSpec'
+  };
+
+  await cipher.init(cryptoFramework.CryptoMode.ENCRYPT_MODE, key, gcmParams);
 
   const plainBytes = new Uint8Array(buffer.from(plainText, 'utf-8').buffer);
   const result = await cipher.doFinal({ data: plainBytes });
-  const ciphertext = result.data as Uint8Array;
-  const authTag = cipher.getAuthTag();
+  const output = result.data as Uint8Array;
 
-  return `${toBase64(iv)}.${toBase64(authTag.data as Uint8Array)}.${toBase64(ciphertext)}`;
+  const authTag = output.slice(output.length - 16);
+  const ciphertext = output.slice(0, output.length - 16);
+
+  return `${toBase64(iv)}.${toBase64(authTag)}.${toBase64(ciphertext)}`;
 }
 
 export async function decryptAesGcm(encrypted: string): Promise<string> {
@@ -48,10 +57,14 @@ export async function decryptAesGcm(encrypted: string): Promise<string> {
   const key = await getKey();
   const cipher = cryptoFramework.createCipher('AES128|GCM|PKCS7');
 
-  await cipher.init(cryptoFramework.CryptoMode.DECRYPT_MODE, key, {
+  const gcmParams: cryptoFramework.GcmParamsSpec = {
     iv: { data: iv },
-    authTag: { data: tag }
-  });
+    aad: { data: new Uint8Array(0) },
+    authTag: { data: tag },
+    algName: 'GcmParamsSpec'
+  };
+
+  await cipher.init(cryptoFramework.CryptoMode.DECRYPT_MODE, key, gcmParams);
 
   const result = await cipher.doFinal({ data: ciphertext });
   const plainBytes = result.data as Uint8Array;

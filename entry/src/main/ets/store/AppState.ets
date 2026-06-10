@@ -3,7 +3,6 @@ import { PixivService, UserInfoResponse } from '../services/PixivService';
 import { ProxyService } from '../services/ProxyService';
 import http from '@ohos.net.http';
 import fileIo from '@ohos.file.fs';
-import common from '@ohos.app.ability.common';
 
 @Observed
 export class AppState {
@@ -142,9 +141,8 @@ export class AppState {
     if (!this.isLoggedIn || !this.userId) return;
     const webUrl = await CookieManager.getAvatarUrl();
     if (!webUrl || !webUrl.startsWith('http')) return;
-    const appContext: common.UIAbilityContext = globalThis.appContext as common.UIAbilityContext;
-    if (!appContext) return;
-    const cacheDir: string = appContext.cacheDir;
+    const cacheDir: string = PixivService.getCacheDir();
+    if (!cacheDir) return;
     const fileName = `avatar_${this.userId}.jpg`;
     const localPath = cacheDir + '/' + fileName;
     try {

@@ -1,7 +1,7 @@
 import router from '@ohos.router';
 import { AppState, appState } from '../../store/AppState';
+import { PixivService } from '../../services/PixivService';
 import fileIo from '@ohos.file.fs';
-import common from '@ohos.app.ability.common';
 
 @Component
 export struct SettingPage {
@@ -12,9 +12,9 @@ export struct SettingPage {
 
   private getAvatarUrl(): string {
     if (this.appState.isLoggedIn && this.appState.userId) {
-      const appContext = globalThis.appContext as common.UIAbilityContext;
-      if (appContext) {
-        const localPath = appContext.cacheDir + '/avatar_' + this.appState.userId + '.jpg';
+      const cacheDir = PixivService.getCacheDir();
+      if (cacheDir) {
+        const localPath = cacheDir + '/avatar_' + this.appState.userId + '.jpg';
         try {
           const file = fileIo.openSync(localPath, fileIo.OpenMode.READ_ONLY);
           fileIo.closeSync(file);

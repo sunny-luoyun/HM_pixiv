@@ -30,6 +30,7 @@ export struct SettingsPage {
   @State novelCoverCacheCount: number = 0;
   @State avatarCacheSize: number = 0;
   @State avatarCacheCount: number = 0;
+  @State totalCacheSize: number = 0;
   @State cachedNovelCount: number = 0;
   @State isLoadingCache: boolean = true;
   @State deepseekApiKey: string = '';
@@ -157,6 +158,7 @@ export struct SettingsPage {
       this.novelCoverCacheCount = novelCover.count;
       this.avatarCacheSize = user.size + avatar.size;
       this.avatarCacheCount = user.count + avatar.count;
+      this.totalCacheSize = illust.size + novelCover.size + user.size + avatar.size;
       this.cachedNovelCount = novelCount;
     } catch (err) {
       console.error('获取缓存信息失败:', err);
@@ -363,9 +365,7 @@ export struct SettingsPage {
     });
   }
 
-  get totalImageCacheSize(): number {
-    return this.illustCacheSize + this.novelCoverCacheSize + this.avatarCacheSize;
-  }
+
 
   pageTransition() {
     PageTransitionEnter({ duration: 300, curve: Curve.Friction })
@@ -992,7 +992,7 @@ export struct SettingsPage {
             .height(1)
             .color($r('app.color.divider'))
             .margin({ top: 8, bottom: 8 })
-          this.CacheRow('总计', this.totalImageCacheSize, this.illustCacheCount + this.novelCoverCacheCount + this.avatarCacheCount, () => { this.clearImageCache('all') })
+          this.CacheRow('总计', this.totalCacheSize, this.illustCacheCount + this.novelCoverCacheCount + this.avatarCacheCount, () => { this.clearImageCache('all') })
         }
       }
       .width('100%')

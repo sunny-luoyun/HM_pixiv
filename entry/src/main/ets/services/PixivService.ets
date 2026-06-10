@@ -864,9 +864,8 @@ export class PixivService {
   }
 
   static async cacheImage(url: string, fileName: string, groupId?: string): Promise<string> {
-    const appContext = globalThis.appContext as common.UIAbilityContext;
-    if (!appContext) return '';
-    const cacheDir: string = appContext.cacheDir;
+    const cacheDir: string = PixivService.getCacheDir();
+    if (!cacheDir) return '';
     const localPath = cacheDir + '/' + fileName;
 
     try {
@@ -1121,7 +1120,11 @@ export class PixivService {
   static getCacheDir(): string {
     const appContext = globalThis.appContext as common.UIAbilityContext;
     if (!appContext) return '';
-    return appContext.cacheDir;
+    const imageDir = appContext.filesDir + '/image_cache';
+    try {
+      fileIo.mkdirSync(imageDir, true);
+    } catch (_) {}
+    return imageDir;
   }
 
   static async getCategoryCacheInfo(prefix: string): Promise<CacheCategoryInfo> {
@@ -1137,7 +1140,7 @@ export class PixivService {
         if (fileName.startsWith(prefix)) {
           try {
             const stat = fileIo.statSync(cacheDir + '/' + fileName);
-            totalSize += stat.size;
+            totalSize += stat.size as number || 0;
             totalCount++;
           } catch (_) {}
         }
