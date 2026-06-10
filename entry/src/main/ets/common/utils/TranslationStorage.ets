@@ -1,5 +1,6 @@
 import preferences from '@ohos.data.preferences';
 import common from '@ohos.app.ability.common';
+import { encryptAesGcm, decryptAesGcm } from './CryptoUtils';
 
 export class TranslationStorage {
   private static PREFERENCES_NAME = 'app_translation';
@@ -13,14 +14,21 @@ export class TranslationStorage {
   static async saveDeepSeekApiKey(apiKey: string): Promise<void> {
     if (!TranslationStorage.context) throw new Error('TranslationStorage not initialized');
     const pref = await preferences.getPreferences(TranslationStorage.context, TranslationStorage.PREFERENCES_NAME);
-    await pref.put(TranslationStorage.KEY_DEEPSEEK_API_KEY, apiKey);
+    const encrypted = await encryptAesGcm(apiKey);
+    await pref.put(TranslationStorage.KEY_DEEPSEEK_API_KEY, encrypted);
     await pref.flush();
   }
 
   static async getDeepSeekApiKey(): Promise<string> {
     if (!TranslationStorage.context) return '';
     const pref = await preferences.getPreferences(TranslationStorage.context, TranslationStorage.PREFERENCES_NAME);
-    return await pref.get(TranslationStorage.KEY_DEEPSEEK_API_KEY, '') as string;
+    const encrypted = await pref.get(TranslationStorage.KEY_DEEPSEEK_API_KEY, '') as string;
+    if (!encrypted) return '';
+    try {
+      return await decryptAesGcm(encrypted);
+    } catch {
+      return '';
+    }
   }
 
   static async clearDeepSeekApiKey(): Promise<void> {
