@@ -108,12 +108,26 @@ export struct SeriesDetailPage {
           }
           .alignItems(HorizontalAlign.Start)
           .layoutWeight(1)
+
+          Text('›')
+            .fontSize(22)
+            .fontColor($r('app.color.text_secondary'))
+            .margin({ left: 8 })
         }
         .width('100%')
         .padding(16)
         .backgroundColor($r('app.color.loading_card'))
         .borderRadius(12)
         .margin({ left: 16, right: 16, top: 8 })
+        .onClick(() => {
+          router.pushUrl({
+            url: 'pages/novel/NovelSeriesPage',
+            params: {
+              seriesId: this.seriesId,
+              seriesTitle: this.seriesTitle
+            }
+          });
+        })
 
         List({ space: 8 }) {
           ForEach(this.novels, (novel: PixivNovel) => {

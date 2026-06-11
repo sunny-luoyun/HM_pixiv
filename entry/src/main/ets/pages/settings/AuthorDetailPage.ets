@@ -155,40 +155,54 @@ export struct AuthorDetailPage {
         Scroll() {
           Column() {
             // Author info header
-            Row() {
-              Column() {
-                Text(this.authorName.charAt(0).toUpperCase())
-                  .fontSize(22)
-                  .fontColor(Color.White)
-                  .fontWeight(FontWeight.Bold)
-              }
-              .width(52).height(52)
-              .borderRadius(26)
-              .backgroundColor($r('app.color.tab_selected'))
-              .justifyContent(FlexAlign.Center)
-              .alignItems(HorizontalAlign.Center)
-              .margin({ right: 14 })
+        Row() {
+          Column() {
+            Text(this.authorName.charAt(0).toUpperCase())
+              .fontSize(22)
+              .fontColor(Color.White)
+              .fontWeight(FontWeight.Bold)
+          }
+          .width(52).height(52)
+          .borderRadius(26)
+          .backgroundColor($r('app.color.tab_selected'))
+          .justifyContent(FlexAlign.Center)
+          .alignItems(HorizontalAlign.Center)
+          .margin({ right: 14 })
 
-              Column() {
-                Text(this.authorName)
-                  .fontSize(18)
-                  .fontWeight(FontWeight.Bold)
-                  .fontColor($r('app.color.user_name'))
-                  .maxLines(1)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-                Text(`${this.authorGroup.totalCount} 本缓存  ·  ${this.authorGroup.seriesMap.size} 个系列`)
-                  .fontSize(13)
-                  .fontColor($r('app.color.text_secondary'))
-                  .margin({ top: 4 })
-              }
-              .alignItems(HorizontalAlign.Start)
-              .layoutWeight(1)
+          Column() {
+            Text(this.authorName)
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
+              .fontColor($r('app.color.user_name'))
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+            Text(`${this.authorGroup.totalCount} 本缓存  ·  ${this.authorGroup.seriesMap.size} 个系列`)
+              .fontSize(13)
+              .fontColor($r('app.color.text_secondary'))
+              .margin({ top: 4 })
+          }
+          .alignItems(HorizontalAlign.Start)
+          .layoutWeight(1)
+
+          Text('›')
+            .fontSize(22)
+            .fontColor($r('app.color.text_secondary'))
+            .margin({ left: 8 })
+        }
+        .width('100%')
+        .padding(16)
+        .backgroundColor($r('app.color.loading_card'))
+        .borderRadius(12)
+        .margin({ bottom: 8 })
+        .onClick(() => {
+          router.pushUrl({
+            url: 'pages/user/UserProfilePage',
+            params: {
+              userId: this.authorId,
+              userName: this.authorName
             }
-            .width('100%')
-            .padding(16)
-            .backgroundColor($r('app.color.loading_card'))
-            .borderRadius(12)
-            .margin({ bottom: 8 })
+          });
+        })
 
             // Series section
             if (this.authorGroup.seriesMap.size > 0) {
