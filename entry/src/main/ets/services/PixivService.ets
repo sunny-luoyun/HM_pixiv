@@ -122,7 +122,7 @@ export interface NovelBookmark {
   tags: string[];
   userId: string;
   userName: string;
-  bookmarkData: BookmarkData;
+  bookmarkData: BookmarkData | null;
   profileImageUrl: string;
   createDate: string;
   updateDate: string;

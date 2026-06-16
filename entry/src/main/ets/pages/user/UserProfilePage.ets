@@ -20,7 +20,7 @@ function mapProfileIllustToBookmark(item: ProfileIllust, defaultName: string = '
     width: item.width,
     height: item.height,
     pageCount: item.pageCount,
-    bookmarkData: item.bookmarkData || { id: item.id, private: false, userId: item.userId } as BookmarkData,
+    bookmarkData: item.bookmarkData as BookmarkData,
     profileImageUrl: item.profileImageUrl || '',
     createDate: item.createDate || '',
   };
@@ -50,7 +50,7 @@ function mapProfileNovelToBookmark(item: ProfileNovel, defaultName: string = '')
     tags: item.tags || [],
     userId: item.userId,
     userName: item.userName || defaultName,
-    bookmarkData: { id: item.id, private: false, userId: item.userId } as BookmarkData,
+    bookmarkData: null,
     profileImageUrl: item.profileImageUrl || '',
     createDate: item.createDate || '',
     updateDate: item.updateDate || '',
