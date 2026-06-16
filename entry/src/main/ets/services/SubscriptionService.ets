@@ -1,5 +1,6 @@
 import http from '@ohos.net.http';
 import fileIo from '@ohos.file.fs';
+import util from '@ohos.util';
 import common from '@ohos.app.ability.common';
 
 export interface FetchResult {
@@ -154,13 +155,10 @@ export class SubscriptionService {
     const fileName = `proxy_subscription_${Date.now()}.yaml`;
     const filePath = cacheDir + '/' + fileName;
     try {
-      const buf = new ArrayBuffer(content.length);
-      const view = new Uint8Array(buf);
-      for (let i = 0; i < content.length; i++) {
-        view[i] = content.charCodeAt(i) & 0xFF;
-      }
+      const encoder = new util.TextEncoder();
+      const uint8Arr = encoder.encodeInto(content);
       const file = fileIo.openSync(filePath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY);
-      fileIo.writeSync(file.fd, buf);
+      fileIo.writeSync(file.fd, uint8Arr.buffer);
       fileIo.closeSync(file);
       return fileName;
     } catch (err) {

@@ -55,6 +55,12 @@ export struct SettingsPage {
   @State nativeRunning: boolean = false;
   @State nativeAvailable: boolean = false;
   @State nativeStatusMessage: string = '';
+  private pageActive: boolean = true;
+
+  aboutToDisappear() {
+    this.pageActive = false;
+  }
+
   aboutToAppear() {
     this.deepseekApiKey = AppStorage.get<string>('deepseekApiKey') ?? '';
     this.resetOnReachEnd = AppStorage.get<boolean>('resetOnReachEnd') ?? false;
@@ -76,12 +82,14 @@ export struct SettingsPage {
 
   async restoreProxyContent(): Promise<void> {
     const raw = await ProxyService.getRawContent();
+    if (!this.pageActive) return;
     if (raw) {
       this.proxyFetchRawContent = raw;
       this.proxyFetchState = 'ok';
       this.proxyFetchMessage = '订阅已保存';
     }
     const status = await ProxyService.getNativeStatus();
+    if (!this.pageActive) return;
     this.nativeRunning = status.running ?? false;
   }
 
@@ -90,6 +98,7 @@ export struct SettingsPage {
     if (ctx) {
       const service = getDeepSeekService();
       await service.loadRatio(ctx);
+      if (!this.pageActive) return;
       this.ratioValue = service.getAdaptiveRatio();
       this.ratioCount = service.getRatioCount();
     }
@@ -99,6 +108,7 @@ export struct SettingsPage {
     this.apiKeyCheckState = 'checking';
     const service = getDeepSeekService();
     const result = await service.fetchBalance(this.deepseekApiKey);
+    if (!this.pageActive) return;
     if (result.success) {
       this.apiKeyCheckState = 'ok';
       this.balanceAmount = result.data;
@@ -121,6 +131,7 @@ export struct SettingsPage {
     this.balanceFetchState = 'loading';
     const service = getDeepSeekService();
     const result = await service.fetchBalance(this.deepseekApiKey);
+    if (!this.pageActive) return;
     if (result.success) {
       this.balanceAmount = result.data;
       this.balanceFetchState = 'ok';
@@ -134,6 +145,7 @@ export struct SettingsPage {
     if (ctx) {
       await pixivCacheDB.init(ctx);
     }
+    if (!this.pageActive) return;
     await this.refreshCacheInfo();
   }
 
@@ -147,6 +159,7 @@ export struct SettingsPage {
         PixivService.getCategoryCacheInfo('avatar_'),
         pixivCacheDB.getCachedNovelCount()
       ]);
+      if (!this.pageActive) return;
       const illust = results[0];
       const novelCover = results[1];
       const user = results[2];
@@ -163,6 +176,7 @@ export struct SettingsPage {
     } catch (err) {
       console.error('获取缓存信息失败:', err);
     }
+    if (!this.pageActive) return;
     this.isLoadingCache = false;
   }
 
@@ -203,6 +217,7 @@ export struct SettingsPage {
     this.proxyFetchState = 'fetching';
     this.proxyFetchMessage = '正在拉取...';
     const result = await SubscriptionService.fetch(this.proxySubscriptionUrl);
+    if (!this.pageActive) return;
     if (result.success) {
       this.proxyFetchState = 'ok';
       this.proxyFetchMessage = `拉取成功 ${result.fileName ? '(已保存)' : ''}`;
@@ -240,6 +255,7 @@ export struct SettingsPage {
         if (attempt > 1) {
           await new Promise<void>(resolve => setTimeout(resolve, 3000));
         }
+        if (!this.pageActive) return;
         const httpRequest = http.createHttp();
         try {
           this.proxyTestMessage = `正在测试 (第${attempt}次)...`;
@@ -249,6 +265,7 @@ export struct SettingsPage {
             readTimeout: 15000,
             usingProxy: config,
           });
+          if (!this.pageActive) return;
           if (resp.responseCode === 200) {
             this.proxyTestState = 'ok';
             this.proxyTestMessage = '';
@@ -273,6 +290,7 @@ export struct SettingsPage {
   async checkNativeRunning(): Promise<void> {
     if (!this.nativeAvailable) return;
     const status = await ProxyService.getNativeStatus();
+    if (!this.pageActive) return;
     this.nativeRunning = status.running ?? false;
     if (status.message) {
       this.nativeStatusMessage = status.message;
@@ -297,6 +315,7 @@ export struct SettingsPage {
       this.nativeStatusMessage = '配置生成失败';
       return;
     }
+    if (!this.pageActive) return;
 
     const ctx = globalThis.appContext as common.UIAbilityContext;
     const preparedPath = ctx.cacheDir + '/prepared_config.yaml';
@@ -308,6 +327,7 @@ export struct SettingsPage {
 
     this.nativeStatusMessage = '正在启动内核...';
     const result = await ProxyService.startNativeProxy(preparedPath);
+    if (!this.pageActive) return;
     if (result.success) {
       this.nativeRunning = true;
       this.nativeStatusMessage = '内核已启动';
@@ -323,6 +343,7 @@ export struct SettingsPage {
     if (!this.nativeAvailable) return;
     this.nativeStatusMessage = '正在停止...';
     const result = await ProxyService.stopNativeProxy();
+    if (!this.pageActive) return;
     if (result.success) {
       this.nativeRunning = false;
       this.nativeStatusMessage = '内核已停止';

@@ -143,6 +143,10 @@ export class ProxyService {
       if (!rawContent || !subUrl) return;
 
       console.info('🔄 自动启动内核...');
+      if (!ProxyService.context) {
+        console.warn('⚠️ 自动启动: context 为空');
+        return;
+      }
       const ctx = ProxyService.context as common.UIAbilityContext;
       const configYaml = await ProxyService.prepareConfig(subUrl, rawContent);
       if (!configYaml) {

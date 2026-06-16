@@ -1,5 +1,6 @@
 #include "napi/native_api.h"
 #include <cstring>
+#include <cstdlib>
 #include <dlfcn.h>
 #include <cstdio>
 #include <sys/socket.h>
@@ -39,6 +40,24 @@ static bool ensureLoaded() {
     return true;
 }
 
+static napi_value makeErrorResponse(napi_env env, const char* msg) {
+    napi_value result;
+    napi_create_string_utf8(env, msg, NAPI_AUTO_LENGTH, &result);
+    return result;
+}
+
+static bool validateStringArg(napi_env env, napi_value val, size_t argIndex, napi_value* errorResult) {
+    napi_valuetype type;
+    if (napi_typeof(env, val, &type) != napi_ok || type != napi_string) {
+        char errBuf[128];
+        snprintf(errBuf, sizeof(errBuf),
+            "{\"success\":false,\"error\":\"invalid argument at index %zu\"}", argIndex);
+        *errorResult = makeErrorResponse(env, errBuf);
+        return false;
+    }
+    return true;
+}
+
 static napi_value JS_Ping(napi_env env, napi_callback_info info) {
     napi_value result;
     napi_create_string_utf8(env, "pong", NAPI_AUTO_LENGTH, &result);
@@ -48,51 +67,83 @@ static napi_value JS_Ping(napi_env env, napi_callback_info info) {
 static napi_value JS_PrepareConfig(napi_env env, napi_callback_info info) {
     napi_value result;
     if (!ensureLoaded()) {
-        napi_create_string_utf8(env, "{\"success\":false,\"error\":\"native core not loaded\"}", NAPI_AUTO_LENGTH, &result);
-        return result;
+        return makeErrorResponse(env, "{\"success\":false,\"error\":\"native core not loaded\"}");
     }
 
     size_t argc = 2;
     napi_value argv[2];
-    char url[2048] = {0};
-    char rawContent[65536] = {0};
-    size_t urlLen = 0, rawLen = 0;
-
     napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr);
-    napi_get_value_string_utf8(env, argv[0], url, sizeof(url), &urlLen);
-    napi_get_value_string_utf8(env, argv[1], rawContent, sizeof(rawContent), &rawLen);
+
+    if (argc < 2 || !validateStringArg(env, argv[0], 0, &result) || !validateStringArg(env, argv[1], 1, &result)) {
+        return result;
+    }
+
+    size_t urlLen = 0, rawLen = 0;
+    napi_get_value_string_utf8(env, argv[0], nullptr, 0, &urlLen);
+    napi_get_value_string_utf8(env, argv[1], nullptr, 0, &rawLen);
+
+    if (urlLen == 0 || rawLen == 0) {
+        return makeErrorResponse(env, "{\"success\":false,\"error\":\"empty argument\"}");
+    }
+
+    char* url = (char*)malloc(urlLen + 1);
+    char* rawContent = (char*)malloc(rawLen + 1);
+    if (!url || !rawContent) {
+        free(url);
+        free(rawContent);
+        return makeErrorResponse(env, "{\"success\":false,\"error\":\"malloc failed\"}");
+    }
+
+    napi_get_value_string_utf8(env, argv[0], url, urlLen + 1, &urlLen);
+    napi_get_value_string_utf8(env, argv[1], rawContent, rawLen + 1, &rawLen);
 
     char* resp = g_prepareConfig(url, rawContent);
     napi_create_string_utf8(env, resp, NAPI_AUTO_LENGTH, &result);
     g_freeString(resp);
+
+    free(url);
+    free(rawContent);
     return result;
 }
 
 static napi_value JS_StartProxy(napi_env env, napi_callback_info info) {
     napi_value result;
     if (!ensureLoaded()) {
-        napi_create_string_utf8(env, "{\"success\":false,\"message\":\"native core not loaded\"}", NAPI_AUTO_LENGTH, &result);
-        return result;
+        return makeErrorResponse(env, "{\"success\":false,\"message\":\"native core not loaded\"}");
     }
 
     size_t argc = 1;
     napi_value argv[1];
-    char configPath[1024] = {0};
-    size_t pathLen = 0;
     napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr);
-    napi_get_value_string_utf8(env, argv[0], configPath, sizeof(configPath), &pathLen);
+
+    if (argc < 1 || !validateStringArg(env, argv[0], 0, &result)) {
+        return result;
+    }
+
+    size_t pathLen = 0;
+    napi_get_value_string_utf8(env, argv[0], nullptr, 0, &pathLen);
+    if (pathLen == 0) {
+        return makeErrorResponse(env, "{\"success\":false,\"message\":\"empty config path\"}");
+    }
+
+    char* configPath = (char*)malloc(pathLen + 1);
+    if (!configPath) {
+        return makeErrorResponse(env, "{\"success\":false,\"message\":\"malloc failed\"}");
+    }
+    napi_get_value_string_utf8(env, argv[0], configPath, pathLen + 1, &pathLen);
 
     char* resp = g_startProxy(configPath);
     napi_create_string_utf8(env, resp, NAPI_AUTO_LENGTH, &result);
     g_freeString(resp);
+
+    free(configPath);
     return result;
 }
 
 static napi_value JS_StopProxy(napi_env env, napi_callback_info info) {
     napi_value result;
     if (!ensureLoaded()) {
-        napi_create_string_utf8(env, "{\"success\":false,\"message\":\"native core not loaded\"}", NAPI_AUTO_LENGTH, &result);
-        return result;
+        return makeErrorResponse(env, "{\"success\":false,\"message\":\"native core not loaded\"}");
     }
     char* resp = g_stopProxy();
     napi_create_string_utf8(env, resp, NAPI_AUTO_LENGTH, &result);
@@ -103,8 +154,7 @@ static napi_value JS_StopProxy(napi_env env, napi_callback_info info) {
 static napi_value JS_GetStatus(napi_env env, napi_callback_info info) {
     napi_value result;
     if (!ensureLoaded()) {
-        napi_create_string_utf8(env, "{\"success\":false,\"running\":false}", NAPI_AUTO_LENGTH, &result);
-        return result;
+        return makeErrorResponse(env, "{\"success\":false,\"running\":false}");
     }
     char* resp = g_getStatus();
     napi_create_string_utf8(env, resp, NAPI_AUTO_LENGTH, &result);
@@ -117,15 +167,33 @@ static napi_value JS_CheckPort(napi_env env, napi_callback_info info) {
     napi_value argv[1];
     napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr);
 
-    int32_t port = 7890;
-    napi_get_value_int32(env, argv[0], &port);
-
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0) {
-        napi_value result;
+    napi_value result;
+    if (argc < 1) {
         napi_create_int32(env, -1, &result);
         return result;
     }
+
+    napi_valuetype type;
+    if (napi_typeof(env, argv[0], &type) != napi_ok || type != napi_number) {
+        napi_create_int32(env, -1, &result);
+        return result;
+    }
+
+    int32_t port = 7890;
+    napi_get_value_int32(env, argv[0], &port);
+    if (port <= 0 || port > 65535) {
+        napi_create_int32(env, -1, &result);
+        return result;
+    }
+
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+        napi_create_int32(env, -1, &result);
+        return result;
+    }
+
+    int optval = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
@@ -135,7 +203,6 @@ static napi_value JS_CheckPort(napi_env env, napi_callback_info info) {
     int ret = bind(sock, (struct sockaddr*)&addr, sizeof(addr));
     close(sock);
 
-    napi_value result;
     napi_create_int32(env, ret == 0 ? 0 : -1, &result);
     return result;
 }
