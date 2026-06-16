@@ -16,8 +16,13 @@ export struct IllustCard {
   @State cardTranslateY: number = 20;
   @State bookmarkScale: number = 1;
   @State imageOpacity: number = 0;
+  @State hasAppeared: boolean = false;
+  @State imageHeight: number = 150;
 
   async aboutToAppear() {
+    if (this.hasAppeared) return;
+    this.hasAppeared = true;
+
     setTimeout(() => {
       animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
         this.cardOpacity = 1;
@@ -72,24 +77,28 @@ export struct IllustCard {
     Column() {
       Column() {
         Stack() {
-          if (this.localUrl) {
-            Image(this.localUrl)
+          Image(this.localUrl)
+            .width('100%')
+            .height(this.imageHeight)
+            .objectFit(ImageFit.Cover)
+            .borderRadius({ topLeft: 12, topRight: 12 })
+            .sharedTransition('illust_' + this.item.id, { duration: 350, curve: Curve.Friction })
+            .opacity(this.imageOpacity)
+            .onComplete((info) => {
+              if (info && info.width > 0 && info.height > 0) {
+                const ratio = info.width / info.height;
+                const ideal = info.componentWidth / ratio;
+                this.imageHeight = Math.max(100, Math.min(300, ideal));
+              }
+              animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
+                this.imageOpacity = 1;
+              });
+            })
+          if (!this.localUrl) {
+            ShimmerLoading()
               .width('100%')
-              .height(150)
-              .objectFit(ImageFit.Cover)
+              .height(this.imageHeight)
               .borderRadius({ topLeft: 12, topRight: 12 })
-              .sharedTransition('illust_' + this.item.id, { duration: 350, curve: Curve.Friction })
-              .opacity(this.imageOpacity)
-              .onComplete(() => {
-                animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
-                  this.imageOpacity = 1;
-                });
-              })
-          } else {
-      ShimmerLoading()
-        .width('100%')
-        .height(150)
-        .borderRadius({ topLeft: 12, topRight: 12 })
           }
           if (this.item.pageCount > 1) {
             Text(`${this.item.pageCount}页`)
@@ -102,7 +111,7 @@ export struct IllustCard {
           }
         }
         .width('100%')
-        .height(150)
+        .height(this.imageHeight)
         Text(this.item.title)
           .fontSize(13)
           .fontWeight(FontWeight.Medium)

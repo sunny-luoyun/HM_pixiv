@@ -5,6 +5,11 @@ import { common } from '@kit.AbilityKit';
 import { curves, display } from '@kit.ArkUI';
 import { PixivService, IllustDetailBody } from '../../services/PixivService';
 
+interface ImageRenderSize {
+  width: number;
+  height: number;
+}
+
 @Entry
 @Component
 struct IllustDetailPage {
@@ -28,6 +33,7 @@ struct IllustDetailPage {
   @State scaleValue: number = 1;
   @State translateX: number = 0;
   @State imageOpacityArray: number[] = [];
+  @State imageRenderSizes: ImageRenderSize[] = [];
   @State backgroundImageUrl: string = '';
   @State backgroundOpacity: number = 0;
   @State dominantColor: string = '';
@@ -76,6 +82,17 @@ struct IllustDetailPage {
     PixivService.cancelDownloadGroup(`detail_${this.illustId}`);
   }
 
+  goBack() {
+    if (this.currentIndex > 0 && this.illustPageCount > 1) {
+      this.currentIndex = 0;
+      setTimeout(() => {
+        router.back();
+      }, 350);
+    } else {
+      router.back();
+    }
+  }
+
   async loadDetail() {
     this.isLoading = true;
     this.errorMsg = '';
@@ -96,15 +113,17 @@ struct IllustDetailPage {
         }
         this.localImageUrls = newUrls;
         this.imageOpacityArray = new Array<number>(pageCount).fill(0);
+        this.imageRenderSizes = new Array(pageCount);
         this.isLoading = false;
 
         if (this.thumbnailLocalUrl) {
           PixivService.extractDominantColor(this.thumbnailLocalUrl)
             .then((color: string) => {
-              if (color && this.isActive) {
-                this.dominantColor = color;
+              if (this.isActive) {
+                const c = color || '#1a1a2e';
+                this.dominantColor = c;
                 animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
-                  this.bgColor = color;
+                  this.bgColor = c;
                 });
               }
             });
@@ -220,8 +239,11 @@ struct IllustDetailPage {
       this.translateY = 0;
       return;
     }
-    const maxX = (this.scaleValue - 1) * this.screenWidth / 2;
-    const maxY = (this.scaleValue - 1) * this.screenHeight / 2;
+    const size = this.imageRenderSizes[this.currentIndex];
+    const imgW = size?.width || this.screenWidth;
+    const imgH = size?.height || this.screenHeight;
+    const maxX = (this.scaleValue - 1) * imgW / 2;
+    const maxY = (this.scaleValue - 1) * imgH / 2;
     this.translateX = Math.max(-maxX, Math.min(maxX, this.translateX));
     this.translateY = Math.max(-maxY, Math.min(maxY, this.translateY));
   }
@@ -259,77 +281,114 @@ struct IllustDetailPage {
           Swiper(this.swiperController) {
             ForEach(this.localImageUrls, (url: string, index: number) => {
               if (url) {
-                Image(url)
-                  .width('100%')
-                  .height('100%')
-                  .objectFit(ImageFit.Contain)
-                  .sharedTransition(index === 0 ? 'illust_' + this.illustId : '', {
-                    duration: 350,
-                    curve: Curve.Friction
-                  })
-                  .opacity(this.imageOpacityArray[index] ?? 0)
-                  .onComplete(() => {
-                    const updated = [...this.imageOpacityArray];
-                    updated[index] = 1;
-                    animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
-                      this.imageOpacityArray = updated;
-                    });
-                  })
-                  .scale({ x: this.scaleValue, y: this.scaleValue })
-                  .translate({ x: this.translateX, y: this.translateY })
-                  .gesture(
-                    GestureGroup(GestureMode.Parallel,
-                      PinchGesture()
-                        .onActionStart(() => {
-                          this.baseScale = this.scaleValue;
-                        })
-                        .onActionUpdate((event: PinchGestureEvent) => {
-                          this.scaleValue = Math.max(1, Math.min(5, this.baseScale * event.scale));
-                          this.clampTranslate();
-                        }),
-                      TapGesture({ count: 2 })
-                        .onAction(() => {
-                          if (this.scaleValue > 1) {
-                            this.scaleValue = 1;
-                            this.translateX = 0;
-                            this.translateY = 0;
-                          } else {
-                            this.scaleValue = 2.5;
-                          }
-                        })
-                    )
+                Stack() {
+                  Image(url)
+                    .width(this.imageRenderSizes[index]?.width || '100%')
+                    .height(this.imageRenderSizes[index]?.height || '100%')
+                    .objectFit(ImageFit.Contain)
+                    .sharedTransition(index === 0 ? 'illust_' + this.illustId : '', {
+                      duration: 350,
+                      curve: Curve.Friction
+                    })
+                    .opacity(this.imageOpacityArray[index] ?? 0)
+                    .onComplete((info) => {
+                      const updated = [...this.imageOpacityArray];
+                      updated[index] = 1;
+                      animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
+                        this.imageOpacityArray = updated;
+                      });
+                      if (info && info.width > 0 && info.height > 0 && this.screenWidth > 0) {
+                        const nativeRatio = info.width / info.height;
+                        const containerRatio = this.screenWidth / this.screenHeight;
+                        const sizes: ImageRenderSize[] = [...this.imageRenderSizes];
+                        if (nativeRatio > containerRatio) {
+                          sizes[index] = { width: this.screenWidth, height: this.screenWidth / nativeRatio } as ImageRenderSize;
+                        } else {
+                          sizes[index] = { width: this.screenHeight * nativeRatio, height: this.screenHeight } as ImageRenderSize;
+                        }
+                        this.imageRenderSizes = sizes;
+                      }
+                    })
+                    .scale({ x: this.scaleValue, y: this.scaleValue })
+                    .translate({ x: this.translateX, y: this.translateY })
+                }
+                .width('100%')
+                .height('100%')
+                .alignContent(Alignment.Center)
+                .gesture(
+                  GestureGroup(GestureMode.Parallel,
+                    PinchGesture()
+                      .onActionStart(() => {
+                        this.baseScale = this.scaleValue;
+                      })
+                      .onActionUpdate((event: PinchGestureEvent) => {
+                        this.scaleValue = Math.max(1, Math.min(5, this.baseScale * event.scale));
+                        this.clampTranslate();
+                      }),
+                    TapGesture({ count: 2 })
+                      .onAction(() => {
+                        if (this.scaleValue > 1) {
+                          this.scaleValue = 1;
+                          this.translateX = 0;
+                          this.translateY = 0;
+                        } else {
+                          this.scaleValue = 2.5;
+                        }
+                      })
                   )
-                  .onTouch((event: TouchEvent) => {
-                    if (this.scaleValue <= 1) return;
-                    if (event.type === TouchType.Down && event.touches.length === 1) {
-                      this.baseTranslateX = this.translateX;
-                      this.baseTranslateY = this.translateY;
-                      this.lastTouchX = event.touches[0].x;
-                      this.lastTouchY = event.touches[0].y;
-                    } else if (event.type === TouchType.Move && event.touches.length === 1 && this.lastTouchX >= 0) {
-                      const dx = event.touches[0].x - this.lastTouchX;
-                      const dy = event.touches[0].y - this.lastTouchY;
-                      this.lastTouchX = event.touches[0].x;
-                      this.lastTouchY = event.touches[0].y;
-                      const speed = this.scaleValue * 0.6 + 0.4;
-                      const maxX = (this.scaleValue - 1) * this.screenWidth / 2;
-                      const maxY = (this.scaleValue - 1) * this.screenHeight / 2;
-                      this.translateX = Math.max(-maxX, Math.min(maxX, this.translateX + dx * speed));
-                      this.translateY = Math.max(-maxY, Math.min(maxY, this.translateY + dy * speed));
-                    } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-                      this.lastTouchX = -1;
-                      this.lastTouchY = -1;
-                    }
-                  })
+                )
+                .onTouch((event: TouchEvent) => {
+                  if (this.scaleValue <= 1) return;
+                  if (event.type === TouchType.Down && event.touches.length === 1) {
+                    this.baseTranslateX = this.translateX;
+                    this.baseTranslateY = this.translateY;
+                    this.lastTouchX = event.touches[0].x;
+                    this.lastTouchY = event.touches[0].y;
+                  } else if (event.type === TouchType.Move && event.touches.length === 1 && this.lastTouchX >= 0) {
+                    const dx = event.touches[0].x - this.lastTouchX;
+                    const dy = event.touches[0].y - this.lastTouchY;
+                    this.lastTouchX = event.touches[0].x;
+                    this.lastTouchY = event.touches[0].y;
+                    const speed = this.scaleValue * 0.6 + 0.4;
+                    const size = this.imageRenderSizes[this.currentIndex];
+                    const imgW = size?.width || this.screenWidth;
+                    const imgH = size?.height || this.screenHeight;
+                    const maxX = (this.scaleValue - 1) * imgW / 2;
+                    const maxY = (this.scaleValue - 1) * imgH / 2;
+                    this.translateX = Math.max(-maxX, Math.min(maxX, this.translateX + dx * speed));
+                    this.translateY = Math.max(-maxY, Math.min(maxY, this.translateY + dy * speed));
+                  } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                    this.lastTouchX = -1;
+                    this.lastTouchY = -1;
+                  }
+                })
               } else if (index === 0 && this.thumbnailLocalUrl) {
-                Image(this.thumbnailLocalUrl)
-                  .width('100%')
-                  .height('100%')
-                  .objectFit(ImageFit.Contain)
-                  .sharedTransition('illust_' + this.illustId, {
-                    duration: 350,
-                    curve: Curve.Friction
-                  })
+                Stack() {
+                  Image(this.thumbnailLocalUrl)
+                    .width(this.imageRenderSizes[index]?.width || '100%')
+                    .height(this.imageRenderSizes[index]?.height || '100%')
+                    .objectFit(ImageFit.Contain)
+                    .sharedTransition('illust_' + this.illustId, {
+                      duration: 350,
+                      curve: Curve.Friction
+                    })
+                    .onComplete((info) => {
+                      if (info && info.width > 0 && info.height > 0 && this.screenWidth > 0) {
+                        const nativeRatio = info.width / info.height;
+                        const containerRatio = this.screenWidth / this.screenHeight;
+                        const sizes: ImageRenderSize[] = [...this.imageRenderSizes];
+                        if (nativeRatio > containerRatio) {
+                          sizes[index] = { width: this.screenWidth, height: this.screenWidth / nativeRatio } as ImageRenderSize;
+                        } else {
+                          sizes[index] = { width: this.screenHeight * nativeRatio, height: this.screenHeight } as ImageRenderSize;
+                        }
+                        this.imageRenderSizes = sizes;
+                      }
+                    })
+                }
+                .width('100%')
+                .height('100%')
+                .alignContent(Alignment.Center)
               } else {
                 Stack() {
                   LoadingProgress().width(30).height(30).color(Color.White)
@@ -374,7 +433,7 @@ struct IllustDetailPage {
               }
               .width(40).height(40)
               .backgroundColor($r('app.color.overlay_light'))
-              .onClick(() => router.back())
+              .onClick(() => this.goBack())
 
               Blank()
 
