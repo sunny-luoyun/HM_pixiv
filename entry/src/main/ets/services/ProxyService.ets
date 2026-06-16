@@ -3,7 +3,7 @@ import common from '@ohos.app.ability.common';
 import http from '@ohos.net.http';
 import fileIo from '@ohos.file.fs';
 import util from '@ohos.util';
-import { startProxy as nativeStartProxy, stopProxy as nativeStopProxy, getStatus as nativeGetStatus, ping as nativePing, prepareConfig as nativePrepareConfig } from 'libproxy_core.so';
+import { startProxy as nativeStartProxy, stopProxy as nativeStopProxy, getStatus as nativeGetStatus, ping as nativePing, prepareConfig as nativePrepareConfig, checkPort as nativeCheckPort } from 'libproxy_core.so';
 
 export type ProxyMode = 'manual' | 'subscription' | 'off';
 
@@ -17,6 +17,7 @@ interface NativeResult {
   success: boolean;
   message?: string;
   running?: boolean;
+  port?: number;
 }
 
 export class ProxyService {
@@ -30,6 +31,7 @@ export class ProxyService {
   private static context: common.BaseContext;
   private static nativeAvailable: boolean = false;
   static nativeErrorMessage: string = '';
+  static currentProxyPort: number = 7890;
 
   static init(context: common.BaseContext) {
     ProxyService.context = context;
@@ -56,8 +58,35 @@ export class ProxyService {
     return ProxyService.nativeAvailable;
   }
 
+  static async findAvailablePort(startPort: number = 7890): Promise<number> {
+    for (let port = startPort; port < startPort + 10; port++) {
+      const ret = nativeCheckPort(port) as number;
+      if (ret === 0) return port;
+    }
+    return -1;
+  }
+
   static async startNativeProxy(configPath: string): Promise<NativeResult> {
     try {
+      const port = await ProxyService.findAvailablePort(7890);
+      if (port < 0) {
+        return { success: false, message: '端口 7890-7899 均被占用，请先关闭其他应用的 Clash 内核' };
+      }
+
+      if (port !== 7890) {
+        const content = fileIo.readTextSync(configPath);
+        const portStr = String(port);
+        const modified = content.replace(/mixed-port:\s*\d+/, 'mixed-port: ' + portStr)
+                                .replace(/port:\s*\d+(?![\s\S]*port:)/, 'port: ' + portStr);
+        const file = fileIo.openSync(configPath, fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
+        const encoder = new util.TextEncoder();
+        const uint8Arr = encoder.encodeInto(modified);
+        fileIo.writeSync(file.fd, uint8Arr.buffer);
+        fileIo.closeSync(file);
+      }
+
+      ProxyService.currentProxyPort = port;
+
       const resp = nativeStartProxy(configPath) as string;
       const result = JSON.parse(resp) as NativeResult;
       if (result.success) {
@@ -72,6 +101,7 @@ export class ProxyService {
   static async stopNativeProxy(): Promise<NativeResult> {
     try {
       const resp = nativeStopProxy() as string;
+      ProxyService.currentProxyPort = 7890;
       return JSON.parse(resp) as NativeResult;
     } catch (err) {
       return { success: false, message: `停止失败: ${String(err)}` };
@@ -258,7 +288,7 @@ export class ProxyService {
     }
 
     if (mode === 'subscription') {
-      return { host: '127.0.0.1', port: 7890, exclusionList: [] };
+      return { host: '127.0.0.1', port: ProxyService.currentProxyPort, exclusionList: [] };
     }
 
     return null;

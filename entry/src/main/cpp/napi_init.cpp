@@ -2,6 +2,10 @@
 #include <cstring>
 #include <dlfcn.h>
 #include <cstdio>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 
 typedef char* (*StartProxyFunc)(char*);
 typedef char* (*StopProxyFunc)();
@@ -108,6 +112,34 @@ static napi_value JS_GetStatus(napi_env env, napi_callback_info info) {
     return result;
 }
 
+static napi_value JS_CheckPort(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value argv[1];
+    napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr);
+
+    int32_t port = 7890;
+    napi_get_value_int32(env, argv[0], &port);
+
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+        napi_value result;
+        napi_create_int32(env, -1, &result);
+        return result;
+    }
+
+    struct sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+    int ret = bind(sock, (struct sockaddr*)&addr, sizeof(addr));
+    close(sock);
+
+    napi_value result;
+    napi_create_int32(env, ret == 0 ? 0 : -1, &result);
+    return result;
+}
+
 EXTERN_C_START
 static napi_value Init(napi_env env, napi_value exports) {
     napi_property_descriptor desc[] = {
@@ -116,6 +148,7 @@ static napi_value Init(napi_env env, napi_value exports) {
         { "startProxy", nullptr, JS_StartProxy, nullptr, nullptr, nullptr, napi_default, nullptr },
         { "stopProxy", nullptr, JS_StopProxy, nullptr, nullptr, nullptr, napi_default, nullptr },
         { "getStatus", nullptr, JS_GetStatus, nullptr, nullptr, nullptr, napi_default, nullptr },
+        { "checkPort", nullptr, JS_CheckPort, nullptr, nullptr, nullptr, napi_default, nullptr },
     };
     napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]), desc);
     return exports;
