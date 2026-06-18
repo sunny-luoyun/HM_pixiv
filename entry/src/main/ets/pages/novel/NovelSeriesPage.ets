@@ -70,6 +70,7 @@ struct NovelSeriesPage {
   @State hasMore: boolean = false;
   @State isOfflineMode: boolean = false;
   @State offlineCachedCount: number = 0;
+  @State isHeaderExpanded: boolean = true;
 
   private configChangeCallback: () => void = () => {};
   private configCallbackId: number = -1;
@@ -264,8 +265,16 @@ struct NovelSeriesPage {
             .fontSize(12)
             .fontColor($r('app.color.text_secondary'))
             .margin({ top: 8 })
-            .maxLines(3)
+            .maxLines(this.isHeaderExpanded ? 999 : 3)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+          Text(this.isHeaderExpanded ? '收起' : '展开全文')
+            .fontSize(12)
+            .fontColor($r('app.color.tab_selected'))
+            .margin({ top: 4 })
+            .onClick(() => {
+              this.isHeaderExpanded = !this.isHeaderExpanded;
+            })
         }
 
         Text(`共 ${this.bookmarks.length} 部作品${this.isOfflineMode ? '（已缓存）' : ''}`)
@@ -279,6 +288,7 @@ struct NovelSeriesPage {
       .borderRadius(12)
       .margin({ top: 12, bottom: 12 })
       .alignSelf(ItemAlign.Center)
+      .animation({ duration: 200, curve: Curve.EaseInOut })
 
       if (this.isLoading && this.bookmarks.length === 0) {
         Column() {
