@@ -519,6 +519,21 @@ export struct NovelCard {
         Text(`${this.item.wordCount}字`)
           .fontSize(10)
           .fontColor($r('app.color.text_secondary'))
+
+        Blank()
+          .width(10)
+
+        Text(`💬`)
+          .fontSize(10)
+          .fontColor($r('app.color.tab_selected'))
+          .onClick(() => {
+            router.pushUrl({
+              url: 'pages/novel/NovelCommentsPage',
+              params: {
+                novelId: this.item.id
+              }
+            });
+          })
       }
       .width('100%')
       .margin({ top: 6 })

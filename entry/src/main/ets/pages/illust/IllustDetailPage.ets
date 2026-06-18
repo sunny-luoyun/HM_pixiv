@@ -514,6 +514,18 @@ struct IllustDetailPage {
                 .fontColor(Color.White)
                 .maxLines(1)
                 .margin({ top: 2 })
+              Text(`评论 (${this.detail.commentCount ?? 0})`)
+                .fontSize(12)
+                .fontColor('#66FFFFFF')
+                .margin({ top: 4 })
+                .onClick(() => {
+                  router.pushUrl({
+                    url: 'pages/illust/IllustCommentsPage',
+                    params: {
+                      illustId: this.illustId
+                    }
+                  });
+                })
               if (this.downloadFail) {
                 Text('保存失败').fontSize(12).fontColor($r('app.color.danger')).margin({ top: 4 })
               }

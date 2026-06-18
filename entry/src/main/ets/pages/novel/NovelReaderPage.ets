@@ -3,6 +3,7 @@ import promptAction from '@ohos.promptAction';
 import common from '@ohos.app.ability.common';
 import { curves } from '@kit.ArkUI';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
+import { PixivService } from '../../services/PixivService';
 import { getDeepSeekService } from '../../services/DeepSeekService';
 import preferences from '@ohos.data.preferences';
 
@@ -125,6 +126,7 @@ struct NovelReaderPage {
   @State private autoReadSpeedIndex: number = 5;
   @State private showFloatingMenu: boolean = false;
   @State private activeSubMenuIndex: number = -1;
+  @State private commentCount: number = 0;
   private touchStartY: number = 0;
   private touchStartTime: number = 0;
 
@@ -152,6 +154,7 @@ struct NovelReaderPage {
 
     if (this.isCachedMode && this.params?.novelId) {
       this.loadOfflineContent(this.params.novelId);
+      this.fetchCommentCount();
     } else if (this.params?.novelId) {
       promptAction.showToast({ message: '小说尚未缓存，请先缓存' });
       setTimeout(() => router.back(), 1000);
@@ -165,6 +168,15 @@ struct NovelReaderPage {
     }
     if (this.saveProgressTimer !== -1) {
       clearTimeout(this.saveProgressTimer);
+    }
+  }
+
+  private async fetchCommentCount(): Promise<void> {
+    try {
+      const detail = await PixivService.fetchNovelDetail(this.params!.novelId);
+      this.commentCount = detail.commentCount ?? 0;
+    } catch (_) {
+      // 静默失败，评论数保持 0
     }
   }
 
@@ -521,6 +533,23 @@ struct NovelReaderPage {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
       .padding({ left: 12, right: 12 })
+
+      Button({ type: ButtonType.Capsule }) {
+        Text(this.commentCount > 0 ? `评论 ${this.commentCount}` : '评论')
+          .fontSize(12)
+          .fontColor(this.getColors().accentText)
+      }
+      .height(28)
+      .backgroundColor(this.getColors().iconBtnBg)
+      .onClick(() => {
+        this.stopAutoRead();
+        router.pushUrl({
+          url: 'pages/novel/NovelCommentsPage',
+          params: {
+            novelId: this.params?.novelId ?? ''
+          }
+        });
+      })
     }
     .width('100%')
     .padding({ left: 16, right: 16, top: 12, bottom: 12 })

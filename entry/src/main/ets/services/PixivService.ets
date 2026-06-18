@@ -61,10 +61,42 @@ export interface IllustDetailBody {
   bookmarkCount: number;
   likeCount: number;
   viewCount: number;
+  commentCount: number;
   createDate: string;
   uploadDate: string;
   profileImageUrl: string;
   bookmarkData?: BookmarkData | null;
+}
+
+export interface AjaxCommentUser {
+  id: string;
+  name: string;
+  account: string;
+  img: string;
+}
+
+export interface AjaxComment {
+  id: string;
+  comment: string;
+  date: string;
+  userId: string;
+  userName: string;
+  userAccount: string;
+  img: string;
+  hasReplies: boolean;
+  stamp?: object;
+  replies?: AjaxComment[];
+}
+
+export interface AjaxCommentsBody {
+  total: number;
+  comments: AjaxComment[];
+}
+
+export interface AjaxCommentsResponse {
+  error: boolean;
+  message?: string;
+  body: AjaxCommentsBody;
 }
 
 export interface IllustDetailResponse {
@@ -1044,6 +1076,16 @@ export class PixivService {
   static async getIllustDetail(illustId: string): Promise<IllustDetailResponse> {
     const path = `/ajax/illust/${illustId}`;
     return PixivService.request<IllustDetailResponse>(path);
+  }
+
+  static async getIllustComments(illustId: string, offset: number = 0): Promise<AjaxCommentsResponse> {
+    const path = `/ajax/illusts/comments/roots?illust_id=${illustId}&offset=${offset}&limit=20`;
+    return PixivService.request<AjaxCommentsResponse>(path);
+  }
+
+  static async getNovelComments(novelId: string, offset: number = 0): Promise<AjaxCommentsResponse> {
+    const path = `/ajax/novels/comments/roots?novel_id=${novelId}&offset=${offset}&limit=20`;
+    return PixivService.request<AjaxCommentsResponse>(path);
   }
 
   static generatePageUrls(baseUrl: string, pageCount: number): string[] {

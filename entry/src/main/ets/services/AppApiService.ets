@@ -118,6 +118,32 @@ interface PostCommentResponse {
   comment: PostCommentData;
 }
 
+export interface CommentProfileImageUrls {
+  medium: string;
+}
+
+export interface CommentUser {
+  id: number;
+  name: string;
+  account: string;
+  profile_image_urls: CommentProfileImageUrls;
+}
+
+export interface IllustComment {
+  id: number;
+  comment: string;
+  date: string;
+  user: CommentUser;
+  has_replies: boolean;
+  stamp?: object;
+}
+
+export interface IllustCommentsResponse {
+  total_comments: number;
+  comments: IllustComment[];
+  next_url: string | null;
+}
+
 interface QueueTask {
   resolve: (value: object) => void;
   reject: (reason: object) => void;
@@ -374,6 +400,11 @@ export class AppApiService {
       comment_id: commentId,
     };
     await AppApiService.request<ApiResult<null>>(http.RequestMethod.POST, '/v1/novel/comment/delete', params);
+  }
+
+  static async getIllustComments(illustId: number, offset: number = 0): Promise<IllustCommentsResponse> {
+    const path = `/v1/illust/comments?illust_id=${illustId}&offset=${offset}&include_total_comments=true`;
+    return AppApiService.request<IllustCommentsResponse>(http.RequestMethod.GET, path);
   }
 
   static async getIllustDetail(illustId: number): Promise<object> {
