@@ -5,6 +5,7 @@ import fileIo from '@ohos.file.fs';
 import { CookieStorage } from '../common/utils/CookieStorage';
 import { TranslationStorage } from '../common/utils/TranslationStorage';
 import { ProxyService } from '../services/ProxyService';
+import { pixivCacheDB } from '../database/PixivCacheDB';
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
@@ -50,6 +51,21 @@ export default class EntryAbility extends UIAbility {
         return;
       }
     });
+  }
+
+  async onBackground(): Promise<void> {
+    console.info('[MX] Ability onBackground');
+    const novelId = AppStorage.get<string>('bgNovelId') ?? '';
+    if (novelId) {
+      const scrollY = AppStorage.get<number>('bgScrollY') ?? 0;
+      const isTranslated = AppStorage.get<boolean>('bgIsTranslated') ?? false;
+      console.info(`[MX] onBackground save novelId=${novelId} scrollY=${scrollY}`);
+      await pixivCacheDB.init(this.context);
+      await pixivCacheDB.saveReadingProgress(novelId, scrollY, isTranslated);
+      console.info('[MX] onBackground save done');
+    } else {
+      console.info('[MX] onBackground skipped: no novelId');
+    }
   }
 
   private migrateImageCache(): void {
