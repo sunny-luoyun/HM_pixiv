@@ -32,6 +32,10 @@ export class ProxyService {
   private static nativeAvailable: boolean = false;
   static nativeErrorMessage: string = '';
   static currentProxyPort: number = 7890;
+  private static proxyReady: boolean = false;
+  private static proxyStarting: boolean = false;
+  private static proxyReadyPromise: Promise<void> | null = null;
+  private static proxyReadyResolve: (() => void) | null = null;
 
   static init(context: common.BaseContext) {
     ProxyService.context = context;
@@ -56,6 +60,37 @@ export class ProxyService {
 
   static isNativeAvailable(): boolean {
     return ProxyService.nativeAvailable;
+  }
+
+  private static getOrCreateReadyPromise(): Promise<void> {
+    if (!ProxyService.proxyReadyPromise) {
+      ProxyService.proxyReadyPromise = new Promise<void>((resolve) => {
+        ProxyService.proxyReadyResolve = resolve;
+      });
+    }
+    return ProxyService.proxyReadyPromise;
+  }
+
+  static notifyProxyReady() {
+    ProxyService.proxyReady = true;
+    ProxyService.proxyStarting = false;
+    if (ProxyService.proxyReadyResolve) {
+      ProxyService.proxyReadyResolve();
+    }
+  }
+
+  static async waitForProxyReady(timeoutMs: number = 5000): Promise<boolean> {
+    if (ProxyService.proxyReady) return true;
+    if (!ProxyService.proxyStarting) return false;
+
+    const readyPromise = ProxyService.getOrCreateReadyPromise();
+    const timeoutPromise = new Promise<boolean>((resolve) => {
+      setTimeout(() => resolve(false), timeoutMs);
+    });
+    return Promise.race([
+      readyPromise.then(() => true),
+      timeoutPromise
+    ]);
   }
 
   static async findAvailablePort(startPort: number = 7890): Promise<number> {
@@ -91,6 +126,7 @@ export class ProxyService {
       const result = JSON.parse(resp) as NativeResult;
       if (result.success) {
         AppStorage.setOrCreate('proxyMode', 'subscription');
+        ProxyService.notifyProxyReady();
       }
       return result;
     } catch (err) {
@@ -143,14 +179,18 @@ export class ProxyService {
       if (!rawContent || !subUrl) return;
 
       console.info('🔄 自动启动内核...');
+      ProxyService.proxyStarting = true;
+
       if (!ProxyService.context) {
         console.warn('⚠️ 自动启动: context 为空');
+        ProxyService.proxyStarting = false;
         return;
       }
       const ctx = ProxyService.context as common.UIAbilityContext;
       const configYaml = await ProxyService.prepareConfig(subUrl, rawContent);
       if (!configYaml) {
         console.warn('⚠️ 自动启动: 配置生成失败');
+        ProxyService.proxyStarting = false;
         return;
       }
 
@@ -166,9 +206,11 @@ export class ProxyService {
         console.info('✅ 自动启动内核成功');
       } else {
         console.warn('⚠️ 自动启动失败: ' + (result.message ?? ''));
+        ProxyService.proxyStarting = false;
       }
     } catch (err) {
       console.warn('⚠️ 自动启动异常: ' + String(err));
+      ProxyService.proxyStarting = false;
     }
   }
 
@@ -292,7 +334,12 @@ export class ProxyService {
     }
 
     if (mode === 'subscription') {
-      return { host: '127.0.0.1', port: ProxyService.currentProxyPort, exclusionList: [] };
+      const ready = await ProxyService.waitForProxyReady(5000);
+      if (ready) {
+        return { host: '127.0.0.1', port: ProxyService.currentProxyPort, exclusionList: [] };
+      }
+      console.warn('⚠️ 代理未就绪，直连');
+      return null;
     }
 
     return null;

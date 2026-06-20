@@ -11,6 +11,7 @@ export default class EntryAbility extends UIAbility {
     CookieStorage.init(this.context);
     TranslationStorage.init(this.context);
     ProxyService.init(this.context);
+    ProxyService.tryAutoStart();
     console.info('✅ CookieStorage + TranslationStorage + ProxyService 已初始化');
 
     setTimeout(() => {
@@ -49,9 +50,6 @@ export default class EntryAbility extends UIAbility {
         return;
       }
     });
-    setTimeout(() => {
-      ProxyService.tryAutoStart();
-    }, 1500);
   }
 
   private migrateImageCache(): void {
