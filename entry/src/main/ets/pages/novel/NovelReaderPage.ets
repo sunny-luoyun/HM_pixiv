@@ -135,6 +135,8 @@ struct NovelReaderPage {
   private saveProgressTimer: number = -1;
   private readonly PROGRESS_SAVE_DELAY = 800;
   private pendingScrollY: number = 0;
+  private autoSaveTimer: number = -1;
+  private readonly AUTO_SAVE_INTERVAL = 30000;
   private autoReadTimerId: number = -1;
   private isProgrammaticScroll: boolean = false;
   private readonly AUTO_READ_BASE_SPEED = 20;
@@ -153,18 +155,34 @@ struct NovelReaderPage {
     }
 
     if (this.isCachedMode && this.params?.novelId) {
+      AppStorage.setOrCreate('bgNovelId', this.params.novelId);
+      AppStorage.setOrCreate('bgIsTranslated', !this.showOriginal);
       this.loadOfflineContent(this.params.novelId);
       this.fetchCommentCount();
+      this.startAutoSave();
     } else if (this.params?.novelId) {
       promptAction.showToast({ message: '小说尚未缓存，请先缓存' });
       setTimeout(() => router.back(), 1000);
     }
   }
 
+  onPageHide(): void {
+    if (this.params?.novelId && this.isCachedMode) {
+      const yOffset = Math.floor(this.scroller.currentOffset().yOffset);
+      if (yOffset > 0) {
+        this.saveProgressInternal(yOffset);
+      }
+    }
+  }
+
   aboutToDisappear(): void {
     this.stopAutoRead();
+    this.stopAutoSave();
     if (this.params?.novelId && this.isCachedMode) {
-      this.saveProgressInternal(Math.floor(this.scroller.currentOffset().yOffset));
+      const yOffset = Math.floor(this.scroller.currentOffset().yOffset);
+      if (yOffset > 0) {
+        this.saveProgressInternal(yOffset);
+      }
     }
     if (this.saveProgressTimer !== -1) {
       clearTimeout(this.saveProgressTimer);
@@ -240,6 +258,9 @@ struct NovelReaderPage {
       } else {
         await pixivCacheDB.saveReadingProgress(this.params.novelId, yOffset, !this.showOriginal);
       }
+      AppStorage.setOrCreate('bgNovelId', this.params.novelId);
+      AppStorage.setOrCreate('bgScrollY', yOffset);
+      AppStorage.setOrCreate('bgIsTranslated', !this.showOriginal);
     }
   }
 
@@ -252,6 +273,25 @@ struct NovelReaderPage {
         await this.saveProgressInternal(Math.floor(yOffset));
       }
     }, this.PROGRESS_SAVE_DELAY);
+  }
+
+  private startAutoSave(): void {
+    if (this.autoSaveTimer !== -1) return;
+    this.autoSaveTimer = setInterval(() => {
+      if (this.params?.novelId && this.isCachedMode) {
+        const yOffset = Math.floor(this.scroller.currentOffset().yOffset);
+        if (yOffset > 0) {
+          this.saveProgressInternal(yOffset);
+        }
+      }
+    }, this.AUTO_SAVE_INTERVAL);
+  }
+
+  private stopAutoSave(): void {
+    if (this.autoSaveTimer !== -1) {
+      clearInterval(this.autoSaveTimer);
+      this.autoSaveTimer = -1;
+    }
   }
 
   private async translateTitle(): Promise<void> {
@@ -642,6 +682,14 @@ struct NovelReaderPage {
       .onScroll((_x: number, _y: number) => {
         if (!this.isLoading && this.params?.novelId) {
           this.debouncedSaveProgress(_y);
+        }
+      })
+      .onScrollStop(() => {
+        if (!this.isLoading && this.params?.novelId && this.isCachedMode) {
+          const yOffset = Math.floor(this.scroller.currentOffset().yOffset);
+          if (yOffset > 0) {
+            this.saveProgressInternal(yOffset);
+          }
         }
       })
       .onTouch((event: TouchEvent) => {
