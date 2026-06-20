@@ -56,7 +56,9 @@ export struct HomePage {
       this.illustRetryTimer = null;
     }
     this.isRefreshingIllust = true;
-    this.isLoadingIllust = true;
+    if (this.illustWorks.length === 0) {
+      this.isLoadingIllust = true;
+    }
     this.illustError = '';
     this.hasMoreIllust = true;
     this.illustEmptyRetries = 0;
@@ -150,7 +152,9 @@ export struct HomePage {
 
   async loadNovels() {
     this.isRefreshingNovel = true;
-    this.isLoadingNovel = true;
+    if (this.novelWorks.length === 0) {
+      this.isLoadingNovel = true;
+    }
     this.novelError = '';
     this.hasMoreNovel = true;
     this.novelEmptyRetries = 0;
@@ -276,9 +280,9 @@ export struct HomePage {
 
       Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
         TabContent() {
-          if (this.isLoadingIllust) {
+          if (this.isLoadingIllust && this.illustWorks.length === 0) {
             LoadingProgress().width(40).height(40).margin({ top: 100 })
-          } else if (this.illustError) {
+          } else if (this.illustWorks.length === 0 && this.illustError) {
             Column() {
               Text(this.illustError).fontSize(14).fontColor($r('app.color.text_secondary'))
               Button('重试').margin({ top: 12 }).onClick(() => this.loadIllusts())
@@ -350,9 +354,9 @@ export struct HomePage {
         .tabBar('')
 
         TabContent() {
-          if (this.isLoadingNovel) {
+          if (this.isLoadingNovel && this.novelWorks.length === 0) {
             LoadingProgress().width(40).height(40).margin({ top: 100 })
-          } else if (this.novelError) {
+          } else if (this.novelWorks.length === 0 && this.novelError) {
             Column() {
               Text(this.novelError).fontSize(14).fontColor($r('app.color.text_secondary'))
               Button('重试').margin({ top: 12 }).onClick(() => this.loadNovels())

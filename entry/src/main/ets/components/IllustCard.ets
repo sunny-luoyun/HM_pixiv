@@ -36,8 +36,9 @@ export struct IllustCard {
     }
     const path = await PixivService.cacheImage(this.item.url, `illust_${this.item.id}.jpg`);
     if (path) {
-      this.imageOpacity = 0;
-      this.localUrl = path;
+      setTimeout(() => {
+        this.localUrl = path;
+      }, 0);
     }
     this.isCaching = false;
     this.isBookmarked = !!this.item.bookmarkData;
@@ -85,14 +86,16 @@ export struct IllustCard {
             .sharedTransition('illust_' + this.item.id, { duration: 350, curve: Curve.Friction })
             .opacity(this.imageOpacity)
             .onComplete((info) => {
-              if (info && info.width > 0 && info.height > 0) {
-                const ratio = info.width / info.height;
-                const ideal = info.componentWidth / ratio;
-                this.imageHeight = Math.max(100, Math.min(300, ideal));
-              }
-              animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
-                this.imageOpacity = 1;
-              });
+              setTimeout(() => {
+                if (info && info.width > 0 && info.height > 0) {
+                  const ratio = info.width / info.height;
+                  const ideal = info.componentWidth / ratio;
+                  this.imageHeight = Math.max(100, Math.min(300, ideal));
+                }
+                animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
+                  this.imageOpacity = 1;
+                });
+              }, 0);
             })
           if (!this.localUrl) {
             ShimmerLoading()

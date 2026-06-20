@@ -1,10 +1,28 @@
+import { curves } from '@kit.ArkUI';
+
 @Component
 export struct PullToRefresh {
-  @Link refreshing: boolean;
+  @Link @Watch('onRefreshingChange') refreshing: boolean;
   onRefresh: () => void = () => {};
   @BuilderParam content: () => void;
-  @State private showComplete: boolean = false;
+  @State private refreshState: 'idle' | 'refreshing' | 'complete' = 'idle';
   private refreshWatcher: number = -1;
+
+  onRefreshingChange(): void {
+    if (!this.refreshing && this.refreshState === 'refreshing') {
+      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+        this.refreshState = 'complete';
+      });
+      if (this.refreshWatcher !== -1) {
+        clearTimeout(this.refreshWatcher);
+      }
+      this.refreshWatcher = setTimeout(() => {
+        animateTo({ curve: curves.springMotion(0.55, 0.75) }, () => {
+          this.refreshState = 'idle';
+        });
+      }, 1200);
+    }
+  }
 
   aboutToDisappear() {
     if (this.refreshWatcher !== -1) {
@@ -13,35 +31,21 @@ export struct PullToRefresh {
   }
 
   build() {
-    Refresh({ refreshing: $$this.refreshing }) {
-      Column() {
-        if (this.refreshing || this.showComplete) {
-          this.IndicatorBar()
-        }
-        this.content()
-      }
-      .width('100%')
+    Refresh({ refreshing: $$this.refreshing, builder: this.RefreshHeaderBuilder }) {
+      this.content()
     }
     .onRefreshing(() => {
+      animateTo({ curve: curves.springMotion(0.55, 0.75) }, () => {
+        this.refreshState = 'refreshing';
+      });
       this.onRefresh();
-    })
-    .onStateChange((state: RefreshStatus) => {
-      if (state === RefreshStatus.Refresh && !this.refreshing) {
-        this.refreshing = true;
-      }
-      if (state === RefreshStatus.Done && !this.refreshing && !this.showComplete) {
-        this.showComplete = true;
-        this.refreshWatcher = setTimeout(() => {
-          this.showComplete = false;
-        }, 1200);
-      }
     })
   }
 
   @Builder
-  IndicatorBar() {
+  RefreshHeaderBuilder() {
     Row() {
-      if (this.showComplete) {
+      if (this.refreshState === 'complete') {
         Text('✓')
           .fontSize(16)
           .fontColor(Color.White)
