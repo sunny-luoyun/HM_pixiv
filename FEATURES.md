@@ -21,7 +21,7 @@
 
 - **描述**：Pixiv 首页推荐插画和小说，瀑布流布局
 - **页面**：`entry/src/main/ets/pages/home/HomePage.ets`
-- **API**：`entry/src/main/ets/services/PixivService.ets`（`fetchRecommendedIllusts`）
+- **API**：`entry/src/main/ets/services/PixivApiService.ets`（`getDiscoveryIllusts`、`getDiscoveryNovels`）
 - **组件**：`entry/src/main/ets/components/IllustCard.ets`、`entry/src/main/ets/components/NovelCard.ets`、`entry/src/main/ets/components/PullToRefresh.ets`、`entry/src/main/ets/components/ShimmerLoading.ets`
 
 ---
@@ -30,7 +30,7 @@
 
 - **描述**：查看已关注用户的最新投稿，支持插画和小说双 Tab
 - **页面**：`entry/src/main/ets/pages/latest/LatestPage.ets`
-- **API**：`entry/src/main/ets/services/PixivService.ets`（`fetchLatestIllusts`、`fetchLatestNovels`）
+- **API**：`entry/src/main/ets/services/PixivApiService.ets`（`getFollowLatestIllusts`、`getFollowLatestNovels`）
 - **组件**：`entry/src/main/ets/components/SegmentedTabBar.ets`
 
 ---
@@ -39,7 +39,7 @@
 
 - **描述**：按插画/小说/用户多维度搜索，含搜索建议
 - **页面**：`entry/src/main/ets/pages/search/SearchPage.ets`
-- **API**：`entry/src/main/ets/services/PixivService.ets`（`searchIllusts`、`searchNovels`、`searchUsers`）
+- **API**：`entry/src/main/ets/services/PixivApiService.ets`（`searchIllusts`、`searchNovels`、`searchUsers`）
 - **组件**：`entry/src/main/ets/components/SegmentedTabBar.ets`
 
 ---
@@ -48,7 +48,7 @@
 
 - **描述**：查看插画大图、标题、作者、标签；浏览/发表评论
 - **页面**：`entry/src/main/ets/pages/illust/IllustDetailPage.ets`、`entry/src/main/ets/pages/illust/IllustCommentsPage.ets`
-- **API**：`entry/src/main/ets/services/PixivService.ets`（`fetchIllustDetail`、`fetchIllustComments`）
+- **API**：`entry/src/main/ets/services/PixivApiService.ets`（`getIllustDetail`、`getIllustComments`）
 
 ---
 
@@ -56,8 +56,9 @@
 
 - **描述**：全功能小说阅读（书签、自动阅读）、小说系列导航、评论
 - **页面**：`entry/src/main/ets/pages/novel/NovelReaderPage.ets`、`entry/src/main/ets/pages/novel/NovelSeriesPage.ets`、`entry/src/main/ets/pages/novel/NovelCommentsPage.ets`
-- **API**：`entry/src/main/ets/services/PixivService.ets`（`fetchNovelDetail`、`fetchNovelText`、`fetchNovelSeries`、`fetchNovelComments`）
-- **缓存**：`entry/src/main/ets/database/PixivCacheDB.ets`
+- **API**：`entry/src/main/ets/services/PixivApiService.ets`（`fetchNovelDetail`、`fetchNovelText`、`fetchSeriesNovels`、`getNovelComments`）
+- **缓存**：`entry/src/main/ets/database/PixivCacheDB.ets`、`entry/src/main/ets/database/NovelCacheDao.ets`
+- **翻译**：`entry/src/main/ets/services/TranslationController.ets`
 - **回调**：`EntryAbility`（后台保存阅读进度）
 
 ---
@@ -216,4 +217,44 @@
 
 ---
 
-> 最后更新：F01-F21，基于 commit 1f87054 重构后基线
+> 最后更新：F01-F21 + 架构重构，基于 2025-06-21 重构后基线
+
+---
+
+## 架构重构记录（2025-06-21）
+
+### 服务层拆分
+- **PixivApiService**：`entry/src/main/ets/services/PixivApiService.ets` — API 请求队列、CSRF、所有 Web API 方法
+- **ImageCacheService**：`entry/src/main/ets/services/ImageCacheService.ets` — 图片下载/缓存/管理
+- **BookmarkService**：`entry/src/main/ets/services/BookmarkService.ets` — 收藏/取消收藏
+- **TranslationController**：`entry/src/main/ets/services/TranslationController.ets` — 翻译业务逻辑
+
+### 数据库拆分
+- **NovelCacheDao**：`entry/src/main/ets/database/NovelCacheDao.ets` — 小说 CRUD、阅读进度
+- **BlockListDao**：`entry/src/main/ets/database/BlockListDao.ets` — 屏蔽作者/系列管理
+- **TranslationCacheDao**：`entry/src/main/ets/database/TranslationCacheDao.ets` — 翻译缓存
+- **DatabaseCore**：`entry/src/main/ets/database/DatabaseCore.ets` — 共享数据库连接与 schema
+
+### 模型拆分
+- **CommonModels**：`entry/src/main/ets/models/CommonModels.ets` — 通用类型（CacheStatus、PixivTag 等）
+- **IllustModels**：`entry/src/main/ets/models/IllustModels.ets` — 插画相关类型
+- **NovelModels**：`entry/src/main/ets/models/NovelModels.ets` — 小说相关类型
+- **UserModels**：`entry/src/main/ets/models/UserModels.ets` — 用户相关类型
+- **CommentModels**：`entry/src/main/ets/models/CommentModels.ets` — 评论相关类型
+- **PixivModels**（Facade）：`entry/src/main/ets/models/PixivModels.ets` — 保留向后兼容的 re-export
+
+### 组件提取
+- **CommentsComponent**：`entry/src/main/ets/components/CommentsComponent.ets` — 通用评论组件（原 IllustCommentsPage + NovelCommentsPage 合并）
+- **ProxySettingsSection**：`entry/src/main/ets/pages/settings/ProxySettingsSection.ets`
+- **TranslationSettingsSection**：`entry/src/main/ets/pages/settings/TranslationSettingsSection.ets`
+- **CacheSettingsSection**：`entry/src/main/ets/pages/settings/CacheSettingsSection.ets`
+
+### 工具函数提取
+- **FormatUtil**：`entry/src/main/ets/common/utils/FormatUtil.ets`
+- **ThemeUtil**：`entry/src/main/ets/common/utils/ThemeUtil.ets`
+- **NovelParser**：`entry/src/main/ets/common/utils/NovelParser.ets`
+
+### 代码清理
+- 删除死代码：`fetchUserName`、`deleteSingleNovelCover`、`getAllImageCacheInfo`
+- 评论页面减少 ~300 行重复代码
+- SettingsPage 从 1092 行降至 ~200 行骨架

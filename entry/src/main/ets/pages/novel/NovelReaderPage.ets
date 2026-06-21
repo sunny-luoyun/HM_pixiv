@@ -5,7 +5,10 @@ import { curves } from '@kit.ArkUI';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { PixivService } from '../../services/PixivService';
 import { getDeepSeekService } from '../../services/DeepSeekService';
+import { TranslationController, PrepareFullTranslationError, PrepareFullTranslationSuccess } from '../../services/TranslationController';
 import preferences from '@ohos.data.preferences';
+import { ReaderColors, getReaderColors } from '../../common/utils/ThemeUtil';
+import { ContentBlock, parsePixivBlocks } from '../../common/utils/NovelParser';
 
 interface ReaderRouterParams {
   novelId: string;
@@ -14,91 +17,6 @@ interface ReaderRouterParams {
   cached: boolean;
   translatedTitle?: string;
   hasTitleTranslation?: boolean;
-}
-
-interface ReaderColors {
-  pageBg: string;
-  headerBg: string;
-  primaryText: string;
-  secondaryText: string;
-  accentText: string;
-  divider: string;
-  iconBtnBg: string;
-  iconBtnText: string;
-  chapterColor: string;
-  hrColor: string;
-  translateBtnText: string;
-  translatedTextColor: string;
-  translationProgressBg: string;
-  translationProgressFill: string;
-  dangerText: string;
-  menuBg: string;
-  menuItemActive: string;
-}
-
-function getReaderColors(isDark: boolean): ReaderColors {
-  return {
-    pageBg:        isDark ? '#0D0D0D' : '#F9F7F2',
-    headerBg:      isDark ? '#141414' : '#FFFFFF',
-    primaryText:   isDark ? '#E6E6E6' : '#1A1A1A',
-    secondaryText: isDark ? '#888888' : '#666666',
-    accentText:    isDark ? '#0A84FF' : '#007DFF',
-    divider:       isDark ? '#2A2A2A' : '#E5E5E5',
-    iconBtnBg:     isDark ? '#2A2A2A' : '#F0F0F0',
-    iconBtnText:   isDark ? '#CCCCCC' : '#444444',
-    chapterColor:  isDark ? '#AADDFF' : '#0055AA',
-    hrColor:       isDark ? '#333333' : '#DDDDDD',
-    translateBtnText: '#007DFF',
-    translatedTextColor: isDark ? '#CCE5FF' : '#0055AA',
-    translationProgressBg: isDark ? '#333333' : '#E5E5E5',
-    translationProgressFill: '#007DFF',
-    dangerText: '#FF4D4F',
-    menuBg: isDark ? '#CC1C1C1E' : '#E8F2F2F7',
-    menuItemActive: isDark ? '#3A3A3C' : '#DDDDDD'
-  };
-}
-
-type BlockType = 'paragraph' | 'chapter' | 'hr' | 'blank';
-
-interface ContentBlock {
-  type: BlockType;
-  text: string;
-  bold?: boolean;
-  italic?: boolean;
-}
-
-function parsePixivBlocks(raw: string): ContentBlock[] {
-  if (!raw) return [];
-  const blocks: ContentBlock[] = [];
-  const lines = raw.split('\n');
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) {
-      blocks.push({ type: 'blank', text: '', bold: false, italic: false });
-      continue;
-    }
-    if (trimmed === '[newpage]') {
-      blocks.push({ type: 'hr', text: '', bold: false, italic: false });
-      continue;
-    }
-    const chapterMatch = trimmed.match(/^\[chapter:(.*?)\]$/);
-    if (chapterMatch) {
-      blocks.push({ type: 'chapter', text: chapterMatch[1], bold: false, italic: false });
-      continue;
-    }
-    let text = trimmed
-      .replace(/\[\[rb:(.*?)>(.*?)\]\]/g, '$1')
-      .replace(/\[b\]([\s\S]*?)\[\/b\]/g, '$1')
-      .replace(/\[i\]([\s\S]*?)\[\/i\]/g, '$1')
-      .replace(/\[jump:(.*?)\]/g, '')
-      .replace(/\[[^\]]*\]/g, '');
-    if (!text.trim()) continue;
-    const hasBold = /\[b\]/.test(line);
-    const hasItalic = /\[i\]/.test(line);
-    blocks.push({ type: 'paragraph', text: text, bold: hasBold, italic: hasItalic });
-  }
-  return blocks;
 }
 
 @Entry
@@ -190,12 +108,8 @@ struct NovelReaderPage {
   }
 
   private async fetchCommentCount(): Promise<void> {
-    try {
-      const detail = await PixivService.fetchNovelDetail(this.params!.novelId);
-      this.commentCount = detail.commentCount ?? 0;
-    } catch (_) {
-      // 静默失败，评论数保持 0
-    }
+    const result = await TranslationController.fetchNovelDetail(this.params!.novelId);
+    this.commentCount = result.commentCount;
   }
 
   private async loadOfflineContent(novelId: string): Promise<void> {
@@ -295,68 +209,34 @@ struct NovelReaderPage {
   }
 
   private async translateTitle(): Promise<void> {
-    const service = getDeepSeekService();
-
-    if (!service.hasValidKey()) {
-      promptAction.showToast({ message: '请先在设置中填入 DeepSeek API 密钥' });
-      return;
-    }
-
     this.isTranslating = true;
-
-    const result = await service.translateText(this.novelTitle, true);
-
-    if (result.success && result.translatedText) {
-      this.translatedTitle = result.translatedText;
-
-      if (this.params?.novelId) {
-        await pixivCacheDB.saveTitleTranslation(this.params.novelId, result.translatedText);
-      }
-
+    const result = await TranslationController.translateTitle(
+      this.params!.novelId, this.novelTitle
+    );
+    if (result.success && result.translatedTitle) {
+      this.translatedTitle = result.translatedTitle;
       promptAction.showToast({ message: '标题翻译完成' });
     } else {
       promptAction.showToast({ message: result.error || '翻译失败' });
     }
-
     this.isTranslating = false;
   }
 
   private async translateFullText(): Promise<void> {
-    const service = getDeepSeekService();
-
-    if (!service.hasValidKey()) {
-      promptAction.showToast({ message: '请先在设置中填入 DeepSeek API 密钥' });
-      return;
-    }
-
     const novelId = this.params?.novelId;
     if (!novelId) return;
 
-    const ctx = getContext(this) as common.UIAbilityContext;
-    await pixivCacheDB.init(ctx);
-    const originalText = await pixivCacheDB.getFullText(novelId);
-
-    if (!originalText) {
-      promptAction.showToast({ message: '找不到原文内容' });
+    const prep = await TranslationController.prepareFullTranslation(novelId);
+    const prepErr = prep as PrepareFullTranslationError;
+    if (prepErr.error) {
+      promptAction.showToast({ message: prepErr.error });
       return;
     }
-
-    await service.initTokenizer(ctx);
-    const inputTokens = service.estimateTokens(originalText);
-    const estimatedMs = service.estimateTime(inputTokens);
-    const totalSec = Math.round(estimatedMs / 1000);
-    const min = Math.floor(totalSec / 60);
-    const sec = totalSec % 60;
-    const fmtTime = min > 0
-      ? (sec > 0 ? `约 ${min} 分 ${sec} 秒` : `约 ${min} 分`)
-      : `约 ${sec} 秒`;
-    const estimatedCostYuan = service.estimateCost(inputTokens);
-    const ratio = service.getAdaptiveRatio();
-    const count = service.getRatioCount();
+    const prepOk = prep as PrepareFullTranslationSuccess;
 
     promptAction.showDialog({
       title: '确认翻译全文',
-      message: `预计翻译 ${originalText.length} 字符 / ${inputTokens} tokens\n预计耗时 ${fmtTime}\n费用约 ¥${estimatedCostYuan.toFixed(4)}\n输出/输入比 ${ratio.toFixed(3)}（已校准 ${count} 次）\n是否继续？`,
+      message: prepOk.estimateInfo,
       buttons: [
         { text: '取消', color: '#666666' },
         { text: '开始翻译', color: '#007DFF' }
@@ -364,7 +244,7 @@ struct NovelReaderPage {
     }).then((data) => {
       if (data.index === 1) {
         this.dismissFloatingMenu();
-        this.performFullTranslation(novelId, originalText);
+        this.performFullTranslation(novelId, prepOk.originalText);
       }
     });
   }
@@ -374,12 +254,8 @@ struct NovelReaderPage {
     this.showTranslation = true;
     this.translationProgress = 0;
 
-    await pixivCacheDB.updateTranslationProgress(novelId, 0, 'in_progress');
-
-    const service = getDeepSeekService();
-
-    const result = await service.translateLongText(
-      originalText,
+    const result = await TranslationController.performFullTranslation(
+      novelId, originalText,
       (current, total) => {
         this.translationProgress = Math.floor((current / total) * 100);
       }
@@ -389,7 +265,6 @@ struct NovelReaderPage {
       this.isTranslating = false;
       this.showTranslation = false;
       this.translationProgress = 0;
-      await pixivCacheDB.updateTranslationProgress(novelId, 0, 'none');
       promptAction.showDialog({
         title: '翻译失败',
         message: result.error || '网络请求失败，请稍后重试',
@@ -405,14 +280,9 @@ struct NovelReaderPage {
       return;
     }
 
-    const translatedText = result.translatedText ?? originalText;
-    const newBlocks = parsePixivBlocks(translatedText);
-    this.translatedBlocks = newBlocks;
+    this.translatedBlocks = result.translatedBlocks!;
     this.showOriginal = false;
-    this.showTranslation = true;
-    this.renderBlocks = newBlocks;
-
-    await pixivCacheDB.saveFullTextTranslation(novelId, translatedText);
+    this.renderBlocks = this.translatedBlocks;
 
     this.isTranslating = false;
     promptAction.showToast({ message: '全文翻译完成' });

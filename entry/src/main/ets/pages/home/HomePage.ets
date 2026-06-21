@@ -11,6 +11,8 @@ import common from '@ohos.app.ability.common';
 const PAGE_SIZE = 30;
 const MAX_EMPTY_RETRIES = 3;
 
+
+
 @Component
 export struct HomePage {
   @Consume('isLoggedIn') @Watch('onLoginStateChange') isLoggedIn: boolean;
@@ -240,6 +242,29 @@ export struct HomePage {
     .justifyContent(FlexAlign.Center)
   }
 
+  @Builder
+  EndOfListRow(onReset: () => void) {
+    Column() {
+      Text('- 已显示全部作品 -')
+        .fontSize(12)
+        .fontColor($r('app.color.text_secondary'))
+        .width('100%')
+        .textAlign(TextAlign.Center)
+      Button('刷新推荐')
+        .fontSize(13)
+        .fontColor(Color.White)
+        .backgroundColor($r('app.color.tab_selected'))
+        .borderRadius(18)
+        .height(36)
+        .padding({ left: 20, right: 20 })
+        .margin({ top: 12 })
+        .onClick(() => { onReset(); })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Center)
+    .margin({ top: 8, bottom: 24 })
+  }
+
   handleHeaderScroll(yOffset: number) {
     const delta = yOffset - this.lastScrollY;
     this.lastScrollY = yOffset;
@@ -313,27 +338,7 @@ export struct HomePage {
                   LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
                 }
                 if (!this.isLoadingMoreIllust && !this.hasMoreIllust && this.illustWorks.length > 0) {
-                  Column() {
-                    Text('- 已显示全部作品 -')
-                      .fontSize(12)
-                      .fontColor($r('app.color.text_secondary'))
-                      .width('100%')
-                      .textAlign(TextAlign.Center)
-                    Button('刷新推荐')
-                      .fontSize(13)
-                      .fontColor(Color.White)
-                      .backgroundColor($r('app.color.tab_selected'))
-                      .borderRadius(18)
-                      .height(36)
-                      .padding({ left: 20, right: 20 })
-                      .margin({ top: 12 })
-                      .onClick(() => {
-                        this.loadIllusts();
-                      })
-                  }
-                  .width('100%')
-                  .alignItems(HorizontalAlign.Center)
-                  .margin({ top: 8, bottom: 24 })
+                  this.EndOfListRow(() => { this.loadIllusts(); })
                 }
               }
               .width('100%')
@@ -384,27 +389,7 @@ export struct HomePage {
                   LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
                 }
                 if (!this.isLoadingMoreNovel && !this.hasMoreNovel && this.novelWorks.length > 0) {
-                  Column() {
-                    Text('- 已显示全部作品 -')
-                      .fontSize(12)
-                      .fontColor($r('app.color.text_secondary'))
-                      .width('100%')
-                      .textAlign(TextAlign.Center)
-                    Button('刷新推荐')
-                      .fontSize(13)
-                      .fontColor(Color.White)
-                      .backgroundColor($r('app.color.tab_selected'))
-                      .borderRadius(18)
-                      .height(36)
-                      .padding({ left: 20, right: 20 })
-                      .margin({ top: 12 })
-                      .onClick(() => {
-                        this.loadNovels();
-                      })
-                  }
-                  .width('100%')
-                  .alignItems(HorizontalAlign.Center)
-                  .margin({ top: 8, bottom: 24 })
+                  this.EndOfListRow(() => { this.loadNovels(); })
                 }
               }
               .width('100%')
