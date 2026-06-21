@@ -1,11 +1,6 @@
 import { describe, it, expect } from '@ohos/hypium';
-import {
-  PixivService,
-  sanitizeNovelBookmark,
-  NovelBookmark,
-  BookmarkData,
-  IllustDetailUrls
-} from '../main/ets/services/PixivService';
+import { PixivService, sanitizeNovelBookmark } from '../main/ets/services/PixivService';
+import { NovelBookmark, BookmarkData, IllustDetailUrls } from '../main/ets/models/PixivModels';
 
 export default function pixivServiceTest() {
   describe('PixivService', () => {

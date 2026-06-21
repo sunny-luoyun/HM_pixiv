@@ -157,6 +157,35 @@
 
 ---
 
+## F19 - API URL 常量集中管理
+
+- **描述**：将散落在各服务的 Pixiv/DeepSeek API 端点 URL 集中到统一配置类，消除重复硬编码
+- **配置**：`entry/src/main/ets/common/constants/ApiConfig.ets`
+- **涉及文件**：`PixivService.ets`、`AppApiService.ets`、`CookieManager.ets`、`DeepSeekService.ets`、`AppState.ets`、`LoginPage.ets`、`SettingsPage.ets`
+- **测试**：`entry/src/test/ApiConfig.test.ets`
+
+---
+
+## F20 - 公共三态 UI 组件
+
+- **描述**：提取 Loading、Error、Empty 三种通用状态为独立可复用组件，消除页面间重复样板代码
+- **组件**：
+  - `entry/src/main/ets/components/LoadingView.ets`（加载进度 + 可选提示文字）
+  - `entry/src/main/ets/components/ErrorView.ets`（错误信息 + 重试按钮回调）
+  - `entry/src/main/ets/components/EmptyView.ets`（空状态提示，默认"暂无数据"）
+- **测试**：`entry/src/test/LoadingView.test.ets`、`entry/src/test/ErrorView.test.ets`、`entry/src/test/EmptyView.test.ets`
+
+---
+
+## F21 - 类型定义统一收敛
+
+- **描述**：将 PixivService（55+ 类型）和 AppApiService（15+ 类型）中分散的接口定义迁移至 `PixivModels.ets`，统一数据模型层
+- **模型**：`entry/src/main/ets/models/PixivModels.ets`（从 188 行扩展至 786 行）
+- **服务精简**：`PixivService.ets`（从 1,348 行缩减至 780 行，-42%）、`AppApiService.ets`（从 436 行缩减至 280 行，-36%）
+- **涉及文件**：16 个页面/组件/测试文件的 import 路径更新
+
+---
+
 ## 手工验证清单
 
 > 每次修改代码后，请逐项检查以下功能是否正常：
@@ -181,7 +210,10 @@
 | 16 | 深色模式 | 系统切换深色模式 → App 跟随切换 | ☐ |
 | 17 | 下拉刷新 | 在列表页下拉 → 内容刷新且旧内容不闪烁 | ☐ |
 | 18 | 收藏按钮 | 插画详情/小说详情 → 点击收藏/取消收藏 → 状态正确切换 | ☐ |
+| 19 | API 配置 | 各页面网络请求正常（涉及 URL 的服务均使用 ApiConfig） | ☐ |
+| 20 | 三态组件 | Loading/Error/Empty 三种状态展示正常 | ☐ |
+| 21 | 类型导入 | 所有页面编译无类型错误（类型集中在 PixivModels） | ☐ |
 
 ---
 
-> 最后更新：F01-F18 全部基于当前代码基线（commit 1f87054）
+> 最后更新：F01-F21，基于 commit 1f87054 重构后基线

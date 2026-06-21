@@ -6,7 +6,8 @@ import {
   CacheStatus,
   PixivSeriesResult
 } from '../../models/PixivModels';
-import { PixivService, NovelBookmark, NovelSeries } from '../../services/PixivService';
+import { PixivService } from '../../services/PixivService';
+import { NovelBookmark, NovelSeries } from '../../models/PixivModels';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { NovelCard } from '../../components/NovelCard';
 

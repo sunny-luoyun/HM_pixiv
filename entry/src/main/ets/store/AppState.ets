@@ -1,6 +1,8 @@
 import { CookieManager } from '../services/CookieManager';
-import { PixivService, UserInfoResponse } from '../services/PixivService';
+import { PixivService } from '../services/PixivService';
+import { UserInfoResponse } from '../models/PixivModels';
 import { ProxyService } from '../services/ProxyService';
+import { ApiConfig } from '../common/constants/ApiConfig';
 import http from '@ohos.net.http';
 import fileIo from '@ohos.file.fs';
 
@@ -75,13 +77,13 @@ export class AppState {
       console.warn('用户ID为空，无法验证');
       return false;
     }
-    const url = `https://www.pixiv.net/users/${this.userId}`;
+    const url = `${ApiConfig.PIXIV_WEB}/users/${this.userId}`;
     const cookieStr = await CookieManager.getFullCookie();
     const httpRequest = http.createHttp();
     try {
       const header: Record<string, string> = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Referer': 'https://www.pixiv.net/',
+        'User-Agent': ApiConfig.USER_AGENT,
+        'Referer': ApiConfig.REFERER,
       };
       if (cookieStr) header['Cookie'] = cookieStr;
 

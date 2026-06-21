@@ -1,5 +1,6 @@
 import router from '@ohos.router';
-import { PixivService, UserSearchResult, FollowingUserRaw } from '../../services/PixivService';
+import { PixivService } from '../../services/PixivService';
+import { UserSearchResult, FollowingUserRaw } from '../../models/PixivModels';
 import { UserCard } from '../../components/UserCard';
 import { appState } from '../../store/AppState';
 

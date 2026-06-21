@@ -1,7 +1,8 @@
 import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
 import { AppApiService } from '../../services/AppApiService';
-import { PixivService, AjaxComment } from '../../services/PixivService';
+import { PixivService } from '../../services/PixivService';
+import { AjaxComment } from '../../models/PixivModels';
 import { AppState } from '../../store/AppState';
 
 @Entry

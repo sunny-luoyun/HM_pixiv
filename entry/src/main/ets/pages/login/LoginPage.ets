@@ -1,6 +1,7 @@
 import webview from '@ohos.web.webview';
 import router from '@ohos.router';
 import { LoginPageViewModel } from './LoginPageViewModel';
+import { ApiConfig } from '../../common/constants/ApiConfig';
 
 @Entry
 @Component
@@ -8,7 +9,7 @@ struct LoginPage {
   controller: webview.WebviewController = new webview.WebviewController();
   private viewModel: LoginPageViewModel = new LoginPageViewModel();
   private isHandled: boolean = false;
-  private loginUrl: string = 'https://accounts.pixiv.net/login';
+  private loginUrl: string = ApiConfig.PIXIV_LOGIN;
 
   pageTransition() {
     PageTransitionEnter({ duration: 300, curve: Curve.Friction })

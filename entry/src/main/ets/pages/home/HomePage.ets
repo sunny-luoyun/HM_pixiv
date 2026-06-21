@@ -1,5 +1,6 @@
 import { curves } from '@kit.ArkUI';
-import { PixivService, IllustBookmark, NovelBookmark } from '../../services/PixivService';
+import { PixivService } from '../../services/PixivService';
+import { IllustBookmark, NovelBookmark } from '../../models/PixivModels';
 import { NovelCard } from '../../components/NovelCard';
 import { IllustCard } from '../../components/IllustCard';
 import { PullToRefresh } from '../../components/PullToRefresh';

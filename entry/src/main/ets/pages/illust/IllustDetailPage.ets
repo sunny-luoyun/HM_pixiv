@@ -3,7 +3,8 @@ import abilityAccessCtrl, { Permissions } from '@ohos.abilityAccessCtrl';
 import promptAction from '@ohos.promptAction';
 import { common } from '@kit.AbilityKit';
 import { curves, display } from '@kit.ArkUI';
-import { PixivService, IllustDetailBody } from '../../services/PixivService';
+import { PixivService } from '../../services/PixivService';
+import { IllustDetailBody } from '../../models/PixivModels';
 
 interface ImageRenderSize {
   width: number;

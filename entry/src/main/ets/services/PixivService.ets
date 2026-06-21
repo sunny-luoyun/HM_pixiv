@@ -1,244 +1,31 @@
-// entry/src/main/ets/services/PixivService.ets
 import http from '@ohos.net.http';
 import fileIo from '@ohos.file.fs';
 import common from '@ohos.app.ability.common';
 import { CookieManager } from './CookieManager';
-import { PixivNovel, CacheStatus, PixivTag, PixivSeries, PixivSeriesResult, parsePixivNovelFromRaw, RawPixivNovelItem } from '../models/PixivModels';
+import {
+  PixivNovel, CacheStatus, PixivTag, PixivSeries, PixivSeriesResult,
+  parsePixivNovelFromRaw, RawPixivNovelItem,
+  NovelBookmark, BookmarkData, IllustBookmark, NovelSeries,
+  UserInfoBody, UserInfoResponse,
+  IllustDetailBody, IllustDetailResponse,
+  AjaxComment, AjaxCommentUser, AjaxCommentsBody, AjaxCommentsResponse,
+  IllustBookmarkResponseBody, IllustBookmarkResponse,
+  NovelBookmarkResponseBody, NovelBookmarkResponse,
+  FollowLatestIllustResponse, FollowLatestNovelResponse,
+  DiscoveryIllustsResponse, DiscoveryNovelsResponse,
+  SearchIllustData, SearchIllustBody, SearchIllustResponse,
+  SearchNovelData, SearchNovelBody, SearchNovelResponse,
+  UserSearchResult, SearchUserPage, SearchUserBody, SearchUserResponse,
+  FollowingUserRaw, FollowingUserBody, FollowingUserResponse,
+  ProfileIllust, ProfileIllustsBody, ProfileIllustsResponse,
+  ProfileNovel, ProfileNovelsBody, ProfileNovelsResponse,
+  ProfileAllBody, ProfileAllResponse,
+} from '../models/PixivModels';
+import { ApiConfig } from '../common/constants/ApiConfig';
 import photoAccessHelper from '@ohos.file.photoAccessHelper';
 import { Context } from '@kit.AbilityKit';
 import { ProxyService } from './ProxyService';
 import image from '@ohos.multimedia.image';
-
-export interface UserInfoBody {
-  userId?: string;
-  name: string;
-  image?: string;
-  imageBig?: string;
-}
-
-interface RequestHeaders {
-  'Cookie': string;
-  'User-Agent': string;
-  'Referer': string;
-  'Accept': string;
-  'X-Csrf-Token'?: string;
-}
-
-export interface IllustDetailUrls {
-  mini: string;
-  thumb: string;
-  small: string;
-  regular: string;
-  original: string;
-}
-
-export interface IllustTagTranslation {
-  en?: string;
-  zh?: string;
-}
-
-export interface IllustTag {
-  tag: string;
-  translation?: IllustTagTranslation;
-}
-
-export interface IllustDetailTags {
-  tags: IllustTag[];
-}
-
-export interface IllustDetailBody {
-  illustId: string;
-  illustTitle: string;
-  userId: string;
-  userName: string;
-  userAccount: string;
-  description: string;
-  urls: IllustDetailUrls;
-  tags: IllustDetailTags;
-  width: number;
-  height: number;
-  pageCount: number;
-  bookmarkCount: number;
-  likeCount: number;
-  viewCount: number;
-  commentCount: number;
-  createDate: string;
-  uploadDate: string;
-  profileImageUrl: string;
-  bookmarkData?: BookmarkData | null;
-}
-
-export interface AjaxCommentUser {
-  id: string;
-  name: string;
-  account: string;
-  img: string;
-}
-
-export interface AjaxComment {
-  id: string;
-  comment: string;
-  date: string;
-  userId: string;
-  userName: string;
-  userAccount: string;
-  img: string;
-  hasReplies: boolean;
-  stamp?: object;
-  replies?: AjaxComment[];
-}
-
-export interface AjaxCommentsBody {
-  total: number;
-  comments: AjaxComment[];
-}
-
-export interface AjaxCommentsResponse {
-  error: boolean;
-  message?: string;
-  body: AjaxCommentsBody;
-}
-
-export interface IllustDetailResponse {
-  error: boolean;
-  message?: string;
-  body: IllustDetailBody;
-}
-
-export interface UserInfoResponse {
-  error: boolean;
-  body?: UserInfoBody;
-}
-
-export interface BookmarkData {
-  id: string;
-  private: boolean;
-  userId: string;
-}
-
-export interface IllustBookmark {
-  id: string;
-  title: string;
-  illustType: number;
-  url: string;
-  tags: string[];
-  userId: string;
-  userName: string;
-  width: number;
-  height: number;
-  pageCount: number;
-  bookmarkData: BookmarkData;
-  profileImageUrl: string;
-  createDate: string;
-}
-
-export interface IllustBookmarkResponseBody {
-  works: IllustBookmark[];
-  total: number;
-}
-
-export interface IllustBookmarkResponse {
-  error: boolean;
-  body: IllustBookmarkResponseBody;
-}
-
-export interface NovelSeries {
-  id: number;
-  title: string;
-  order?: number;
-}
-
-export interface NovelBookmark {
-  id: string;
-  title: string;
-  tags: string[];
-  userId: string;
-  userName: string;
-  bookmarkData: BookmarkData | null;
-  profileImageUrl: string;
-  createDate: string;
-  updateDate: string;
-  textCount: number;
-  wordCount: number;
-  characterCount: number;
-  readingTime: number;
-  useWordCount: boolean;
-  url: string;
-  description: string;
-  pageCount: number;
-  width: number;
-  height: number;
-  restrict: number;
-  xRestrict: number;
-  sl: number;
-  isBookmarkable: boolean;
-  isUnlisted: boolean;
-  isMasked: boolean;
-  bookmarkCount: number;
-  commentCount: number;
-  markerCount: number;
-  seriesId?: number;
-  seriesTitle?: string;
-  seriesContentOrder?: number;
-  seriesOrder?: number;
-  series?: NovelSeries;
-  originalWork: boolean;
-  aiType: number;
-  titleTranslated?: string;
-  hasTitleTranslation?: boolean;
-}
-
-export function sanitizeNovelBookmark(item: NovelBookmark): NovelBookmark {
-  return {
-    id: item.id,
-    title: item.title ?? '',
-    tags: item.tags ?? [],
-    userId: item.userId,
-    userName: item.userName ?? '',
-    bookmarkData: item.bookmarkData,
-    profileImageUrl: item.profileImageUrl ?? '',
-    createDate: item.createDate ?? '',
-    updateDate: item.updateDate ?? '',
-    textCount: item.textCount,
-    wordCount: item.wordCount,
-    characterCount: item.characterCount,
-    readingTime: item.readingTime,
-    useWordCount: item.useWordCount,
-    url: item.url ?? '',
-    description: item.description ?? '',
-    pageCount: item.pageCount,
-    width: item.width,
-    height: item.height,
-    restrict: item.restrict,
-    xRestrict: item.xRestrict,
-    sl: item.sl,
-    isBookmarkable: item.isBookmarkable,
-    isUnlisted: item.isUnlisted,
-    isMasked: item.isMasked,
-    bookmarkCount: item.bookmarkCount,
-    commentCount: item.commentCount,
-    markerCount: item.markerCount,
-    seriesId: item.seriesId,
-    seriesTitle: item.seriesTitle ?? undefined,
-    seriesContentOrder: item.seriesContentOrder,
-    seriesOrder: item.seriesOrder,
-    series: item.series,
-    originalWork: item.originalWork,
-    aiType: item.aiType,
-    titleTranslated: item.titleTranslated,
-    hasTitleTranslation: item.hasTitleTranslation,
-  };
-}
-
-export interface NovelBookmarkResponseBody {
-  works: NovelBookmark[];
-  total: number;
-}
-
-export interface NovelBookmarkResponse {
-  error: boolean;
-  body: NovelBookmarkResponseBody;
-}
 
 interface NovelAjaxResponse<T> {
   error: boolean;
@@ -286,214 +73,6 @@ interface DownloadTask {
   groupId?: string;
 }
 
-interface FollowLatestIllustThumbnails {
-  illust: IllustBookmark[];
-}
-
-interface FollowLatestIllustBody {
-  thumbnails: FollowLatestIllustThumbnails;
-  total: number;
-  page: number;
-  pages: number;
-}
-
-export interface FollowLatestIllustResponse {
-  error: boolean;
-  body: FollowLatestIllustBody;
-}
-
-interface FollowLatestNovelThumbnails {
-  novel: NovelBookmark[];
-}
-
-interface FollowLatestNovelBody {
-  thumbnails: FollowLatestNovelThumbnails;
-  total: number;
-  page: number;
-  pages: number;
-}
-
-export interface FollowLatestNovelResponse {
-  error: boolean;
-  body: FollowLatestNovelBody;
-}
-
-// ---- Discovery 发现页 ----
-
-interface DiscoveryThumbnailsIllust {
-  illust: IllustBookmark[];
-}
-
-interface DiscoveryIllustsBody {
-  thumbnails: DiscoveryThumbnailsIllust;
-}
-
-export interface DiscoveryIllustsResponse {
-  error: boolean;
-  body: DiscoveryIllustsBody;
-}
-
-interface DiscoveryThumbnailsNovel {
-  novel: NovelBookmark[];
-}
-
-interface DiscoveryNovelsBody {
-  thumbnails: DiscoveryThumbnailsNovel;
-}
-
-export interface DiscoveryNovelsResponse {
-  error: boolean;
-  body: DiscoveryNovelsBody;
-}
-
-// ---- Search ----
-
-export interface SearchIllustData {
-  data: IllustBookmark[];
-  total: number;
-}
-
-export interface SearchIllustBody {
-  illust: SearchIllustData;
-}
-
-export interface SearchIllustResponse {
-  error: boolean;
-  body: SearchIllustBody;
-}
-
-export interface SearchNovelData {
-  data: NovelBookmark[];
-  total: number;
-}
-
-export interface SearchNovelBody {
-  novel: SearchNovelData;
-}
-
-export interface SearchNovelResponse {
-  error: boolean;
-  body: SearchNovelBody;
-}
-
-export interface UserSearchResult {
-  userId: string;
-  name: string;
-  image: string;
-  imageBig: string;
-  comment: string;
-  premium: boolean;
-  isFollowed: boolean;
-  following: number;
-}
-
-export interface SearchUserPage {
-  userIds: number[];
-  total: number;
-}
-
-export interface SearchUserBody {
-  users: UserSearchResult[];
-  page: SearchUserPage;
-}
-
-export interface SearchUserResponse {
-  error: boolean;
-  body: SearchUserBody;
-}
-
-export interface FollowingUserRaw {
-  userId: string;
-  userName: string;
-  profileImageUrl: string;
-  userComment: string;
-  following: boolean;
-  followed: boolean;
-  isBlocking: boolean;
-  isMypixiv: boolean;
-  acceptRequest: boolean;
-}
-
-export interface FollowingUserBody {
-  total: number;
-  users: FollowingUserRaw[];
-}
-
-export interface FollowingUserResponse {
-  error: boolean;
-  body: FollowingUserBody;
-}
-
-export interface ProfileIllust {
-  id: string;
-  title: string;
-  illustType: number;
-  xRestrict: number;
-  url: string;
-  tags: string[];
-  userId: string;
-  userName?: string;
-  width: number;
-  height: number;
-  pageCount: number;
-  isBookmarkable: boolean;
-  bookmarkData: BookmarkData | null;
-  createDate?: string;
-  profileImageUrl?: string;
-}
-
-export interface ProfileIllustsBody {
-  works: Record<string, ProfileIllust>;
-}
-
-export interface ProfileIllustsResponse {
-  error: boolean;
-  body: ProfileIllustsBody;
-}
-
-export interface ProfileNovel {
-  id: string;
-  title: string;
-  tags: string[];
-  userId: string;
-  userName?: string;
-  url: string;
-  description?: string;
-  pageCount: number;
-  textCount?: number;
-  wordCount?: number;
-  readingTime?: number;
-  bookmarkCount?: number;
-  createDate?: string;
-  updateDate?: string;
-  profileImageUrl?: string;
-  seriesId?: number;
-  seriesTitle?: string;
-  seriesContentOrder?: number;
-  seriesOrder?: number;
-  series?: NovelSeries;
-}
-
-export interface ProfileNovelsBody {
-  works?: Record<string, ProfileNovel>;
-}
-
-export interface ProfileNovelsResponse {
-  error: boolean;
-  body: ProfileNovelsBody;
-}
-
-export interface ProfileAllBody {
-  illusts: Record<string, null>;
-  manga: Record<string, null>;
-  novels: Record<string, null>;
-}
-
-export interface ProfileAllResponse {
-  error: boolean;
-  body: ProfileAllBody;
-}
-
 interface SeriesInfoBody {
   id: number;
   title: string;
@@ -539,22 +118,55 @@ interface AddIllustBookmarkBody {
   tags: string[];
 }
 
-interface DeleteIllustBookmarkBody {
-  bookmark_id: string;
-}
-
 interface AddNovelBookmarkBody {
   novel_id: string;
   restrict: number;
 }
 
-interface DeleteNovelBookmarkBody {
-  del: string;
-  book_id: string;
+export function sanitizeNovelBookmark(item: NovelBookmark): NovelBookmark {
+  return {
+    id: item.id,
+    title: item.title ?? '',
+    tags: item.tags ?? [],
+    userId: item.userId,
+    userName: item.userName ?? '',
+    bookmarkData: item.bookmarkData,
+    profileImageUrl: item.profileImageUrl ?? '',
+    createDate: item.createDate ?? '',
+    updateDate: item.updateDate ?? '',
+    textCount: item.textCount,
+    wordCount: item.wordCount,
+    characterCount: item.characterCount,
+    readingTime: item.readingTime,
+    useWordCount: item.useWordCount,
+    url: item.url ?? '',
+    description: item.description ?? '',
+    pageCount: item.pageCount,
+    width: item.width,
+    height: item.height,
+    restrict: item.restrict,
+    xRestrict: item.xRestrict,
+    sl: item.sl,
+    isBookmarkable: item.isBookmarkable,
+    isUnlisted: item.isUnlisted,
+    isMasked: item.isMasked,
+    bookmarkCount: item.bookmarkCount,
+    commentCount: item.commentCount,
+    markerCount: item.markerCount,
+    seriesId: item.seriesId,
+    seriesTitle: item.seriesTitle ?? undefined,
+    seriesContentOrder: item.seriesContentOrder,
+    seriesOrder: item.seriesOrder,
+    series: item.series,
+    originalWork: item.originalWork,
+    aiType: item.aiType,
+    titleTranslated: item.titleTranslated,
+    hasTitleTranslation: item.hasTitleTranslation,
+  };
 }
 
 export class PixivService {
-  private static baseUrl = 'https://www.pixiv.net';
+  private static baseUrl = ApiConfig.PIXIV_WEB;
 
   // 下载并发队列（已有）
   private static maxConcurrentDownloads = 3;
@@ -582,8 +194,8 @@ export class PixivService {
       const url = `${PixivService.baseUrl}/`;
       const cookie = await CookieManager.getFullCookie();
       const header: Record<string, string> = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Referer': 'https://www.pixiv.net/',
+        'User-Agent': ApiConfig.USER_AGENT,
+        'Referer': ApiConfig.REFERER,
       };
       if (cookie) header['Cookie'] = cookie;
 
@@ -644,8 +256,8 @@ export class PixivService {
     const cookie = await CookieManager.getFullCookie();
     try {
       const header: Record<string, string> = {
-        'Referer': 'https://www.pixiv.net/',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Referer': ApiConfig.REFERER,
+        'User-Agent': ApiConfig.USER_AGENT,
       };
       if (cookie) header['Cookie'] = cookie;
 
@@ -763,8 +375,8 @@ export class PixivService {
     const url = `${PixivService.baseUrl}${path}`;
 
     const header: Record<string, string> = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      'Referer': 'https://www.pixiv.net/',
+      'User-Agent': ApiConfig.USER_AGENT,
+      'Referer': ApiConfig.REFERER,
       'Accept': 'application/json',
       'Accept-Language': 'zh-CN,zh;q=0.9',
       'Accept-Encoding': 'gzip, deflate',

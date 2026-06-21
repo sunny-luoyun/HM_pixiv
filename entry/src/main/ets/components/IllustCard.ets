@@ -1,7 +1,8 @@
 import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
 import { curves } from '@kit.ArkUI';
-import { PixivService, IllustBookmark } from '../services/PixivService';
+import { PixivService } from '../services/PixivService';
+import { IllustBookmark } from '../models/PixivModels';
 import { ShimmerLoading } from './ShimmerLoading';
 
 @Component

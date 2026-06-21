@@ -1,7 +1,8 @@
 import router from '@ohos.router';
 import { curves } from '@kit.ArkUI';
 import { AppApiService } from '../../services/AppApiService';
-import { PixivService, IllustBookmark, NovelBookmark, BookmarkData, ProfileIllust, ProfileNovel } from '../../services/PixivService';
+import { PixivService } from '../../services/PixivService';
+import { IllustBookmark, NovelBookmark, BookmarkData, ProfileIllust, ProfileNovel } from '../../models/PixivModels';
 import { IllustCard } from '../../components/IllustCard';
 import { NovelCard } from '../../components/NovelCard';
 import { SegmentedTabBar } from '../../components/SegmentedTabBar';

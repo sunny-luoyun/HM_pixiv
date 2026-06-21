@@ -24,9 +24,13 @@
 
 - **每次代码修改完成后，AI 必须自动执行以下命令**：
   ```
-  hvigorw test
+  hvigorw test 2>&1 | grep -E 'ERROR|BUILD|FAIL'
+  hvigorw assembleHap 2>&1 | grep -E 'ERROR|BUILD|FAIL'
   ```
-- **判定标准**：输出必须包含 `BUILD SUCCESSFUL` 且 **0 Error**（grep `Error in` 结果为 0）
+- **判定标准**：
+  - `hvigorw test` 输出必须包含 `BUILD SUCCESSFUL` 且 grep `Error in` 结果为 0
+  - `hvigorw assembleHap` 输出必须包含 `BUILD SUCCESSFUL` 且 grep `ERROR` 结果为 0
+  - **两个命令都必须通过**（`test` 可能因编译目标差异掩盖部分错误）
 - 如有失败，AI 自行修复后重新运行，直到全部通过，**不可将未通过测试的代码交付用户**
 - 如修改涉及 UI 页面，AI 应提醒用户过一遍 `FEATURES.md` 底部对应的手工验证项
 

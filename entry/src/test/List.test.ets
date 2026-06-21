@@ -12,6 +12,10 @@ import cookieStorageTest from './CookieStorage.test';
 import translationStorageTest from './TranslationStorage.test';
 import deepSeekTokenizerTest from './DeepSeekTokenizer.test';
 import pixivCacheDBTest from './PixivCacheDB.test';
+import apiConfigTest from './ApiConfig.test';
+import loadingViewTest from './LoadingView.test';
+import errorViewTest from './ErrorView.test';
+import emptyViewTest from './EmptyView.test';
 import localUnitTest from './LocalUnit.test';
 
 export default function testsuite() {
@@ -30,4 +34,8 @@ export default function testsuite() {
   translationStorageTest();
   deepSeekTokenizerTest();
   pixivCacheDBTest();
+  apiConfigTest();
+  loadingViewTest();
+  errorViewTest();
+  emptyViewTest();
 }

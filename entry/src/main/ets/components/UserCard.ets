@@ -1,6 +1,7 @@
 import router from '@ohos.router';
 import { curves } from '@kit.ArkUI';
-import { PixivService, UserSearchResult } from '../services/PixivService';
+import { PixivService } from '../services/PixivService';
+import { UserSearchResult } from '../models/PixivModels';
 import { ShimmerLoading } from './ShimmerLoading';
 
 @Component

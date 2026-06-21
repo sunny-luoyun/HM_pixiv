@@ -1,104 +1,15 @@
 import http from '@ohos.net.http';
 import { CookieManager } from './CookieManager';
 import { ProxyService } from './ProxyService';
+import { ApiConfig } from '../common/constants/ApiConfig';
+import {
+  IllustCommentsResponse, AppUserIllustsResponse, AppUserNovelsResponse
+} from '../models/PixivModels';
 
 interface ApiResult<T> {
   error: boolean;
   message?: string;
   body?: T;
-}
-
-export interface AppProfileImageUrls {
-  medium: string;
-}
-
-export interface AppIllustUser {
-  id: number;
-  name: string;
-  account: string;
-  profile_image_urls: AppProfileImageUrls;
-}
-
-export interface AppImageUrls {
-  square_medium: string;
-  medium: string;
-  large: string;
-}
-
-export interface AppIllustTag {
-  name: string;
-}
-
-export interface AppIllust {
-  id: number;
-  title: string;
-  type: string;
-  image_urls: AppImageUrls;
-  caption: string;
-  restrict: number;
-  user: AppIllustUser;
-  tags: AppIllustTag[];
-  tools: string[];
-  create_date: string;
-  page_count: number;
-  width: number;
-  height: number;
-  total_view: number;
-  total_bookmarks: number;
-  is_bookmarked: boolean;
-  x_restrict: number;
-  sanity_level: number;
-}
-
-export interface AppUserIllustsResponse {
-  illusts: AppIllust[];
-  next_url: string | null;
-}
-
-export interface AppNovelUser {
-  id: number;
-  name: string;
-  account: string;
-  profile_image_urls: AppProfileImageUrls;
-}
-
-export interface AppNovelSeries {
-  id: number;
-  title: string;
-}
-
-export interface AppNovelImageUrls {
-  square_medium: string;
-  medium: string;
-  large: string;
-}
-
-export interface AppNovel {
-  id: number;
-  title: string;
-  caption: string;
-  restrict: number;
-  x_restrict: number;
-  is_original: boolean;
-  user: AppNovelUser;
-  tags: string[];
-  series: AppNovelSeries | null;
-  create_date: string;
-  upload_date: string;
-  page_count: number;
-  text_count: number;
-  word_count: number;
-  reading_time: number;
-  bookmark_count: number;
-  comment_count: number;
-  is_bookmarked: boolean;
-  url: string;
-  image_urls: AppNovelImageUrls;
-}
-
-export interface AppUserNovelsResponse {
-  novels: AppNovel[];
-  next_url: string | null;
 }
 
 interface PostCommentUser {
@@ -116,32 +27,6 @@ interface PostCommentData {
 
 interface PostCommentResponse {
   comment: PostCommentData;
-}
-
-export interface CommentProfileImageUrls {
-  medium: string;
-}
-
-export interface CommentUser {
-  id: number;
-  name: string;
-  account: string;
-  profile_image_urls: CommentProfileImageUrls;
-}
-
-export interface IllustComment {
-  id: number;
-  comment: string;
-  date: string;
-  user: CommentUser;
-  has_replies: boolean;
-  stamp?: object;
-}
-
-export interface IllustCommentsResponse {
-  total_comments: number;
-  comments: IllustComment[];
-  next_url: string | null;
 }
 
 interface QueueTask {
@@ -210,7 +95,7 @@ interface AddIllustBookmarkWithTagsParams {
 }
 
 export class AppApiService {
-  private static baseUrl = 'https://app-api.pixiv.net';
+  private static baseUrl = ApiConfig.PIXIV_APP;
   private static queue: Array<QueueTask> = [];
   private static isProcessing = false;
   private static lastRequestTime = 0;
@@ -262,8 +147,8 @@ export class AppApiService {
       try {
         const url = `${AppApiService.baseUrl}${path}`;
         const header: Record<string, string> = {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Referer': 'https://www.pixiv.net/',
+          'User-Agent': ApiConfig.USER_AGENT,
+          'Referer': ApiConfig.REFERER,
           'Accept': 'application/json',
           'Accept-Language': 'zh-CN,zh;q=0.9',
         };

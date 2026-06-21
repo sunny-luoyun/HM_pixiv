@@ -3,6 +3,7 @@ import { BusinessError } from '@ohos.base';
 import common from '@ohos.app.ability.common';
 import preferences from '@ohos.data.preferences';
 import { DeepSeekTokenizer, getDeepSeekTokenizer } from './DeepSeekTokenizer';
+import { ApiConfig } from '../common/constants/ApiConfig';
 
 const PRICE_INPUT = 1.0;
 const PRICE_OUTPUT = 2.0;
@@ -120,7 +121,7 @@ class AdaptiveConcurrencyController {
 
 export class DeepSeekService {
   private apiKey: string = '';
-  private baseUrl: string = 'https://api.deepseek.com/chat/completions';
+  private baseUrl: string = ApiConfig.DEEPSEEK_API;
   private model: string = 'deepseek-v4-flash';
 
   private totalTranslatedChars: number = 0;
@@ -262,7 +263,7 @@ export class DeepSeekService {
     try {
       const httpRequest = http.createHttp();
       const response = await httpRequest.request(
-        'https://api.deepseek.com/user/balance',
+        ApiConfig.DEEPSEEK_BALANCE,
         {
           method: http.RequestMethod.GET,
           header: {

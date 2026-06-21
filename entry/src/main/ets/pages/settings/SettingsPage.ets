@@ -5,6 +5,7 @@ import fileIo from '@ohos.file.fs';
 import util from '@ohos.util';
 import { AppState, appState } from '../../store/AppState';
 import common from '@ohos.app.ability.common';
+import { ApiConfig } from '../../common/constants/ApiConfig';
 import { PixivService } from '../../services/PixivService';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { TranslationStorage } from '../../common/utils/TranslationStorage';
@@ -259,7 +260,7 @@ export struct SettingsPage {
         const httpRequest = http.createHttp();
         try {
           this.proxyTestMessage = `正在测试 (第${attempt}次)...`;
-          const resp = await httpRequest.request('https://www.pixiv.net/', {
+          const resp = await httpRequest.request(ApiConfig.PIXIV_WEB + '/', {
             method: http.RequestMethod.GET,
             connectTimeout: 15000,
             readTimeout: 15000,

@@ -1,10 +1,11 @@
 import webview from '@ohos.web.webview';
 import { CookieStorage } from '../common/utils/CookieStorage';
+import { ApiConfig } from '../common/constants/ApiConfig';
 
 export class CookieManager {
   private static readonly DOMAINS = [
-    'https://accounts.pixiv.net',
-    'https://www.pixiv.net'
+    ApiConfig.PIXIV_ACCOUNTS,
+    ApiConfig.PIXIV_WEB
   ];
 
   static async collectLoginCookies(): Promise<string> {
