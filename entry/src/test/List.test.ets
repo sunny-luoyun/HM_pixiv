@@ -18,6 +18,7 @@ import errorViewTest from './ErrorView.test';
 import emptyViewTest from './EmptyView.test';
 import indexPageTest from './IndexPage.test';
 import localUnitTest from './LocalUnit.test';
+import statusBarThemeTest from './StatusBarTheme.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -40,4 +41,5 @@ export default function testsuite() {
   errorViewTest();
   emptyViewTest();
   indexPageTest();
+  statusBarThemeTest();
 }

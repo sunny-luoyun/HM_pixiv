@@ -42,14 +42,24 @@ export default class EntryAbility extends UIAbility {
     // 监听配置变化（包括颜色模式）
     globalThis.isDarkMode = newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
     AppStorage.SetOrCreate('isDarkMode', globalThis.isDarkMode);
+
+    // 颜色模式切换时同步更新状态栏内容颜色
+    const contentColor = globalThis.isDarkMode ? '#FFFFFF' : '#000000';
+    window.getLastWindow(this.context).then((w: window.Window) => {
+      w.setWindowSystemBarProperties({
+        statusBarContentColor: contentColor,
+        navigationBarContentColor: contentColor,
+      });
+    });
   }
 
   onWindowStageCreate(windowStage: window.WindowStage): void {
     // 沉浸式窗口设置：透明系统栏，内容区域由系统自动避让状态栏
+    const contentColor = globalThis.isDarkMode ? '#FFFFFF' : '#000000';
     windowStage.getMainWindow().then((mainWindow: window.Window) => {
       mainWindow.setWindowSystemBarProperties({
-        statusBarContentColor: '#FFFFFF',
-        navigationBarContentColor: '#FFFFFF',
+        statusBarContentColor: contentColor,
+        navigationBarContentColor: contentColor,
       });
       console.info('✅ 沉浸式系统栏已启用');
     });

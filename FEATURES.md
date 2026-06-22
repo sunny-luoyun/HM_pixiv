@@ -228,6 +228,7 @@
 | 20 | 三态组件 | Loading/Error/Empty 三种状态展示正常 | ☐ |
 | 21 | 类型导入 | 所有页面编译无类型错误（类型集中在 PixivModels） | ☐ |
 | 22 | 沉浸光感 | 底部 TabBar 毛玻璃效果正常、深浅色切换稳定、滑动流畅 | ☐ |
+| 23 | 状态栏深浅适配 | 切换系统深色/浅色模式后，状态栏时钟和图标颜色随背景自动变为白色/黑色，可清晰辨识 | ☐ |
 
 ---
 
@@ -259,7 +260,17 @@
 
 ---
 
-> 最后更新：F23 ArkUI 规范修复，基于 2026-06-22
+## F24 - 状态栏颜色深浅适配
+
+- **描述**：状态栏内容颜色（时钟/图标）跟随深色/浅色模式动态切换，避免浅色模式下白色图标与白色背景重叠不可读
+- **涉及文件**：
+  - `entry/src/main/ets/entryability/EntryAbility.ets` — `onWindowStageCreate` 和 `onConfigurationUpdate` 中根据 `isDarkMode` 动态设置 `statusBarContentColor` / `navigationBarContentColor`
+- **测试**：`entry/src/test/StatusBarTheme.test.ets`
+- **规则**：深色模式 → `#FFFFFF`，浅色模式 → `#000000`
+
+---
+
+> 最后更新：F24 状态栏深浅适配，基于 2026-06-22
 
 ---
 
