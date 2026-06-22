@@ -16,6 +16,7 @@ import apiConfigTest from './ApiConfig.test';
 import loadingViewTest from './LoadingView.test';
 import errorViewTest from './ErrorView.test';
 import emptyViewTest from './EmptyView.test';
+import indexPageTest from './IndexPage.test';
 import localUnitTest from './LocalUnit.test';
 
 export default function testsuite() {
@@ -38,4 +39,5 @@ export default function testsuite() {
   loadingViewTest();
   errorViewTest();
   emptyViewTest();
+  indexPageTest();
 }

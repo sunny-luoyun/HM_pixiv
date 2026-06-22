@@ -1,20 +1,55 @@
-import { curves } from '@kit.ArkUI';
+import { SymbolGlyphModifier } from '@kit.ArkUI';
+import { window } from '@kit.ArkUI';
+import { HdsTabs, HdsTabsController, hdsMaterial } from '@kit.UIDesignKit';
 import { HomePage } from './home/HomePage';
 import { LatestPage } from './latest/LatestPage';
 import { SearchPage } from './search/SearchPage';
 import { SettingPage } from './setting/SettingPage';
 import { appState } from '../store/AppState';
 
-interface TabItem {
-  icon: string;
+interface TabConfig {
+  iconNormal: SymbolGlyphModifier;
+  iconSelected: SymbolGlyphModifier;
   label: string;
 }
 
-const TAB_ITEMS: TabItem[] = [
-  { icon: '◉', label: '发现' },
-  { icon: '✦', label: '最新' },
-  { icon: '◎', label: '搜索' },
-  { icon: '●', label: '我的' }
+const TAB_CONFIG: TabConfig[] = [
+  {
+    iconNormal: new SymbolGlyphModifier($r('sys.symbol.house'))
+      .renderingStrategy(SymbolRenderingStrategy.MULTIPLE_COLOR)
+      .fontColor([$r('app.color.text_secondary')]),
+    iconSelected: new SymbolGlyphModifier($r('sys.symbol.house_fill'))
+      .renderingStrategy(SymbolRenderingStrategy.MULTIPLE_COLOR)
+      .fontColor([$r('app.color.tab_selected')]),
+    label: '发现'
+  },
+  {
+    iconNormal: new SymbolGlyphModifier($r('sys.symbol.clock'))
+      .renderingStrategy(SymbolRenderingStrategy.MULTIPLE_COLOR)
+      .fontColor([$r('app.color.text_secondary')]),
+    iconSelected: new SymbolGlyphModifier($r('sys.symbol.clock_fill'))
+      .renderingStrategy(SymbolRenderingStrategy.MULTIPLE_COLOR)
+      .fontColor([$r('app.color.tab_selected')]),
+    label: '最新'
+  },
+  {
+    iconNormal: new SymbolGlyphModifier($r('sys.symbol.magnifyingglass'))
+      .renderingStrategy(SymbolRenderingStrategy.MULTIPLE_COLOR)
+      .fontColor([$r('app.color.text_secondary')]),
+    iconSelected: new SymbolGlyphModifier($r('sys.symbol.magnifyingglass'))
+      .renderingStrategy(SymbolRenderingStrategy.MULTIPLE_COLOR)
+      .fontColor([$r('app.color.tab_selected')]),
+    label: '搜索'
+  },
+  {
+    iconNormal: new SymbolGlyphModifier($r('sys.symbol.person'))
+      .renderingStrategy(SymbolRenderingStrategy.MULTIPLE_COLOR)
+      .fontColor([$r('app.color.text_secondary')]),
+    iconSelected: new SymbolGlyphModifier($r('sys.symbol.person_fill'))
+      .renderingStrategy(SymbolRenderingStrategy.MULTIPLE_COLOR)
+      .fontColor([$r('app.color.tab_selected')]),
+    label: '我的'
+  }
 ];
 
 @Entry
@@ -23,13 +58,21 @@ struct Index {
   @State currentIndex: number = 0;
   @State isReady: boolean = false;
   @Provide('isLoggedIn') isLoggedIn: boolean = false;
-  @State bounceIndex: number = -1;
-  @State bounceScale: number = 1;
-  @State indicatorOffset: number = 0;
-  @State tabItemWidths: number[] = [42, 42, 42, 42];
-  private tabsController: TabsController = new TabsController();
+  @State materialLevel: hdsMaterial.MaterialLevel = hdsMaterial.MaterialLevel.EXQUISITE;
+  @State bottomInsetVp: number = 0;
+  private tabsController: HdsTabsController = new HdsTabsController();
 
   async aboutToAppear() {
+    // 读取底部导航条避让高度，确保浮动栏不被系统手势条遮挡
+    this.readBottomInset();
+
+    // 设备沉浸光感能力探测：不支持 IMMERSIVE 材质则降级为 SMOOTH 保障流畅度
+    const materialTypes = hdsMaterial.getSystemMaterialTypes();
+    if (materialTypes.indexOf(hdsMaterial.MaterialType.IMMERSIVE) < 0) {
+      this.materialLevel = hdsMaterial.MaterialLevel.SMOOTH;
+      console.info('⚠️ 当前设备不支持 IMMERSIVE 材质，沉浸光感降级为 SMOOTH');
+    }
+
     await appState.checkLoginStatus(true);
     this.isLoggedIn = appState.isLoggedIn;
     console.info(`🔄 检查登录状态: ${appState.isLoggedIn ? '已登录' : '未登录'}`);
@@ -41,87 +84,81 @@ struct Index {
     this.isLoggedIn = appState.isLoggedIn;
   }
 
+  private readBottomInset(): void {
+    const uiCtx = this.getUIContext();
+    if (!uiCtx) { return; }
+    const hostCtx = uiCtx.getHostContext();
+    if (!hostCtx) { return; }
+    window.getLastWindow(hostCtx).then((lastWindow: window.Window) => {
+      const avoidArea = lastWindow.getWindowAvoidArea(
+        window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR
+      );
+      const inset = uiCtx.px2vp(avoidArea.bottomRect.height);
+      if (inset > 0) {
+        this.bottomInsetVp = inset;
+        console.info(`✅ 底部导航条避让高度: ${inset}vp`);
+      }
+    });
+  }
+
   build() {
     if (this.isReady) {
-      Stack() {
-        Tabs({
-          barPosition: BarPosition.End,
-          controller: this.tabsController,
-          index: this.currentIndex
-        }) {
-          TabContent() {
-            HomePage()
-          }
-          .tabBar('')
-
-          TabContent() {
-            LatestPage()
-          }
-          .tabBar('')
-
-          TabContent() {
-            SearchPage()
-          }
-          .tabBar('')
-
-          TabContent() {
-            SettingPage()
-          }
-          .tabBar('')
+      HdsTabs({
+        controller: this.tabsController,
+        index: this.currentIndex,
+        barPosition: BarPosition.End
+      }) {
+        TabContent() {
+          HomePage()
         }
-        .vertical(false)
-        .scrollable(true)
-        .barWidth(0)
-        .barHeight(0)
-        .onChange((index: number) => {
-          this.currentIndex = index;
-        })
-        .width('100%')
-        .height('100%')
+        .tabBar(new BottomTabBarStyle({
+          normal: TAB_CONFIG[0].iconNormal,
+          selected: TAB_CONFIG[0].iconSelected
+        }, TAB_CONFIG[0].label)
+        .labelStyle({ selectedColor: $r('app.color.tab_selected') }))
 
-      Column() {
-        Row() {
-          Row() {
-            ForEach(TAB_ITEMS, (item: TabItem, index: number) => {
-              this.TabItemView(item, index)
-            }, (item: TabItem) => item.label)
-          }
-          .height(60)
-          .padding({ left: 6, right: 6 })
-          .width('92%')
-          .backgroundColor($r('app.color.tab_bar_bg'))
-          .borderRadius(30)
-          .overlay(() => {
-            Column()
-              .width(18)
-              .height(3)
-              .backgroundColor($r('app.color.tab_selected'))
-              .borderRadius(1.5)
-              .position({ x: this.indicatorOffset, y: 58 })
-          }, { align: Alignment.BottomStart })
-          .onAreaChange((_oldArea: Area, newArea: Area) => {
-            const w = newArea.width;
-            const width = Number(w);
-            if (width > 0) {
-              const tabW = (width - 12) / 4;
-              this.tabItemWidths = TAB_ITEMS.map(() => tabW);
-              const initialOffset = this.currentIndex * tabW + (tabW / 2 - 9);
-              if (this.indicatorOffset !== initialOffset) {
-                this.indicatorOffset = initialOffset;
-              }
-            }
-          })
+        TabContent() {
+          LatestPage()
         }
-        .width('100%')
-        .justifyContent(FlexAlign.Center)
+        .tabBar(new BottomTabBarStyle({
+          normal: TAB_CONFIG[1].iconNormal,
+          selected: TAB_CONFIG[1].iconSelected
+        }, TAB_CONFIG[1].label)
+        .labelStyle({ selectedColor: $r('app.color.tab_selected') }))
+
+        TabContent() {
+          SearchPage()
+        }
+        .tabBar(new BottomTabBarStyle({
+          normal: TAB_CONFIG[2].iconNormal,
+          selected: TAB_CONFIG[2].iconSelected
+        }, TAB_CONFIG[2].label)
+        .labelStyle({ selectedColor: $r('app.color.tab_selected') }))
+
+        TabContent() {
+          SettingPage()
+        }
+        .tabBar(new BottomTabBarStyle({
+          normal: TAB_CONFIG[3].iconNormal,
+          selected: TAB_CONFIG[3].iconSelected
+        }, TAB_CONFIG[3].label)
+        .labelStyle({ selectedColor: $r('app.color.tab_selected') }))
       }
-      .width('100%')
-      .height(80)
-      .justifyContent(FlexAlign.Start)
-      .position({ bottom: 0 })
-      }
-      .width('100%')
-      .height('100%')
+      .barMode(BarMode.Fixed)
+      .barOverlap(true)
+      .vertical(false)
+      .clip(false)
+      .barFloatingStyle({
+        barBottomMargin: this.bottomInsetVp,
+        barOpacity: 0.95,
+        systemMaterialEffect: {
+          materialType: hdsMaterial.MaterialType.IMMERSIVE,
+          materialLevel: this.materialLevel
+        }
+      })
+      .onChange((index: number) => {
+        this.currentIndex = index;
+      })
     } else {
       Column() {
         LoadingProgress().width(40).height(40)
@@ -131,58 +168,5 @@ struct Index {
       .justifyContent(FlexAlign.Center)
       .backgroundColor($r('app.color.page_background'))
     }
-  }
-
-  triggerBounce(index: number) {
-    this.bounceIndex = index;
-    animateTo({ curve: Curve.FastOutSlowIn, duration: 250 }, () => {
-      this.bounceScale = 1.25;
-    });
-    setTimeout(() => {
-      animateTo({ curve: curves.springMotion(0.55, 0.65) }, () => {
-        this.bounceScale = 0.9;
-      });
-      setTimeout(() => {
-        animateTo({ curve: curves.springMotion(0.55, 0.65) }, () => {
-          this.bounceScale = 1;
-          this.bounceIndex = -1;
-        });
-      }, 250);
-    }, 250);
-  }
-
-  @Builder
-  TabItemView(item: TabItem, index: number) {
-    Column() {
-      Text(item.icon)
-        .fontSize(18)
-        .fontColor(this.currentIndex === index
-          ? $r('app.color.tab_selected')
-          : $r('app.color.text_secondary'))
-        .margin({ bottom: 2 })
-        .scale({
-          x: this.bounceIndex === index ? this.bounceScale : 1,
-          y: this.bounceIndex === index ? this.bounceScale : 1
-        })
-
-      Text(item.label)
-        .fontSize(10)
-        .fontColor(this.currentIndex === index
-          ? $r('app.color.tab_selected')
-          : $r('app.color.text_secondary'))
-        .fontWeight(this.currentIndex === index ? FontWeight.Medium : FontWeight.Normal)
-    }
-    .layoutWeight(1)
-    .padding({ top: 8, bottom: 6 })
-    .alignItems(HorizontalAlign.Center)
-    .onClick(() => {
-      this.currentIndex = index;
-      this.tabsController.changeIndex(index);
-      this.triggerBounce(index);
-      const tabW = this.tabItemWidths[index] || 42;
-      animateTo({ curve: Curve.FastOutSlowIn, duration: 350 }, () => {
-        this.indicatorOffset = index * tabW + (tabW / 2 - 9);
-      });
-    })
   }
 }

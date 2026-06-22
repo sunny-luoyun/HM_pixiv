@@ -187,6 +187,19 @@
 
 ---
 
+## F22 - 沉浸光感改造（第一阶段）
+
+- **描述**：基于华为 HDS 沉浸光感规范，将主 Tab 框架从原生 Tabs 迁移至 HdsNavigation + HdsTabs，启用窗口全屏沉浸式和底部页签系统材质效果
+- **SDK 升级**：`build-profile.json5`（targetSdk 6.0.2→6.1.0）、`oh-package.json5`（modelVersion 6.0.2→6.1.0）、`hvigor/hvigor-config.json5`（modelVersion 6.0.2→6.1.0）
+- **窗口沉浸式**：`entry/src/main/ets/entryability/EntryAbility.ets`（setWindowLayoutFullScreen + 透明系统栏）
+- **主框架**：`entry/src/main/ets/pages/Index.ets`（HdsNavigation + HdsTabs + barFloatingStyle.systemMaterialEffect + 设备能力探测降级）
+- **依赖**：`@kit.UIDesignKit`（HdsTabs、HdsTabsController、hdsMaterial）
+- **Tab 图标**：原生 `BottomTabBarStyle` + `SymbolGlyphModifier` 系统符号（house/clock/magnifyingglass/person）
+- **底部避让**：动态读取系统导航指示条高度作为 `barBottomMargin`
+- **内容适配**：`SettingPage.ets` 底部 padding 80vp，其余 3 个 Tab 页已有 120vp 底部留白
+
+---
+
 ## 手工验证清单
 
 > 每次修改代码后，请逐项检查以下功能是否正常：
@@ -214,10 +227,11 @@
 | 19 | API 配置 | 各页面网络请求正常（涉及 URL 的服务均使用 ApiConfig） | ☐ |
 | 20 | 三态组件 | Loading/Error/Empty 三种状态展示正常 | ☐ |
 | 21 | 类型导入 | 所有页面编译无类型错误（类型集中在 PixivModels） | ☐ |
+| 22 | 沉浸光感 | 底部 TabBar 毛玻璃效果正常、深浅色切换稳定、滑动流畅 | ☐ |
 
 ---
 
-> 最后更新：F01-F21 + 架构重构，基于 2025-06-21 重构后基线
+> 最后更新：F22 沉浸光感第一阶段，基于 2026-06-22 SDK 6.1.0 升级后基线
 
 ---
 

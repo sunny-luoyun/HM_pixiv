@@ -45,6 +45,15 @@ export default class EntryAbility extends UIAbility {
   }
 
   onWindowStageCreate(windowStage: window.WindowStage): void {
+    // 沉浸式窗口设置：透明系统栏，内容区域由系统自动避让状态栏
+    windowStage.getMainWindow().then((mainWindow: window.Window) => {
+      mainWindow.setWindowSystemBarProperties({
+        statusBarContentColor: '#FFFFFF',
+        navigationBarContentColor: '#FFFFFF',
+      });
+      console.info('✅ 沉浸式系统栏已启用');
+    });
+
     windowStage.loadContent('pages/Index', (err) => {
       if (err) {
         console.error(`Failed to load content, error: ${JSON.stringify(err)}`);
