@@ -5,6 +5,7 @@ import { IllustBookmark, NovelBookmark } from '../../models/PixivModels';
 import { NovelCard } from '../../components/NovelCard';
 import { IllustCard } from '../../components/IllustCard';
 import { SegmentedTabBar } from '../../components/SegmentedTabBar';
+import { BasicDataSource } from '../../common/utils/BasicDataSource';
 import { appState } from '../../store/AppState';
 
 const PAGE_SIZE = 30;
@@ -14,8 +15,10 @@ const PAGE_SIZE = 30;
 struct FavoritesPage {
   private isActive: boolean = true;
   @State currentTab: number = 0;
-  @State illustWorks: IllustBookmark[] = [];
-  @State novelWorks: NovelBookmark[] = [];
+  @State isHeaderVisible: boolean = true;
+  private lastScrollY: number = 0;
+  private illustSource: BasicDataSource<IllustBookmark> = new BasicDataSource();
+  private novelSource: BasicDataSource<NovelBookmark> = new BasicDataSource();
   @State isLoadingIllust: boolean = true;
   @State isLoadingNovel: boolean = false;
   @State illustError: string = '';
@@ -49,8 +52,8 @@ struct FavoritesPage {
       const res = await PixivService.getIllustBookmarks(appState.userId, 0, PAGE_SIZE);
       if (!this.isActive) return;
       if (!res.error) {
-        this.illustWorks = res.body.works;
-        this.illustOffset = this.illustWorks.length;
+        this.illustSource.reset(res.body.works);
+        this.illustOffset = this.illustSource.totalCount();
         if (this.illustOffset >= res.body.total) {
           this.hasMoreIllust = false;
         }
@@ -72,7 +75,7 @@ struct FavoritesPage {
       const res = await PixivService.getIllustBookmarks(appState.userId, this.illustOffset, PAGE_SIZE);
       if (!this.isActive) return;
       if (!res.error) {
-        this.illustWorks = [...this.illustWorks, ...res.body.works];
+        this.illustSource.push(...res.body.works);
         this.illustOffset += res.body.works.length;
         if (this.illustOffset >= res.body.total) {
           this.hasMoreIllust = false;
@@ -94,8 +97,8 @@ struct FavoritesPage {
       const res = await PixivService.getNovelBookmarks(appState.userId, 0, PAGE_SIZE);
       if (!this.isActive) return;
       if (!res.error) {
-        this.novelWorks = res.body.works;
-        this.novelOffset = this.novelWorks.length;
+        this.novelSource.reset(res.body.works);
+        this.novelOffset = this.novelSource.totalCount();
         if (this.novelOffset >= res.body.total) {
           this.hasMoreNovel = false;
         }
@@ -117,7 +120,7 @@ struct FavoritesPage {
       const res = await PixivService.getNovelBookmarks(appState.userId, this.novelOffset, PAGE_SIZE);
       if (!this.isActive) return;
       if (!res.error) {
-        this.novelWorks = [...this.novelWorks, ...res.body.works];
+        this.novelSource.push(...res.body.works);
         this.novelOffset += res.body.works.length;
         if (this.novelOffset >= res.body.total) {
           this.hasMoreNovel = false;
@@ -189,20 +192,41 @@ struct FavoritesPage {
     .alignItems(HorizontalAlign.Center)
   }
 
+  handleHeaderScroll(yOffset: number) {
+    const delta = yOffset - this.lastScrollY;
+    this.lastScrollY = yOffset;
+
+    if (delta > 8 && this.isHeaderVisible && yOffset > 30) {
+      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+        this.isHeaderVisible = false;
+      });
+    } else if (delta < -8 && !this.isHeaderVisible && yOffset < 10) {
+      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+        this.isHeaderVisible = true;
+      });
+    }
+  }
+
   @Builder
   TabsSection() {
     Column() {
-      SegmentedTabBar({
-        tabs: ['插画', '小说'],
-        currentIndex: this.currentTab,
-        onChange: (index: number) => {
-          this.currentTab = index;
-          if (index === 1 && this.novelWorks.length === 0 && !this.isLoadingNovel) {
-            this.loadNovels();
+      if (this.isHeaderVisible) {
+        SegmentedTabBar({
+          tabs: ['插画', '小说'],
+          currentIndex: this.currentTab,
+          onChange: (index: number) => {
+            this.currentTab = index;
+            this.lastScrollY = 0;
+            if (index === 1 && this.novelSource.totalCount() === 0 && !this.isLoadingNovel) {
+              this.loadNovels();
+            }
           }
-        }
-      })
-      .padding({ left: 16, right: 16, top: 8, bottom: 4 })
+        })
+        .padding({ left: 16, right: 16, top: 8, bottom: 4 })
+        .transition(TransitionEffect.translate({ y: -48 })
+          .combine(TransitionEffect.OPACITY)
+          .animation({ curve: curves.springMotion(0.45, 0.7) }))
+      }
 
       Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
         TabContent() {
@@ -215,15 +239,15 @@ struct FavoritesPage {
             }
             .margin({ top: 80 })
             .alignItems(HorizontalAlign.Center)
-          } else if (this.illustWorks.length === 0) {
+          } else if (this.illustSource.totalCount() === 0) {
             Text('暂无收藏插画').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
           } else {
             Scroll() {
               Column() {
                 Grid() {
-                  ForEach(this.illustWorks, (item: IllustBookmark, index?: number) => {
+                  LazyForEach(this.illustSource, (item: IllustBookmark, index: number) => {
                     GridItem() {
-                      IllustCard({ item: item, index: index ?? 0 })
+                      IllustCard({ item: item, index: index })
                     }
                   }, (item: IllustBookmark) => item.id)
                 }
@@ -236,7 +260,7 @@ struct FavoritesPage {
                 if (this.isLoadingMoreIllust) {
                   LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
                 }
-                if (!this.isLoadingMoreIllust && !this.hasMoreIllust && this.illustWorks.length > 0) {
+                if (!this.isLoadingMoreIllust && !this.hasMoreIllust && this.illustSource.totalCount() > 0) {
                   Text('- 已显示全部作品 -')
                     .fontSize(12)
                     .fontColor($r('app.color.text_secondary'))
@@ -255,6 +279,9 @@ struct FavoritesPage {
                 this.loadMoreIllusts();
               }
             })
+            .onScroll((_xOffset: number, yOffset: number) => {
+              this.handleHeaderScroll(yOffset);
+            })
           }
         }
         .tabBar('')
@@ -269,15 +296,15 @@ struct FavoritesPage {
             }
             .margin({ top: 80 })
             .alignItems(HorizontalAlign.Center)
-          } else if (this.novelWorks.length === 0) {
+          } else if (this.novelSource.totalCount() === 0) {
             Text('暂无收藏小说').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
           } else {
             Scroll() {
               Column() {
                 List() {
-                  ForEach(this.novelWorks, (item: NovelBookmark, index?: number) => {
+                  LazyForEach(this.novelSource, (item: NovelBookmark, index: number) => {
                     ListItem() {
-                      NovelCard({ item: item, index: index ?? 0 })
+                      NovelCard({ item: item, index: index })
                     }
                   }, (item: NovelBookmark) => item.id)
                 }
@@ -287,7 +314,7 @@ struct FavoritesPage {
                 if (this.isLoadingMoreNovel) {
                   LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
                 }
-                if (!this.isLoadingMoreNovel && !this.hasMoreNovel && this.novelWorks.length > 0) {
+                if (!this.isLoadingMoreNovel && !this.hasMoreNovel && this.novelSource.totalCount() > 0) {
                   Text('- 已显示全部作品 -')
                     .fontSize(12)
                     .fontColor($r('app.color.text_secondary'))
@@ -306,6 +333,9 @@ struct FavoritesPage {
                 this.loadMoreNovels();
               }
             })
+            .onScroll((_xOffset: number, yOffset: number) => {
+              this.handleHeaderScroll(yOffset);
+            })
           }
         }
         .tabBar('')
@@ -317,7 +347,7 @@ struct FavoritesPage {
         animateTo({ curve: curves.springMotion(0.55, 0.65) }, () => {
           this.currentTab = index;
         });
-        if (index === 1 && this.novelWorks.length === 0 && !this.isLoadingNovel) {
+        if (index === 1 && this.novelSource.totalCount() === 0 && !this.isLoadingNovel) {
           this.loadNovels();
         }
       })

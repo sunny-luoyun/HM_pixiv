@@ -6,6 +6,7 @@ import { IllustBookmark, NovelBookmark, BookmarkData, ProfileIllust, ProfileNove
 import { IllustCard } from '../../components/IllustCard';
 import { NovelCard } from '../../components/NovelCard';
 import { SegmentedTabBar } from '../../components/SegmentedTabBar';
+import { BasicDataSource } from '../../common/utils/BasicDataSource';
 
 const PAGE_SIZE = 30;
 
@@ -95,15 +96,17 @@ struct UserProfilePage {
   @State profileError: string = '';
 
   @State currentTab: number = 0;
+  @State isHeaderVisible: boolean = true;
+  private lastScrollY: number = 0;
 
-  @State illustWorks: IllustBookmark[] = [];
+  private illustSource: BasicDataSource<IllustBookmark> = new BasicDataSource();
   @State illustOffset: number = 0;
   @State hasMoreIllust: boolean = true;
   @State isLoadingIllust: boolean = true;
   @State isLoadingMoreIllust: boolean = false;
   @State illustError: string = '';
 
-  @State novelWorks: NovelBookmark[] = [];
+  private novelSource: BasicDataSource<NovelBookmark> = new BasicDataSource();
   @State novelOffset: number = 0;
   @State hasMoreNovel: boolean = true;
   @State isLoadingNovel: boolean = false;
@@ -112,14 +115,14 @@ struct UserProfilePage {
   private allNovelIds: string[] = [];
   private novelPage: number = 1;
 
-  @State bookmarkIllustWorks: IllustBookmark[] = [];
+  private bookmarkIllustSource: BasicDataSource<IllustBookmark> = new BasicDataSource();
   @State bookmarkIllustOffset: number = 0;
   @State hasMoreBookmarkIllust: boolean = true;
   @State isLoadingBookmarkIllust: boolean = false;
   @State isLoadingMoreBookmarkIllust: boolean = false;
   @State bookmarkIllustError: string = '';
 
-  @State bookmarkNovelWorks: NovelBookmark[] = [];
+  private bookmarkNovelSource: BasicDataSource<NovelBookmark> = new BasicDataSource();
   @State bookmarkNovelOffset: number = 0;
   @State hasMoreBookmarkNovel: boolean = true;
   @State isLoadingBookmarkNovel: boolean = false;
@@ -220,7 +223,7 @@ struct UserProfilePage {
             works.push(mapProfileIllustToBookmark(work, this.userName));
           }
         }
-        this.illustWorks = works;
+        this.illustSource.reset(works);
         this.illustOffset = works.length;
         this.hasMoreIllust = false;
       } else {
@@ -274,7 +277,7 @@ struct UserProfilePage {
             works.push(mapProfileNovelToBookmark(work, this.userName));
           }
         }
-        this.novelWorks = works;
+        this.novelSource.reset(works);
         this.novelOffset = works.length;
         this.hasMoreNovel = allIds.length > PAGE_SIZE;
       } else {
@@ -310,7 +313,7 @@ struct UserProfilePage {
             works.push(mapProfileNovelToBookmark(work, this.userName));
           }
         }
-        this.novelWorks = [...this.novelWorks, ...works];
+        this.novelSource.push(...works);
         this.novelOffset += works.length;
         this.novelPage++;
         this.hasMoreNovel = start + PAGE_SIZE < this.allNovelIds.length;
@@ -331,8 +334,8 @@ struct UserProfilePage {
       const res = await PixivService.getIllustBookmarks(this.userId, 0, PAGE_SIZE, '', 'show');
       if (!this.isActive) return;
       if (!res.error) {
-        this.bookmarkIllustWorks = res.body.works;
-        this.bookmarkIllustOffset = this.bookmarkIllustWorks.length;
+        this.bookmarkIllustSource.reset(res.body.works);
+        this.bookmarkIllustOffset = this.bookmarkIllustSource.totalCount();
         if (this.bookmarkIllustOffset >= res.body.total) {
           this.hasMoreBookmarkIllust = false;
         }
@@ -354,7 +357,7 @@ struct UserProfilePage {
       const res = await PixivService.getIllustBookmarks(this.userId, this.bookmarkIllustOffset, PAGE_SIZE, '', 'show');
       if (!this.isActive) return;
       if (!res.error) {
-        this.bookmarkIllustWorks = [...this.bookmarkIllustWorks, ...res.body.works];
+        this.bookmarkIllustSource.push(...res.body.works);
         this.bookmarkIllustOffset += res.body.works.length;
         if (this.bookmarkIllustOffset >= res.body.total) {
           this.hasMoreBookmarkIllust = false;
@@ -376,8 +379,8 @@ struct UserProfilePage {
       const res = await PixivService.getNovelBookmarks(this.userId, 0, PAGE_SIZE, '', 'show');
       if (!this.isActive) return;
       if (!res.error) {
-        this.bookmarkNovelWorks = res.body.works;
-        this.bookmarkNovelOffset = this.bookmarkNovelWorks.length;
+        this.bookmarkNovelSource.reset(res.body.works);
+        this.bookmarkNovelOffset = this.bookmarkNovelSource.totalCount();
         if (this.bookmarkNovelOffset >= res.body.total) {
           this.hasMoreBookmarkNovel = false;
         }
@@ -399,7 +402,7 @@ struct UserProfilePage {
       const res = await PixivService.getNovelBookmarks(this.userId, this.bookmarkNovelOffset, PAGE_SIZE, '', 'show');
       if (!this.isActive) return;
       if (!res.error) {
-        this.bookmarkNovelWorks = [...this.bookmarkNovelWorks, ...res.body.works];
+        this.bookmarkNovelSource.push(...res.body.works);
         this.bookmarkNovelOffset += res.body.works.length;
         if (this.bookmarkNovelOffset >= res.body.total) {
           this.hasMoreBookmarkNovel = false;
@@ -414,13 +417,14 @@ struct UserProfilePage {
 
   handleTabChange(index: number) {
     this.currentTab = index;
-    if (index === 0 && this.illustWorks.length === 0 && !this.isLoadingIllust) {
+    this.lastScrollY = 0;
+    if (index === 0 && this.illustSource.totalCount() === 0 && !this.isLoadingIllust) {
       this.loadIllusts();
-    } else if (index === 1 && this.novelWorks.length === 0 && !this.isLoadingNovel) {
+    } else if (index === 1 && this.novelSource.totalCount() === 0 && !this.isLoadingNovel) {
       this.loadNovels();
-    } else if (index === 2 && this.bookmarkIllustWorks.length === 0 && !this.isLoadingBookmarkIllust) {
+    } else if (index === 2 && this.bookmarkIllustSource.totalCount() === 0 && !this.isLoadingBookmarkIllust) {
       this.loadBookmarkIllusts();
-    } else if (index === 3 && this.bookmarkNovelWorks.length === 0 && !this.isLoadingBookmarkNovel) {
+    } else if (index === 3 && this.bookmarkNovelSource.totalCount() === 0 && !this.isLoadingBookmarkNovel) {
       this.loadBookmarkNovels();
     }
   }
@@ -511,15 +515,35 @@ struct UserProfilePage {
     .alignItems(HorizontalAlign.Center)
   }
 
+  handleHeaderScroll(yOffset: number) {
+    const delta = yOffset - this.lastScrollY;
+    this.lastScrollY = yOffset;
+
+    if (delta > 8 && this.isHeaderVisible && yOffset > 30) {
+      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+        this.isHeaderVisible = false;
+      });
+    } else if (delta < -8 && !this.isHeaderVisible && yOffset < 10) {
+      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+        this.isHeaderVisible = true;
+      });
+    }
+  }
+
   @Builder
   TabsSection() {
     Column() {
-      SegmentedTabBar({
-        tabs: ['插画', '小说', '收藏插画', '收藏小说'],
-        currentIndex: this.currentTab,
-        onChange: (index: number): void => this.handleTabChange(index)
-      })
-      .padding({ left: 16, right: 16, top: 8, bottom: 4 })
+      if (this.isHeaderVisible) {
+        SegmentedTabBar({
+          tabs: ['插画', '小说', '收藏插画', '收藏小说'],
+          currentIndex: this.currentTab,
+          onChange: (index: number): void => this.handleTabChange(index)
+        })
+        .padding({ left: 16, right: 16, top: 8, bottom: 4 })
+        .transition(TransitionEffect.translate({ y: -48 })
+          .combine(TransitionEffect.OPACITY)
+          .animation({ curve: curves.springMotion(0.45, 0.7) }))
+      }
 
       Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
         TabContent() {
@@ -562,15 +586,15 @@ struct UserProfilePage {
       LoadingProgress().width(40).height(40).margin({ top: 60 })
     } else if (this.illustError) {
       this.RetryView(this.illustError, (): Promise<void> => this.loadIllusts())
-    } else if (this.illustWorks.length === 0) {
+    } else if (this.illustSource.totalCount() === 0) {
       this.EmptyView('该作者暂无插画作品')
     } else {
       Scroll() {
         Column() {
           Grid() {
-            ForEach(this.illustWorks, (item: IllustBookmark, index?: number) => {
+            LazyForEach(this.illustSource, (item: IllustBookmark, index: number) => {
               GridItem() {
-                IllustCard({ item: item, index: index ?? 0 })
+                IllustCard({ item: item, index: index })
               }
             }, (item: IllustBookmark) => item.id)
           }
@@ -583,7 +607,7 @@ struct UserProfilePage {
           if (this.isLoadingMoreIllust) {
             LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
           }
-          if (!this.isLoadingMoreIllust && !this.hasMoreIllust && this.illustWorks.length > 0) {
+          if (!this.isLoadingMoreIllust && !this.hasMoreIllust && this.illustSource.totalCount() > 0) {
             Text('- 已显示全部作品 -')
               .fontSize(12)
               .fontColor($r('app.color.text_secondary'))
@@ -602,6 +626,9 @@ struct UserProfilePage {
           this.loadMoreIllusts();
         }
       })
+      .onScroll((_xOffset: number, yOffset: number) => {
+        this.handleHeaderScroll(yOffset);
+      })
     }
   }
 
@@ -611,19 +638,23 @@ struct UserProfilePage {
       LoadingProgress().width(40).height(40).margin({ top: 60 })
     } else if (this.novelError) {
       this.RetryView(this.novelError, (): Promise<void> => this.loadNovels())
-    } else if (this.novelWorks.length === 0) {
+    } else if (this.novelSource.totalCount() === 0) {
       this.EmptyView('该作者暂无小说作品')
     } else {
       Scroll() {
         Column() {
-          ForEach(this.novelWorks, (item: NovelBookmark, index?: number) => {
-            NovelCard({ item: item, index: index ?? 0 })
-          }, (item: NovelBookmark) => item.id)
+          List() {
+            LazyForEach(this.novelSource, (item: NovelBookmark, index: number) => {
+              ListItem() {
+                NovelCard({ item: item, index: index })
+              }
+            }, (item: NovelBookmark) => item.id)
+          }
 
           if (this.isLoadingMoreNovel) {
             LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
           }
-          if (!this.isLoadingMoreNovel && !this.hasMoreNovel && this.novelWorks.length > 0) {
+          if (!this.isLoadingMoreNovel && !this.hasMoreNovel && this.novelSource.totalCount() > 0) {
             Text('- 已显示全部作品 -')
               .fontSize(12)
               .fontColor($r('app.color.text_secondary'))
@@ -642,6 +673,9 @@ struct UserProfilePage {
           this.loadMoreNovels();
         }
       })
+      .onScroll((_xOffset: number, yOffset: number) => {
+        this.handleHeaderScroll(yOffset);
+      })
     }
   }
 
@@ -651,15 +685,15 @@ struct UserProfilePage {
       LoadingProgress().width(40).height(40).margin({ top: 60 })
     } else if (this.bookmarkIllustError) {
       this.RetryView(this.bookmarkIllustError, (): Promise<void> => this.loadBookmarkIllusts())
-    } else if (this.bookmarkIllustWorks.length === 0) {
+    } else if (this.bookmarkIllustSource.totalCount() === 0) {
       this.EmptyView('该作者暂无收藏插画')
     } else {
       Scroll() {
         Column() {
           Grid() {
-            ForEach(this.bookmarkIllustWorks, (item: IllustBookmark, index?: number) => {
+            LazyForEach(this.bookmarkIllustSource, (item: IllustBookmark, index: number) => {
               GridItem() {
-                IllustCard({ item: item, index: index ?? 0 })
+                IllustCard({ item: item, index: index })
               }
             }, (item: IllustBookmark) => item.id)
           }
@@ -672,7 +706,7 @@ struct UserProfilePage {
           if (this.isLoadingMoreBookmarkIllust) {
             LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
           }
-          if (!this.isLoadingMoreBookmarkIllust && !this.hasMoreBookmarkIllust && this.bookmarkIllustWorks.length > 0) {
+          if (!this.isLoadingMoreBookmarkIllust && !this.hasMoreBookmarkIllust && this.bookmarkIllustSource.totalCount() > 0) {
             Text('- 已显示全部作品 -')
               .fontSize(12)
               .fontColor($r('app.color.text_secondary'))
@@ -691,6 +725,9 @@ struct UserProfilePage {
           this.loadMoreBookmarkIllusts();
         }
       })
+      .onScroll((_xOffset: number, yOffset: number) => {
+        this.handleHeaderScroll(yOffset);
+      })
     }
   }
 
@@ -700,19 +737,23 @@ struct UserProfilePage {
       LoadingProgress().width(40).height(40).margin({ top: 60 })
     } else if (this.bookmarkNovelError) {
       this.RetryView(this.bookmarkNovelError, (): Promise<void> => this.loadBookmarkNovels())
-    } else if (this.bookmarkNovelWorks.length === 0) {
+    } else if (this.bookmarkNovelSource.totalCount() === 0) {
       this.EmptyView('该作者暂无收藏小说')
     } else {
       Scroll() {
         Column() {
-          ForEach(this.bookmarkNovelWorks, (item: NovelBookmark, index?: number) => {
-            NovelCard({ item: item, index: index ?? 0 })
-          }, (item: NovelBookmark) => item.id)
+          List() {
+            LazyForEach(this.bookmarkNovelSource, (item: NovelBookmark, index: number) => {
+              ListItem() {
+                NovelCard({ item: item, index: index })
+              }
+            }, (item: NovelBookmark) => item.id)
+          }
 
           if (this.isLoadingMoreBookmarkNovel) {
             LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
           }
-          if (!this.isLoadingMoreBookmarkNovel && !this.hasMoreBookmarkNovel && this.bookmarkNovelWorks.length > 0) {
+          if (!this.isLoadingMoreBookmarkNovel && !this.hasMoreBookmarkNovel && this.bookmarkNovelSource.totalCount() > 0) {
             Text('- 已显示全部作品 -')
               .fontSize(12)
               .fontColor($r('app.color.text_secondary'))
@@ -730,6 +771,9 @@ struct UserProfilePage {
         if (this.hasMoreBookmarkNovel && !this.isLoadingMoreBookmarkNovel) {
           this.loadMoreBookmarkNovels();
         }
+      })
+      .onScroll((_xOffset: number, yOffset: number) => {
+        this.handleHeaderScroll(yOffset);
       })
     }
   }

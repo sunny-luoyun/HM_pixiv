@@ -65,14 +65,9 @@ export struct IllustCard {
     });
     setTimeout(() => {
       animateTo({ curve: curves.springMotion(0.55, 0.65) }, () => {
-        this.bookmarkScale = 0.9;
+        this.bookmarkScale = 1;
       });
-      setTimeout(() => {
-        animateTo({ curve: curves.springMotion(0.55, 0.65) }, () => {
-          this.bookmarkScale = 1;
-        });
-      }, 250);
-    }, 250);
+    }, 280);
   }
 
   build() {

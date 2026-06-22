@@ -1,6 +1,7 @@
 import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
 import { AjaxComment, AjaxCommentsResponse } from '../models/PixivModels';
+import { BasicDataSource } from '../common/utils/BasicDataSource';
 import { AppState } from '../store/AppState';
 
 @Component
@@ -12,8 +13,8 @@ export struct CommentsComponent {
   private postComment: (id: number, text: string) => Promise<Object> = () => Promise.reject(new Error('not set'));
   private deleteComment: (commentId: number) => Promise<void> = () => Promise.reject(new Error('not set'));
 
-  @State comments: AjaxComment[] = [];
   @State totalComments: number = 0;
+  private commentSource: BasicDataSource<AjaxComment> = new BasicDataSource();
   @State isLoading: boolean = true;
   @State isLoadingMore: boolean = false;
   @State isPosting: boolean = false;
@@ -39,10 +40,10 @@ export struct CommentsComponent {
     try {
       const resp = await this.fetchComments(this.entityId, 0);
       if (!resp.error && resp.body) {
-        this.comments = resp.body.comments || [];
+        this.commentSource.reset(resp.body.comments || []);
         this.totalComments = resp.body.total || 0;
         this.nextOffset = resp.body.comments ? resp.body.comments.length : 0;
-        this.hasMore = this.comments.length < this.totalComments;
+        this.hasMore = this.commentSource.totalCount() < this.totalComments;
       } else {
         this.errorMsg = resp.message || '获取评论失败';
       }
@@ -61,7 +62,7 @@ export struct CommentsComponent {
       const resp = await this.fetchComments(this.entityId, this.nextOffset);
       if (!resp.error && resp.body) {
         const newComments = resp.body.comments || [];
-        this.comments = [...this.comments, ...newComments];
+        this.commentSource.push(...newComments);
         this.nextOffset += newComments.length;
         this.hasMore = this.nextOffset < this.totalComments;
       }
@@ -97,7 +98,7 @@ export struct CommentsComponent {
     this.deletingCommentId = commentId;
     try {
       await this.deleteComment(commentId);
-      this.comments = this.comments.filter(c => parseInt(c.id) !== commentId);
+      this.commentSource.reset(this.commentSource.getDataArray().filter(c => parseInt(c.id) !== commentId));
       if (this.totalComments > 0) {
         this.totalComments--;
       }
@@ -166,7 +167,7 @@ export struct CommentsComponent {
         .width('100%')
         .layoutWeight(1)
         .justifyContent(FlexAlign.Center)
-      } else if (this.comments.length === 0) {
+      } else if (this.commentSource.totalCount() === 0) {
         Column() {
           Text('暂无评论').fontSize(14).fontColor($r('app.color.text_secondary'))
           Text(this.emptyHint).fontSize(12).fontColor($r('app.color.text_secondary')).margin({ top: 4 })
@@ -177,7 +178,7 @@ export struct CommentsComponent {
       } else {
         List() {
           ListItemGroup() {
-            ForEach(this.comments, (comment: AjaxComment) => {
+            LazyForEach(this.commentSource, (comment: AjaxComment) => {
               ListItem() {
                 Column() {
                   this.commentItem(comment)

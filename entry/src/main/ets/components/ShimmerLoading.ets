@@ -1,27 +1,34 @@
 @Component
 export struct ShimmerLoading {
   @State shimmerX: number = -200
-  private timer: number = -1
+  private shimmerInterval: number = -1
+  private shimmerForward: boolean = true
 
   aboutToAppear() {
     this.startShimmer()
   }
 
   aboutToDisappear() {
-    if (this.timer !== -1) {
-      clearTimeout(this.timer)
-      this.timer = -1
-    }
+    this.stopShimmer()
   }
 
   startShimmer() {
-    animateTo({ duration: 800, curve: Curve.Linear }, () => {
-      this.shimmerX = 400
-    })
-    this.timer = setTimeout(() => {
-      this.shimmerX = -200
-      this.startShimmer()
+    if (this.shimmerInterval !== -1) {
+      return
+    }
+    this.shimmerInterval = setInterval(() => {
+      this.shimmerForward = !this.shimmerForward
+      animateTo({ duration: 800, curve: Curve.Linear }, () => {
+        this.shimmerX = this.shimmerForward ? 400 : -200
+      })
     }, 800)
+  }
+
+  stopShimmer() {
+    if (this.shimmerInterval !== -1) {
+      clearInterval(this.shimmerInterval)
+      this.shimmerInterval = -1
+    }
   }
 
   build() {
@@ -47,5 +54,12 @@ export struct ShimmerLoading {
         .translate({ x: this.shimmerX })
     }
     .clip(true)
+    .onVisibleAreaChange([0.0, 1.0], (isVisible: boolean, _currentRatio: number) => {
+      if (isVisible) {
+        this.startShimmer()
+      } else {
+        this.stopShimmer()
+      }
+    })
   }
 }

@@ -218,14 +218,9 @@ struct IllustDetailPage {
     });
     setTimeout(() => {
       animateTo({ curve: curves.springMotion(0.55, 0.65) }, () => {
-        this.bookmarkScale = 0.9;
+        this.bookmarkScale = 1;
       });
-      setTimeout(() => {
-        animateTo({ curve: curves.springMotion(0.55, 0.65) }, () => {
-          this.bookmarkScale = 1;
-        });
-      }, 250);
-    }, 250);
+    }, 280);
   }
 
   resetZoom() {
@@ -405,6 +400,7 @@ struct IllustDetailPage {
           .autoPlay(false)
           .loop(false)
           .indicator(false)
+          .cachedCount(1)
           .onChange((index: number) => {
             this.currentIndex = index;
             this.resetZoom();

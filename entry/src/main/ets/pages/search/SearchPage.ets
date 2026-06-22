@@ -6,6 +6,7 @@ import { NovelCard } from '../../components/NovelCard';
 import { UserCard } from '../../components/UserCard';
 import { SegmentedTabBar } from '../../components/SegmentedTabBar';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
+import { BasicDataSource } from '../../common/utils/BasicDataSource';
 import inputMethod from '@ohos.inputMethod';
 import preferences from '@ohos.data.preferences';
 import common from '@ohos.app.ability.common';
@@ -14,11 +15,13 @@ import common from '@ohos.app.ability.common';
 export struct SearchPage {
   @State keyword: string = '';
   @State currentTab: number = 0;
+  @State isHeaderVisible: boolean = true;
+  private lastScrollY: number = 0;
   @State showHistory: boolean = false;
   @State searchHistory: string[] = [];
 
   // illust
-  @State illustWorks: IllustBookmark[] = [];
+  private illustSource: BasicDataSource<IllustBookmark> = new BasicDataSource();
   @State illustPage: number = 1;
   @State illustPages: number = 0;
   @State isLoadingIllust: boolean = false;
@@ -26,7 +29,7 @@ export struct SearchPage {
   @State illustError: string = '';
 
   // novel
-  @State novelWorks: NovelBookmark[] = [];
+  private novelSource: BasicDataSource<NovelBookmark> = new BasicDataSource();
   @State novelPage: number = 1;
   @State novelPages: number = 0;
   @State isLoadingNovel: boolean = false;
@@ -34,7 +37,7 @@ export struct SearchPage {
   @State novelError: string = '';
 
   // user
-  @State userWorks: UserSearchResult[] = [];
+  private userSource: BasicDataSource<UserSearchResult> = new BasicDataSource();
   @State userPage: number = 1;
   @State userPages: number = 0;
   @State isLoadingUser: boolean = false;
@@ -125,7 +128,7 @@ export struct SearchPage {
     if (reset) {
       this.isLoadingIllust = true;
       this.illustError = '';
-      this.illustWorks = [];
+      this.illustSource.reset([]);
     }
     try {
       const res = await PixivService.searchIllusts(this.keyword.trim(), page, 's_tag', 'illust_and_ugoira');
@@ -139,9 +142,9 @@ export struct SearchPage {
           }
         }
         if (reset) {
-          this.illustWorks = works;
+          this.illustSource.reset(works);
         } else {
-          this.illustWorks = [...this.illustWorks, ...works];
+          this.illustSource.push(...works);
         }
         const total = res.body?.illust?.total ?? 0;
         this.illustPage = page;
@@ -162,7 +165,7 @@ export struct SearchPage {
     if (reset) {
       this.isLoadingNovel = true;
       this.novelError = '';
-      this.novelWorks = [];
+      this.novelSource.reset([]);
     }
     try {
       const res = await PixivService.searchNovels(this.keyword.trim(), page, 's_tag');
@@ -177,9 +180,9 @@ export struct SearchPage {
         }
         const filtered = await this.filterBlockedNovels(works);
         if (reset) {
-          this.novelWorks = filtered;
+          this.novelSource.reset(filtered);
         } else {
-          this.novelWorks = [...this.novelWorks, ...filtered];
+          this.novelSource.push(...filtered);
         }
         const total = res.body?.novel?.total ?? 0;
         this.novelPage = page;
@@ -200,7 +203,7 @@ export struct SearchPage {
     if (reset) {
       this.isLoadingUser = true;
       this.userError = '';
-      this.userWorks = [];
+      this.userSource.reset([]);
     }
     try {
       const res = await PixivService.searchUsers(this.keyword.trim(), page);
@@ -214,9 +217,9 @@ export struct SearchPage {
           }
         }
         if (reset) {
-          this.userWorks = users;
+          this.userSource.reset(users);
         } else {
-          this.userWorks = [...this.userWorks, ...users];
+          this.userSource.push(...users);
         }
         const total = res.body?.page?.total ?? 0;
         this.userPage = page;
@@ -272,11 +275,11 @@ export struct SearchPage {
   handleTabChange(index: number) {
     this.currentTab = index;
     if (!this.hasSearched) return;
-    if (index === 0 && this.illustWorks.length === 0 && !this.isLoadingIllust) {
+    if (index === 0 && this.illustSource.totalCount() === 0 && !this.isLoadingIllust) {
       this.searchIllusts(1, true);
-    } else if (index === 1 && this.novelWorks.length === 0 && !this.isLoadingNovel) {
+    } else if (index === 1 && this.novelSource.totalCount() === 0 && !this.isLoadingNovel) {
       this.searchNovels(1, true);
-    } else if (index === 2 && this.userWorks.length === 0 && !this.isLoadingUser) {
+    } else if (index === 2 && this.userSource.totalCount() === 0 && !this.isLoadingUser) {
       this.searchUsers(1, true);
     }
   }
@@ -393,15 +396,38 @@ export struct SearchPage {
     .alignItems(HorizontalAlign.Center)
   }
 
+  handleHeaderScroll(yOffset: number) {
+    const delta = yOffset - this.lastScrollY;
+    this.lastScrollY = yOffset;
+
+    if (delta > 8 && this.isHeaderVisible && yOffset > 30) {
+      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+        this.isHeaderVisible = false;
+      });
+    } else if (delta < -8 && !this.isHeaderVisible && yOffset < 10) {
+      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+        this.isHeaderVisible = true;
+      });
+    }
+  }
+
   @Builder
   TabsSection() {
     Column() {
-      SegmentedTabBar({
-        tabs: ['插画', '小说', '用户'],
-        currentIndex: this.currentTab,
-        onChange: (index: number): void => this.handleTabChange(index)
-      })
-      .padding({ left: 16, right: 16, top: 8, bottom: 4 })
+      if (this.isHeaderVisible) {
+        SegmentedTabBar({
+          tabs: ['插画', '小说', '用户'],
+          currentIndex: this.currentTab,
+          onChange: (index: number): void => {
+            this.lastScrollY = 0;
+            this.handleTabChange(index);
+          }
+        })
+        .padding({ left: 16, right: 16, top: 8, bottom: 4 })
+        .transition(TransitionEffect.translate({ y: -48 })
+          .combine(TransitionEffect.OPACITY)
+          .animation({ curve: curves.springMotion(0.45, 0.7) }))
+      }
 
       Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
         TabContent() {
@@ -444,15 +470,15 @@ export struct SearchPage {
       }
       .margin({ top: 80 })
       .alignItems(HorizontalAlign.Center)
-    } else if (this.illustWorks.length === 0) {
+    } else if (this.illustSource.totalCount() === 0) {
       Text('未找到相关插画').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
     } else {
       Scroll() {
         Column() {
           Grid() {
-            ForEach(this.illustWorks, (item: IllustBookmark, index?: number) => {
+            LazyForEach(this.illustSource, (item: IllustBookmark, index: number) => {
               GridItem() {
-                IllustCard({ item: item, index: index ?? 0 })
+                IllustCard({ item: item, index: index })
               }
             }, (item: IllustBookmark) => item.id)
           }
@@ -465,7 +491,7 @@ export struct SearchPage {
           if (this.isLoadingMoreIllust) {
             LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
           }
-          if (!this.isLoadingMoreIllust && this.illustPage >= this.illustPages && this.illustWorks.length > 0) {
+          if (!this.isLoadingMoreIllust && this.illustPage >= this.illustPages && this.illustSource.totalCount() > 0) {
             Text('- 已显示全部作品 -')
               .fontSize(12)
               .fontColor($r('app.color.text_secondary'))
@@ -484,6 +510,9 @@ export struct SearchPage {
           this.loadMoreIllusts();
         }
       })
+      .onScroll((_xOffset: number, yOffset: number) => {
+        this.handleHeaderScroll(yOffset);
+      })
     }
   }
 
@@ -498,15 +527,15 @@ export struct SearchPage {
       }
       .margin({ top: 80 })
       .alignItems(HorizontalAlign.Center)
-    } else if (this.novelWorks.length === 0) {
+    } else if (this.novelSource.totalCount() === 0) {
       Text('未找到相关小说').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
     } else {
       Scroll() {
         Column() {
           List() {
-            ForEach(this.novelWorks, (item: NovelBookmark, index?: number) => {
+            LazyForEach(this.novelSource, (item: NovelBookmark, index: number) => {
               ListItem() {
-                NovelCard({ item: item, index: index ?? 0 })
+                NovelCard({ item: item, index: index })
               }
             }, (item: NovelBookmark) => item.id)
           }
@@ -516,7 +545,7 @@ export struct SearchPage {
           if (this.isLoadingMoreNovel) {
             LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
           }
-          if (!this.isLoadingMoreNovel && this.novelPage >= this.novelPages && this.novelWorks.length > 0) {
+          if (!this.isLoadingMoreNovel && this.novelPage >= this.novelPages && this.novelSource.totalCount() > 0) {
             Text('- 已显示全部作品 -')
               .fontSize(12)
               .fontColor($r('app.color.text_secondary'))
@@ -535,6 +564,9 @@ export struct SearchPage {
           this.loadMoreNovels();
         }
       })
+      .onScroll((_xOffset: number, yOffset: number) => {
+        this.handleHeaderScroll(yOffset);
+      })
     }
   }
 
@@ -549,15 +581,15 @@ export struct SearchPage {
       }
       .margin({ top: 80 })
       .alignItems(HorizontalAlign.Center)
-    } else if (this.userWorks.length === 0) {
+    } else if (this.userSource.totalCount() === 0) {
       Text('未找到相关用户').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
     } else {
       Scroll() {
         Column() {
           Grid() {
-            ForEach(this.userWorks, (item: UserSearchResult, index?: number) => {
+            LazyForEach(this.userSource, (item: UserSearchResult, index: number) => {
               GridItem() {
-                UserCard({ item: item, index: index ?? 0 })
+                UserCard({ item: item, index: index })
               }
             }, (item: UserSearchResult) => item.userId)
           }
@@ -570,7 +602,7 @@ export struct SearchPage {
           if (this.isLoadingMoreUser) {
             LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
           }
-          if (!this.isLoadingMoreUser && this.userPage >= this.userPages && this.userWorks.length > 0) {
+          if (!this.isLoadingMoreUser && this.userPage >= this.userPages && this.userSource.totalCount() > 0) {
             Text('- 已显示全部用户 -')
               .fontSize(12)
               .fontColor($r('app.color.text_secondary'))
@@ -588,6 +620,9 @@ export struct SearchPage {
         if (!this.isLoadingMoreUser && this.userPage < this.userPages) {
           this.loadMoreUsers();
         }
+      })
+      .onScroll((_xOffset: number, yOffset: number) => {
+        this.handleHeaderScroll(yOffset);
       })
     }
   }

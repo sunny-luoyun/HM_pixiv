@@ -364,8 +364,10 @@ struct NovelReaderPage {
   }
 
   private dismissFloatingMenu(): void {
-    this.showFloatingMenu = false;
-    this.activeSubMenuIndex = -1;
+    animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
+      this.showFloatingMenu = false;
+      this.activeSubMenuIndex = -1;
+    });
     if (this.isAutoReading) {
       this.startAutoRead();
     }
@@ -573,7 +575,9 @@ struct NovelReaderPage {
             if (this.isAutoReading) {
               this.clearAutoReadTimer();
             }
-            this.showFloatingMenu = true;
+            animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
+              this.showFloatingMenu = true;
+            });
           }
         }
       })
@@ -638,7 +642,11 @@ struct NovelReaderPage {
     .layoutWeight(1)
     .padding({ top: 10, bottom: 8 })
     .alignItems(HorizontalAlign.Center)
-    .onClick(() => { this.activeSubMenuIndex = index; })
+    .onClick(() => {
+      animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
+        this.activeSubMenuIndex = index;
+      });
+    })
   }
 
   @Builder SubMenuPanel() {
@@ -651,7 +659,11 @@ struct NovelReaderPage {
         }
         .width(32).height(32)
         .backgroundColor(this.getColors().iconBtnBg)
-        .onClick(() => { this.activeSubMenuIndex = -1; })
+        .onClick(() => {
+          animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
+            this.activeSubMenuIndex = -1;
+          });
+        })
 
         Text(this.activeSubMenuIndex === 0 ? '外观'
           : this.activeSubMenuIndex === 1 ? '翻译'

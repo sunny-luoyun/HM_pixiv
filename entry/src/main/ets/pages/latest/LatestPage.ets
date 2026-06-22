@@ -6,14 +6,15 @@ import { IllustCard } from '../../components/IllustCard';
 import { PullToRefresh } from '../../components/PullToRefresh';
 import { SegmentedTabBar } from '../../components/SegmentedTabBar';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
+import { BasicDataSource } from '../../common/utils/BasicDataSource';
 import common from '@ohos.app.ability.common';
 
 @Component
 export struct LatestPage {
   @Consume('isLoggedIn') @Watch('onLoginStateChange') isLoggedIn: boolean;
   @State currentTab: number = 0;
-  @State illustWorks: IllustBookmark[] = [];
-  @State novelWorks: NovelBookmark[] = [];
+  private illustSource: BasicDataSource<IllustBookmark> = new BasicDataSource();
+  private novelSource: BasicDataSource<NovelBookmark> = new BasicDataSource();
   @State isLoadingIllust: boolean = true;
   @State isLoadingNovel: boolean = false;
   @State isRefreshingIllust: boolean = false;
@@ -26,7 +27,7 @@ export struct LatestPage {
   @State illustPages: number = 0;
   @State isLoadingMoreIllust: boolean = false;
 
-  @State headerTranslateY: number = 0;
+  @State isHeaderVisible: boolean = true;
   private lastScrollY: number = 0;
 
   // 小说分页
@@ -43,14 +44,14 @@ export struct LatestPage {
   }
 
   onLoginStateChange() {
-    if (this.isLoggedIn && this.illustWorks.length === 0 && !this.isLoadingIllust) {
+    if (this.isLoggedIn && this.illustSource.totalCount() === 0 && !this.isLoadingIllust) {
       this.loadIllusts();
     }
   }
 
   async loadIllusts() {
     this.isRefreshingIllust = true;
-    if (this.illustWorks.length === 0) {
+    if (this.illustSource.totalCount() === 0) {
       this.isLoadingIllust = true;
     }
     this.illustError = '';
@@ -59,7 +60,7 @@ export struct LatestPage {
     try {
       const res = await PixivService.getFollowLatestIllusts(1, 'all');
       if (!res.error) {
-        this.illustWorks = res.body?.thumbnails?.illust ?? [];
+        this.illustSource.reset(res.body?.thumbnails?.illust ?? []);
         this.illustPage = res.body?.page ?? 1;
         this.illustPages = res.body?.pages ?? 1;
       } else {
@@ -81,7 +82,7 @@ export struct LatestPage {
       const res = await PixivService.getFollowLatestIllusts(nextPage, 'all');
       if (!res.error) {
         const newWorks = res.body?.thumbnails?.illust ?? [];
-        this.illustWorks = [...this.illustWorks, ...newWorks];
+        this.illustSource.push(...newWorks);
         this.illustPage = res.body?.page ?? nextPage;
         this.illustPages = res.body?.pages ?? this.illustPages;
       }
@@ -118,7 +119,7 @@ export struct LatestPage {
 
   async loadNovels() {
     this.isRefreshingNovel = true;
-    if (this.novelWorks.length === 0) {
+    if (this.novelSource.totalCount() === 0) {
       this.isLoadingNovel = true;
     }
     this.novelError = '';
@@ -128,7 +129,7 @@ export struct LatestPage {
       const res = await PixivService.getFollowLatestNovels(1, 'all');
       if (!res.error) {
         const rawWorks = res.body?.thumbnails?.novel ?? [];
-        this.novelWorks = await this.filterBlockedNovels(rawWorks);
+        this.novelSource.reset(await this.filterBlockedNovels(rawWorks));
         this.novelPage = res.body?.page ?? 1;
         this.novelPages = res.body?.pages ?? 1;
       } else {
@@ -151,7 +152,7 @@ export struct LatestPage {
       if (!res.error) {
         const rawNew = res.body?.thumbnails?.novel ?? [];
         const filteredNew = await this.filterBlockedNovels(rawNew);
-        this.novelWorks = [...this.novelWorks, ...filteredNew];
+        this.novelSource.push(...filteredNew);
         this.novelPage = res.body?.page ?? nextPage;
         this.novelPages = res.body?.pages ?? this.novelPages;
       }
@@ -165,13 +166,13 @@ export struct LatestPage {
     const delta = yOffset - this.lastScrollY;
     this.lastScrollY = yOffset;
 
-    if (delta > 8 && this.headerTranslateY >= 0 && yOffset > 30) {
+    if (delta > 8 && this.isHeaderVisible && yOffset > 30) {
       animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
-        this.headerTranslateY = -48;
+        this.isHeaderVisible = false;
       });
-    } else if (delta < -8 && this.headerTranslateY < 0) {
+    } else if (delta < -8 && !this.isHeaderVisible && yOffset < 10) {
       animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
-        this.headerTranslateY = 0;
+        this.isHeaderVisible = true;
       });
     }
   }
@@ -217,46 +218,45 @@ export struct LatestPage {
   @Builder
   TabsSection() {
     Column() {
-      Column()
-        .width('100%')
-        .height(48)
-        .clip(true) {
+      if (this.isHeaderVisible) {
         SegmentedTabBar({
           tabs: ['插画', '小说'],
           currentIndex: this.currentTab,
           onChange: (index: number) => {
             this.currentTab = index;
             this.lastScrollY = 0;
-            if (index === 1 && this.novelWorks.length === 0 && !this.isLoadingNovel) {
+            if (index === 1 && this.novelSource.totalCount() === 0 && !this.isLoadingNovel) {
               this.loadNovels();
             }
           }
         })
         .padding({ left: 16, right: 16, top: 8, bottom: 4 })
-        .translate({ y: this.headerTranslateY })
+        .transition(TransitionEffect.translate({ y: -48 })
+          .combine(TransitionEffect.OPACITY)
+          .animation({ curve: curves.springMotion(0.45, 0.7) }))
       }
 
       Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
         TabContent() {
-          if (this.isLoadingIllust && this.illustWorks.length === 0) {
+          if (this.isLoadingIllust && this.illustSource.totalCount() === 0) {
             LoadingProgress().width(40).height(40).margin({ top: 100 })
-          } else if (this.illustWorks.length === 0 && this.illustError) {
+          } else if (this.illustSource.totalCount() === 0 && this.illustError) {
             Column() {
               Text(this.illustError).fontSize(14).fontColor($r('app.color.text_secondary'))
               Button('重试').margin({ top: 12 }).onClick(() => this.loadIllusts())
             }
             .margin({ top: 80 })
             .alignItems(HorizontalAlign.Center)
-          } else if (this.illustWorks.length === 0) {
+          } else if (this.illustSource.totalCount() === 0) {
             Text('没有更多最新插画').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
           } else {
             PullToRefresh({ refreshing: this.isRefreshingIllust, onRefresh: (): Promise<void> => this.loadIllusts() }) {
               Scroll() {
                 Column() {
                   Grid() {
-                    ForEach(this.illustWorks, (item: IllustBookmark, index?: number) => {
+                    LazyForEach(this.illustSource, (item: IllustBookmark, index: number) => {
                     GridItem() {
-                      IllustCard({ item: item, index: index ?? 0 })
+                      IllustCard({ item: item, index: index })
                     }
                   }, (item: IllustBookmark) => item.id)
                 }
@@ -269,7 +269,7 @@ export struct LatestPage {
                 if (this.isLoadingMoreIllust) {
                   LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
                 }
-                if (!this.isLoadingMoreIllust && this.illustPage >= this.illustPages && this.illustWorks.length > 0) {
+                if (!this.isLoadingMoreIllust && this.illustPage >= this.illustPages && this.illustSource.totalCount() > 0) {
                   Text('- 已显示全部作品 -')
                     .fontSize(12)
                     .fontColor($r('app.color.text_secondary'))
@@ -297,25 +297,25 @@ export struct LatestPage {
         .tabBar('')
 
         TabContent() {
-          if (this.isLoadingNovel && this.novelWorks.length === 0) {
+          if (this.isLoadingNovel && this.novelSource.totalCount() === 0) {
             LoadingProgress().width(40).height(40).margin({ top: 100 })
-          } else if (this.novelWorks.length === 0 && this.novelError) {
+          } else if (this.novelSource.totalCount() === 0 && this.novelError) {
             Column() {
               Text(this.novelError).fontSize(14).fontColor($r('app.color.text_secondary'))
               Button('重试').margin({ top: 12 }).onClick(() => this.loadNovels())
             }
             .margin({ top: 80 })
             .alignItems(HorizontalAlign.Center)
-          } else if (this.novelWorks.length === 0) {
+          } else if (this.novelSource.totalCount() === 0) {
             Text('没有更多最新小说').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
           } else {
             PullToRefresh({ refreshing: this.isRefreshingNovel, onRefresh: (): Promise<void> => this.loadNovels() }) {
               Scroll() {
                 Column() {
                   List() {
-                    ForEach(this.novelWorks, (item: NovelBookmark, index?: number) => {
+                    LazyForEach(this.novelSource, (item: NovelBookmark, index: number) => {
                     ListItem() {
-                      NovelCard({ item: item, index: index ?? 0 })
+                      NovelCard({ item: item, index: index })
                     }
                   }, (item: NovelBookmark) => item.id)
                 }
@@ -325,7 +325,7 @@ export struct LatestPage {
                 if (this.isLoadingMoreNovel) {
                   LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
                 }
-                if (!this.isLoadingMoreNovel && this.novelPage >= this.novelPages && this.novelWorks.length > 0) {
+                if (!this.isLoadingMoreNovel && this.novelPage >= this.novelPages && this.novelSource.totalCount() > 0) {
                   Text('- 已显示全部作品 -')
                     .fontSize(12)
                     .fontColor($r('app.color.text_secondary'))
@@ -359,7 +359,7 @@ export struct LatestPage {
         animateTo({ curve: curves.springMotion(0.55, 0.65) }, () => {
           this.currentTab = index;
         });
-        if (index === 1 && this.novelWorks.length === 0 && !this.isLoadingNovel) {
+        if (index === 1 && this.novelSource.totalCount() === 0 && !this.isLoadingNovel) {
           this.loadNovels();
         }
       })

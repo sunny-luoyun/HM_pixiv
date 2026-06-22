@@ -2,6 +2,7 @@ import router from '@ohos.router';
 import { PixivService } from '../../services/PixivService';
 import { UserSearchResult, FollowingUserRaw } from '../../models/PixivModels';
 import { UserCard } from '../../components/UserCard';
+import { BasicDataSource } from '../../common/utils/BasicDataSource';
 import { appState } from '../../store/AppState';
 
 const PAGE_LIMIT = 30;
@@ -23,7 +24,7 @@ function toUserSearchResult(raw: FollowingUserRaw): UserSearchResult {
 @Component
 struct FollowingPage {
   private isActive: boolean = true;
-  @State users: UserSearchResult[] = [];
+  private userSource: BasicDataSource<UserSearchResult> = new BasicDataSource();
   @State isLoading: boolean = true;
   @State isLoadingMore: boolean = false;
   @State hasMore: boolean = true;
@@ -52,7 +53,7 @@ struct FollowingPage {
       const res = await PixivService.getFollowingList(appState.userId, 0, PAGE_LIMIT);
       if (!this.isActive) return;
       if (!res.error) {
-        this.users = res.body.users.map(toUserSearchResult);
+        this.userSource.reset(res.body.users.map(toUserSearchResult));
         this.currentOffset += res.body.users.length;
         if (this.currentOffset >= res.body.total) {
           this.hasMore = false;
@@ -74,7 +75,7 @@ struct FollowingPage {
       const res = await PixivService.getFollowingList(appState.userId, this.currentOffset, PAGE_LIMIT);
       if (!this.isActive) return;
       if (!res.error) {
-        this.users = [...this.users, ...res.body.users.map(toUserSearchResult)];
+        this.userSource.push(...res.body.users.map(toUserSearchResult));
         this.currentOffset += res.body.users.length;
         if (this.currentOffset >= res.body.total) {
           this.hasMore = false;
@@ -100,22 +101,22 @@ struct FollowingPage {
 
       if (this.isLoading) {
         LoadingProgress().width(40).height(40).margin({ top: 100 })
-      } else if (this.error && this.users.length === 0) {
+      } else if (this.error && this.userSource.totalCount() === 0) {
         Column() {
           Text(this.error).fontSize(14).fontColor($r('app.color.text_secondary'))
           Button('重试').margin({ top: 12 }).onClick(() => this.loadUsers())
         }
         .margin({ top: 80 })
         .alignItems(HorizontalAlign.Center)
-      } else if (this.users.length === 0) {
+      } else if (this.userSource.totalCount() === 0) {
         Text('暂无关注').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
       } else {
         Scroll() {
           Column() {
             Grid() {
-              ForEach(this.users, (item: UserSearchResult, index?: number) => {
+              LazyForEach(this.userSource, (item: UserSearchResult, index: number) => {
                 GridItem() {
-                  UserCard({ item: item, index: index ?? 0 })
+                  UserCard({ item: item, index: index })
                 }
               }, (item: UserSearchResult) => item.userId)
             }
@@ -128,7 +129,7 @@ struct FollowingPage {
             if (this.isLoadingMore) {
               LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
             }
-            if (!this.isLoadingMore && !this.hasMore && this.users.length > 0) {
+            if (!this.isLoadingMore && !this.hasMore && this.userSource.totalCount() > 0) {
               Text('- 已显示全部关注 -')
                 .fontSize(12)
                 .fontColor($r('app.color.text_secondary'))

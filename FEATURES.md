@@ -231,7 +231,35 @@
 
 ---
 
-> 最后更新：F22 沉浸光感第一阶段，基于 2026-06-22 SDK 6.1.0 升级后基线
+## F23 - ArkUI 动画与列表规范修复
+
+- **描述**：按 ArkUI 官方规范修复动画 API 和列表渲染的不合规用法
+- **涉及文件**：
+  - `entry/src/main/ets/common/utils/BasicDataSource.ets`（新增，LazyForEach 通用数据源）
+  - `entry/src/main/ets/components/ShimmerLoading.ets` — 递归动画改为 setInterval + 可见性管理
+  - `entry/src/main/ets/components/SegmentedTabBar.ets` — 移除脆弱标志位，改用值比较跳过重复动画
+  - `entry/src/main/ets/components/IllustCard.ets` — 收藏动画 3 段式简化为 2 段式
+  - `entry/src/main/ets/pages/novel/NovelReaderPage.ets` — transition 配合 animateTo
+  - `entry/src/main/ets/pages/illust/IllustDetailPage.ets` — 收藏动画简化、Swiper cachedCount
+  - `entry/src/main/ets/pages/home/HomePage.ets` — onScroll animateTo 加防护、LazyForEach
+  - `entry/src/main/ets/pages/latest/LatestPage.ets` — onScroll animateTo 加防护、LazyForEach
+  - `entry/src/main/ets/pages/search/SearchPage.ets` — LazyForEach
+  - `entry/src/main/ets/pages/user/UserProfilePage.ets` — LazyForEach (4 个 Tab)
+  - `entry/src/main/ets/pages/favorites/FavoritesPage.ets` — LazyForEach
+  - `entry/src/main/ets/pages/setting/FollowingPage.ets` — LazyForEach
+  - `entry/src/main/ets/components/CommentsComponent.ets` — LazyForEach
+- **修复项**：
+  1. onScroll 高频回调内 animateTo 添加目标值防护，避免重复创建动画
+  2. ShimmerLoading 递归 setTimeout 改为 setInterval + onVisibleAreaChange 可见性管理
+  3. transition 转场动效配合 animateTo 包装状态变更
+  4. 收藏按钮动画三段嵌套 setTimeout 简化为两段
+  5. SegmentedTabBar 移除 updatingFromClick 标志位，用 animIndex===currentIndex 跳过重复
+  6. 7 个列表页/组件的 ForEach 迁移为 LazyForEach + BasicDataSource
+  7. IllustDetailPage Swiper 添加 cachedCount(1) 预加载相邻页
+
+---
+
+> 最后更新：F23 ArkUI 规范修复，基于 2026-06-22
 
 ---
 

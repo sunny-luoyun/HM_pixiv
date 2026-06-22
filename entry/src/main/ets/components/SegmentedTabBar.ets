@@ -8,15 +8,13 @@ export struct SegmentedTabBar {
 
   @State private animIndex: number = 0;
   @State private pillWidth: number = 0;
-  private updatingFromClick: boolean = false;
 
   aboutToAppear() {
     this.animIndex = this.currentIndex;
   }
 
   onIndexChange() {
-    if (this.updatingFromClick) {
-      this.updatingFromClick = false;
+    if (this.animIndex === this.currentIndex) {
       return;
     }
     animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
@@ -26,7 +24,6 @@ export struct SegmentedTabBar {
 
   handleClick(index: number) {
     if (index === this.animIndex) return;
-    this.updatingFromClick = true;
     animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
       this.animIndex = index;
     });
