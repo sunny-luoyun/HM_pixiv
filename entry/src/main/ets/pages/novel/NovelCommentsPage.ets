@@ -19,7 +19,6 @@ struct NovelCommentsPage {
         entityId: this.novelId,
         titleLabel: '小说评论',
         fetchComments: (id: string, offset: number) => PixivService.getNovelComments(id, offset),
-        postComment: (id: number, text: string) => AppApiService.postNovelComment(id, text),
         deleteComment: (id: number) => AppApiService.deleteNovelComment(id),
       })
     }

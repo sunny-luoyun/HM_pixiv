@@ -8,17 +8,14 @@ import { AppState } from '../store/AppState';
 export struct CommentsComponent {
   private entityId: string = '';
   private titleLabel: string = '评论';
-  private emptyHint: string = '来发表第一条评论吧';
+  private emptyHint: string = '还没有人评论';
   private fetchComments: (id: string, offset: number) => Promise<AjaxCommentsResponse> = () => Promise.reject(new Error('not set'));
-  private postComment: (id: number, text: string) => Promise<Object> = () => Promise.reject(new Error('not set'));
   private deleteComment: (commentId: number) => Promise<void> = () => Promise.reject(new Error('not set'));
 
   @State totalComments: number = 0;
   private commentSource: BasicDataSource<AjaxComment> = new BasicDataSource();
   @State isLoading: boolean = true;
   @State isLoadingMore: boolean = false;
-  @State isPosting: boolean = false;
-  @State inputText: string = '';
   @State errorMsg: string = '';
   @State hasMore: boolean = false;
   @State deletingCommentId: number = -1;
@@ -71,26 +68,6 @@ export struct CommentsComponent {
       console.error('加载更多评论失败:', err);
       this.isLoadingMore = false;
     }
-  }
-
-  async handlePost() {
-    const text = this.inputText.trim();
-    if (!text || this.isPosting) return;
-    if (text.length > 500) {
-      promptAction.showToast({ message: '评论内容不能超过500字' });
-      return;
-    }
-    this.isPosting = true;
-    try {
-      const idNum = parseInt(this.entityId);
-      await this.postComment(idNum, text);
-      this.inputText = '';
-      promptAction.showToast({ message: '评论发表成功' });
-      await this.loadComments();
-    } catch (err) {
-      promptAction.showToast({ message: '发表评论失败: ' + String(err) });
-    }
-    this.isPosting = false;
   }
 
   async handleDelete(commentId: number) {
@@ -214,42 +191,6 @@ export struct CommentsComponent {
         .scrollBar(BarState.Off)
         .onReachEnd(() => this.loadMore())
       }
-
-      Row() {
-        TextInput({ placeholder: '写下你的评论...', text: this.inputText })
-          .placeholderColor($r('app.color.text_secondary'))
-          .placeholderFont({ size: 14 })
-          .fontSize(14)
-          .fontColor(Color.White)
-          .backgroundColor($r('app.color.overlay_light'))
-          .borderRadius(20)
-          .height(40)
-          .layoutWeight(1)
-          .padding({ left: 16, right: 16 })
-          .onChange((value: string) => {
-            this.inputText = value;
-          })
-          .maxLength(500)
-
-        if (this.isPosting) {
-          LoadingProgress().width(20).height(20).color($r('app.color.text_secondary'))
-            .margin({ left: 10 })
-        } else {
-          Button(this.inputText.trim() ? '发送' : '')
-            .fontSize(14)
-            .fontColor(Color.White)
-            .backgroundColor(this.inputText.trim() ? $r('app.color.brand_accent') : $r('app.color.overlay_light'))
-            .borderRadius(18)
-            .height(36)
-            .width(this.inputText.trim() ? 56 : 40)
-            .margin({ left: 8 })
-            .opacity(this.inputText.trim() ? 1 : 0.5)
-            .onClick(() => this.handlePost())
-        }
-      }
-      .width('100%')
-      .padding({ left: 16, right: 16, top: 10, bottom: 10 })
-      .backgroundColor('#0f0f14')
     }
     .width('100%')
     .height('100%')

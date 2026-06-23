@@ -46,9 +46,11 @@
 
 ## F05 - 插画详情与评论
 
-- **描述**：查看插画大图、标题、作者、标签；浏览/发表评论
+- **描述**：查看插画大图、标题、作者、标签；浏览/删除评论（发表评论暂不可用，待 OAuth2 接入后恢复）
 - **页面**：`entry/src/main/ets/pages/illust/IllustDetailPage.ets`、`entry/src/main/ets/pages/illust/IllustCommentsPage.ets`
-- **API**：`entry/src/main/ets/services/PixivApiService.ets`（`getIllustDetail`、`getIllustComments`）
+- **API**：`entry/src/main/ets/services/PixivApiService.ets`（`getIllustDetail`、`getIllustComments`）、`entry/src/main/ets/services/AppApiService.ets`（`deleteIllustComment`，`postIllustComment` 保留代码待 OAuth 启用）
+- **组件**：`entry/src/main/ets/components/CommentsComponent.ets`
+- **已知限制**：发表评论需 Pixiv OAuth2 Bearer Token 认证，当前仅使用 PHPSESSID Cookie，评论接口返回 400 OAuth error。发表 UI 已临时移除，`AppApiService.ts` 中 `Content-Type` 头修复已保留
 
 ---
 
@@ -211,10 +213,10 @@
 | 3 | 最新作品加载 | 切换到「最新」Tab → 切换插画/小说 Tab 正常 | ☐ |
 | 4 | 搜索 | 切换到「搜索」Tab → 输入关键词 → 结果正常展示 | ☐ |
 | 5 | 插画详情 | 点击任意插画 → 大图/标题/标签/作者正常展示 | ☐ |
-| 6 | 插画评论 | 插画详情页 → 点击评论 → 评论列表正常 | ☐ |
+| 6 | 插画评论 | 插画详情页 → 点击评论 → 评论列表正常（发表暂不可用） | ☐ |
 | 7 | 小说阅读器 | 点击任意小说 → 正文加载 → 自动阅读/书签保存 | ☐ |
 | 8 | 小说系列 | 小说详情页 → 点击系列 → 系列列表正常 | ☐ |
-| 9 | 小说评论 | 小说详情页 → 点击评论 → 评论列表正常 | ☐ |
+| 9 | 小说评论 | 小说详情页 → 点击评论 → 评论列表正常（发表暂不可用） | ☐ |
 | 10 | 用户主页 | 点击任意作者头像 → 作品列表正常 | ☐ |
 | 11 | 收藏管理 | 「我的」→ 收藏 → 列表正常加载 | ☐ |
 | 12 | 代理启动 | 设置 → 导入订阅 → 开启代理 → 显示运行中 | ☐ |

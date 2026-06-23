@@ -19,7 +19,6 @@ struct IllustCommentsPage {
         entityId: this.illustId,
         titleLabel: '评论',
         fetchComments: (id: string, offset: number) => PixivService.getIllustComments(id, offset),
-        postComment: (id: number, text: string) => AppApiService.postIllustComment(id, text),
         deleteComment: (id: number) => AppApiService.deleteIllustComment(id),
       })
     }

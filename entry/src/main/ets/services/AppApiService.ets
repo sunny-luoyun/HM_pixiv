@@ -167,6 +167,7 @@ export class AppApiService {
         };
 
         if (data && method === http.RequestMethod.POST) {
+          header['Content-Type'] = 'application/x-www-form-urlencoded';
           options.extraData = Object.entries(data as Record<string, string | number | boolean | string[]>)
             .map((entry: [string, string | number | boolean | string[]]) => `${encodeURIComponent(entry[0])}=${encodeURIComponent(String(entry[1]))}`)
             .join('&');
@@ -178,7 +179,8 @@ export class AppApiService {
         if (response.responseCode === 200) {
           return JSON.parse(response.result as string) as T;
         }
-        throw new Error(`HTTP ${response.responseCode}: ${response.result}`);
+        console.error(`AppApi 请求失败 [${method} ${path}]: HTTP ${response.responseCode}, body: ${response.result}`);
+        throw new Error(`HTTP ${response.responseCode}`);
       } finally {
         httpRequest.destroy();
       }
