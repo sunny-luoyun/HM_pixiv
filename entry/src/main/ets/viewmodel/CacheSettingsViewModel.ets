@@ -3,6 +3,7 @@ import { BaseVM, BaseVMEvent } from './BaseVM';
 import { PixivService } from '../services/PixivService';
 import { pixivCacheDB } from '../database/PixivCacheDB';
 import { formatFileSize } from '../common/utils/FormatUtil';
+import { AppState } from '../store/AppState';
 import common from '@ohos.app.ability.common';
 
 export class CacheSettingsEventType {
@@ -105,8 +106,10 @@ export class CacheSettingsViewModel extends BaseVM<CacheSettingsState> {
       } else if (category === 'novel') {
         await PixivService.clearCategoryCache('novel_');
       } else if (category === 'avatar') {
+        const appState = AppStorage.get<AppState>('appState');
+        const excludeFile = appState?.userId ? `avatar_${appState.userId}.jpg` : undefined;
         await PixivService.clearCategoryCache('user_');
-        await PixivService.clearCategoryCache('avatar_');
+        await PixivService.clearCategoryCache('avatar_', excludeFile);
       }
       await this.refreshCacheInfo();
     } catch (err) {
@@ -116,7 +119,9 @@ export class CacheSettingsViewModel extends BaseVM<CacheSettingsState> {
 
   async clearAllImageCache(): Promise<void> {
     try {
-      await PixivService.clearAllImageCache();
+      const appState = AppStorage.get<AppState>('appState');
+      const excludeFile = appState?.userId ? `avatar_${appState.userId}.jpg` : undefined;
+      await PixivService.clearAllImageCache(excludeFile);
       await this.refreshCacheInfo();
     } catch (err) {
       console.error('清除全部图片缓存失败:', err);

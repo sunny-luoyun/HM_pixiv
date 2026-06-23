@@ -154,12 +154,12 @@ export class PixivService {
     return ImageCacheService.getCategoryCacheInfo(prefix);
   }
 
-  static async clearCategoryCache(prefix: string): Promise<number> {
-    return ImageCacheService.clearCategoryCache(prefix);
+  static async clearCategoryCache(prefix: string, excludeFileName?: string): Promise<number> {
+    return ImageCacheService.clearCategoryCache(prefix, excludeFileName);
   }
 
-  static async clearAllImageCache(): Promise<void> {
-    return ImageCacheService.clearAllImageCache();
+  static async clearAllImageCache(excludeAvatarFile?: string): Promise<void> {
+    return ImageCacheService.clearAllImageCache(excludeAvatarFile);
   }
 
   static async addIllustBookmark(illustId: string, restrict: string = 'public', tags: string[] = []): Promise<void> {

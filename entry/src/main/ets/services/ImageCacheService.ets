@@ -233,7 +233,7 @@ export class ImageCacheService {
     return { size: totalSize, count: totalCount };
   }
 
-  static async clearCategoryCache(prefix: string): Promise<number> {
+  static async clearCategoryCache(prefix: string, excludeFileName?: string): Promise<number> {
     const cacheDir = ImageCacheService.getCacheDir();
     if (!cacheDir) return 0;
 
@@ -242,7 +242,7 @@ export class ImageCacheService {
     try {
       const files = fileIo.listFileSync(cacheDir);
       for (const fileName of files) {
-        if (fileName.startsWith(prefix)) {
+        if (fileName.startsWith(prefix) && fileName !== excludeFileName) {
           try {
             fileIo.unlinkSync(cacheDir + '/' + fileName);
             deletedCount++;
@@ -254,11 +254,11 @@ export class ImageCacheService {
     return deletedCount;
   }
 
-  static async clearAllImageCache(): Promise<void> {
+  static async clearAllImageCache(excludeAvatarFile?: string): Promise<void> {
     await ImageCacheService.clearCategoryCache('illust_');
     await ImageCacheService.clearCategoryCache('novel_');
     await ImageCacheService.clearCategoryCache('user_');
-    await ImageCacheService.clearCategoryCache('avatar_');
+    await ImageCacheService.clearCategoryCache('avatar_', excludeAvatarFile);
   }
 
   static async extractDominantColor(filePath: string): Promise<string> {

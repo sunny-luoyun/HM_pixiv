@@ -4,6 +4,7 @@ import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { formatFileSize } from '../../common/utils/FormatUtil';
 import { PageContext } from '../../common/utils/PageContext';
 import { PageEnum } from '../../common/constants/PageEnum';
+import { AppState } from '../../store/AppState';
 
 @Component
 export struct CacheSettingsSection {
@@ -95,10 +96,14 @@ export struct CacheSettingsSection {
             } else if (category === 'novel') {
               await PixivService.clearCategoryCache('novel_');
             } else if (category === 'avatar') {
+              const appState = AppStorage.get<AppState>('appState');
+              const excludeFile = appState?.userId ? `avatar_${appState.userId}.jpg` : undefined;
               await PixivService.clearCategoryCache('user_');
-              await PixivService.clearCategoryCache('avatar_');
+              await PixivService.clearCategoryCache('avatar_', excludeFile);
             } else if (category === 'all') {
-              await PixivService.clearAllImageCache();
+              const appState = AppStorage.get<AppState>('appState');
+              const excludeFile = appState?.userId ? `avatar_${appState.userId}.jpg` : undefined;
+              await PixivService.clearAllImageCache(excludeFile);
             }
             await this.refreshCacheInfo();
           } catch (err) {
