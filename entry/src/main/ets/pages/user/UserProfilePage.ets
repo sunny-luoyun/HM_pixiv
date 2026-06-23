@@ -1,4 +1,4 @@
-import router from '@ohos.router';
+
 import { curves } from '@kit.ArkUI';
 import { AppApiService } from '../../services/AppApiService';
 import { PixivService } from '../../services/PixivService';
@@ -7,6 +7,7 @@ import { IllustCard } from '../../components/IllustCard';
 import { NovelCard } from '../../components/NovelCard';
 import { SegmentedTabBar } from '../../components/SegmentedTabBar';
 import { BasicDataSource } from '../../common/utils/BasicDataSource';
+import { PageContext } from '../../common/utils/PageContext';
 
 const PAGE_SIZE = 30;
 
@@ -85,9 +86,9 @@ function mapProfileNovelToBookmark(item: ProfileNovel, defaultName: string = '')
   };
 }
 
-@Entry
 @Component
 struct UserProfilePage {
+  @State navParams: Record<string, Object> = {};
   private userId: string = '';
   @State userName: string = '';
   @State userAvatarUrl: string = '';
@@ -140,17 +141,8 @@ struct UserProfilePage {
     this.isActive = false;
   }
 
-  async aboutToAppear() {
-    const params = router.getParams() as Record<string, string>;
-    this.userId = params['userId'];
-    this.userName = params['userName'] || '';
-    if (!this.userId) {
-      this.profileError = '缺少用户ID';
-      this.isLoadingProfile = false;
-      return;
-    }
-    await this.loadProfile();
-    await this.loadIllusts();
+  aboutToAppear() {
+    // 参数由 onReady 获取
   }
 
   async loadProfile() {
@@ -434,14 +426,8 @@ struct UserProfilePage {
     }
   }
 
-  pageTransition() {
-    PageTransitionEnter({ duration: 300, curve: Curve.Friction })
-      .slide(SlideEffect.Right)
-    PageTransitionExit({ duration: 300, curve: Curve.Friction })
-      .slide(SlideEffect.Right)
-  }
-
   build() {
+    NavDestination() {
     Column() {
       this.TopBar()
       if (this.profileError && !this.isLoadingProfile) {
@@ -454,6 +440,25 @@ struct UserProfilePage {
     .width('100%')
     .height('100%')
     .backgroundColor($r('app.color.page_background'))
+    }
+    .onReady((ctx: NavDestinationContext) => {
+      this.navParams = ctx.pathInfo.param as Record<string, Object> ?? {};
+      this.userId = (this.navParams['userId'] as string) || '';
+      this.userName = (this.navParams['userName'] as string) || '';
+      if (!this.userId) {
+        this.profileError = '缺少用户ID';
+        this.isLoadingProfile = false;
+        return;
+      }
+      this.loadProfile();
+      this.loadIllusts();
+    })
+    .onBackPressed(() => {
+      const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+      if (pageCtx) { pageCtx.popPage(); }
+      return true;
+    })
+    .hideTitleBar(true)
   }
 
   @Builder
@@ -463,7 +468,8 @@ struct UserProfilePage {
         .fontSize(28)
         .fontColor($r('app.color.tab_selected'))
         .onClick(() => {
-          router.back();
+          const ctx = AppStorage.get<PageContext>('rootPageContext');
+          if (ctx) { ctx.popPage(); }
         })
       Text(this.userName || '作者主页')
         .fontSize(18)
@@ -844,9 +850,14 @@ struct UserProfilePage {
         .margin({ top: 80 })
       Button('返回')
         .margin({ top: 12 })
-        .onClick(() => { router.back(); })
+          .onClick(() => { const ctx = AppStorage.get<PageContext>('rootPageContext'); if (ctx) { ctx.popPage(); } })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Center)
   }
+}
+
+@Builder
+export function UserProfileBuilder(): void {
+  UserProfilePage()
 }

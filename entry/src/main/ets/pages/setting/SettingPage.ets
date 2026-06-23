@@ -1,7 +1,8 @@
-import router from '@ohos.router';
 import { AppState, appState } from '../../store/AppState';
 import { PixivService } from '../../services/PixivService';
 import fileIo from '@ohos.file.fs';
+import { PageContext } from '../../common/utils/PageContext';
+import { PageEnum } from '../../common/constants/PageEnum';
 
 @Component
 export struct SettingPage {
@@ -40,19 +41,24 @@ export struct SettingPage {
   MenuSection() {
     Column() {
       this.MenuItem('◉', '我的关注', () => {
-        router.pushUrl({ url: 'pages/setting/FollowingPage' });
+        const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+        if (pageCtx) { pageCtx.openPage(PageEnum.FOLLOWING); }
       })
       this.MenuItem('◎', '我的缓存', () => {
-        router.pushUrl({ url: 'pages/settings/CachedNovelsPage' });
+        const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+        if (pageCtx) { pageCtx.openPage(PageEnum.CACHED_NOVELS); }
       })
       this.MenuItem('✦', '我的收藏', () => {
-        router.pushUrl({ url: 'pages/favorites/FavoritesPage' });
+        const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+        if (pageCtx) { pageCtx.openPage(PageEnum.FAVORITES); }
       })
       this.MenuItem('🚫', '屏蔽内容', () => {
-        router.pushUrl({ url: 'pages/setting/BlockedContentPage' });
+        const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+        if (pageCtx) { pageCtx.openPage(PageEnum.BLOCKED_CONTENT); }
       })
       this.MenuItem('⚙', '设置', () => {
-        router.pushUrl({ url: 'pages/settings/SettingsPage' });
+        const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+        if (pageCtx) { pageCtx.openPage(PageEnum.SETTINGS); }
       })
     }
     .width('100%')
@@ -132,7 +138,8 @@ export struct SettingPage {
           Blank()
           Button('去登录')
             .onClick(() => {
-              router.pushUrl({ url: 'pages/login/LoginPage' });
+              const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+              if (pageCtx) { pageCtx.openPage(PageEnum.LOGIN); }
             })
         }
         .width('100%')

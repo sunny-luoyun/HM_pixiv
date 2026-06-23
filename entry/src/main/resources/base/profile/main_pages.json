@@ -1,20 +1,5 @@
 {
   "src": [
-    "pages/Index",
-    "pages/login/LoginPage",
-    "pages/favorites/FavoritesPage",
-    "pages/novel/NovelReaderPage",
-    "pages/novel/NovelSeriesPage",
-    "pages/novel/NovelCommentsPage",
-    "pages/illust/IllustDetailPage",
-    "pages/illust/IllustCommentsPage",
-    "pages/settings/SettingsPage",
-    "pages/settings/CachedNovelsPage",
-    "pages/settings/AuthorDetailPage",
-    "pages/settings/SeriesDetailPage",
-    "pages/settings/CachedNovelsSimplePage",
-    "pages/setting/FollowingPage",
-    "pages/setting/BlockedContentPage",
-    "pages/user/UserProfilePage"
+    "pages/Index"
   ]
 }

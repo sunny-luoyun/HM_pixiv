@@ -1,14 +1,16 @@
-import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
 import { curves } from '@kit.ArkUI';
 import { PixivService } from '../services/PixivService';
 import { IllustBookmark } from '../models/PixivModels';
-import { ShimmerLoading } from './ShimmerLoading';
+import { ImageComponent } from './ImageComponent';
+import { IllustDetailParam, UserProfileParam } from '../common/constants/PageParamTypes';
+import { PageContext } from '../common/utils/PageContext';
+import { PageEnum } from '../common/constants/PageEnum';
 
 @Component
 export struct IllustCard {
   private item!: IllustBookmark;
-  @Prop index: number = 0;
+  @Prop @Require index: number;
   @State localUrl: string = '';
   @State isCaching: boolean = true;
   @State isBookmarked: boolean = false;
@@ -43,6 +45,12 @@ export struct IllustCard {
     }
     this.isCaching = false;
     this.isBookmarked = !!this.item.bookmarkData;
+
+    setTimeout(() => {
+      animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
+        this.imageOpacity = 1;
+      });
+    }, this.index * 60 + 200);
   }
 
   async toggleBookmark() {
@@ -74,31 +82,11 @@ export struct IllustCard {
     Column() {
       Column() {
         Stack() {
-          Image(this.localUrl)
+          ImageComponent({ src: this.localUrl, imgBorderRadius: 12, showLoading: !this.localUrl })
             .width('100%')
             .height(this.imageHeight)
-            .objectFit(ImageFit.Cover)
-            .borderRadius({ topLeft: 12, topRight: 12 })
             .sharedTransition('illust_' + this.item.id, { duration: 350, curve: Curve.Friction })
             .opacity(this.imageOpacity)
-            .onComplete((info) => {
-              setTimeout(() => {
-                if (info && info.width > 0 && info.height > 0) {
-                  const ratio = info.width / info.height;
-                  const ideal = info.componentWidth / ratio;
-                  this.imageHeight = Math.max(100, Math.min(300, ideal));
-                }
-                animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
-                  this.imageOpacity = 1;
-                });
-              }, 0);
-            })
-          if (!this.localUrl) {
-            ShimmerLoading()
-              .width('100%')
-              .height(this.imageHeight)
-              .borderRadius({ topLeft: 12, topRight: 12 })
-          }
           if (this.item.pageCount > 1) {
             Text(`${this.item.pageCount}页`)
               .fontSize(11)
@@ -120,13 +108,14 @@ export struct IllustCard {
       }
       .width('100%')
       .onClick(() => {
-        router.pushUrl({
-          url: 'pages/illust/IllustDetailPage',
-          params: {
+        const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+        if (pageCtx) {
+          const params: IllustDetailParam = {
             id: this.item.id,
             thumbnailLocalUrl: this.localUrl
-          }
-        });
+          };
+          pageCtx.openPage(PageEnum.ILLUST_DETAIL, params as Object);
+        }
       })
 
       Row() {
@@ -137,13 +126,14 @@ export struct IllustCard {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .layoutWeight(1)
           .onClick(() => {
-            router.pushUrl({
-              url: 'pages/user/UserProfilePage',
-              params: {
+            const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+            if (pageCtx) {
+              const params: UserProfileParam = {
                 userId: this.item.userId,
                 userName: this.item.userName
-              }
-            });
+              };
+              pageCtx.openPage(PageEnum.USER_PROFILE, params as Object);
+            }
           })
 
         if (this.isBookmarkLoading) {

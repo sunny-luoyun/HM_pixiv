@@ -329,3 +329,50 @@
 - 删除死代码：`fetchUserName`、`deleteSingleNovelCover`、`getAllImageCacheInfo`
 - 评论页面减少 ~300 行重复代码
 - SettingsPage 从 1092 行降至 ~200 行骨架
+
+### 路由迁移：router.pushUrl → PageContext.openPage
+- **PageContext**：`entry/src/main/ets/common/utils/PageContext.ets` — 封装 NavPathStack 替代 @ohos.router
+- **PageEnum**：`entry/src/main/ets/common/constants/PageEnum.ets` — 页面路由枚举
+- **PageParamTypes**：`entry/src/main/ets/common/constants/PageParamTypes.ets` — 页面参数类型定义
+- **涉及文件**：IllustCard、NovelCard、UserCard、IllustDetailPage、NovelReaderPage、NovelSeriesPage、SettingPage、BlockedContentPage、AuthorDetailPage、CacheSettingsSection、CachedNovelsPage、SeriesDetailPage（共 12 个文件）
+- **说明**：所有 router.pushUrl 调用已替换为 PageContext.openPage，通过 AppStorage 获取 rootPageContext，使用具名路由和类型化参数接口
+
+---
+
+## F24 - 项目标准化改造（对标官方 HarmonyOS 示例）
+
+### 全局状态管理：globalThis → AppStorage
+- **修改文件**：EntryAbility、SubscriptionService、ImageCacheService、TranslationController、BlockedContentPage、NovelReaderPage、SearchPage、AuthorDetailPage、CachedNovelsSimplePage、CacheSettingsSection、CachedNovelsPage、ProxySettingsSection、SeriesDetailPage、TranslationSettingsSection（共 14 个文件）
+- **说明**：清除全部 26 处 globalThis 引用，统一使用 AppStorage 管理全局状态。appContext 通过 `AppStorage.setOrCreate('appContext', context)` 存储，isDarkMode 通过 `AppStorage.setOrCreate('isDarkMode', value)` 管理
+- **StorageKeys**：`entry/src/main/ets/common/constants/StorageKeys.ets` — AppStorage 键名常量
+
+### MVVM 架构引入
+- **BaseState**：`entry/src/main/ets/viewmodel/BaseState.ets` — State 基类
+- **BaseVM**：`entry/src/main/ets/viewmodel/BaseVM.ets` — ViewModel 抽象基类（含事件分发）
+- **LoadingModel**：`entry/src/main/ets/models/LoadingModel.ets` — 统一加载状态模型（LoadingStatus 枚举 + @Observed）
+- **PageLoadModel**：分页加载状态模型（PageStatus 枚举 + @Observed）
+- **ViewModel 文件**（22 个）：HomeViewModel、LatestViewModel、SearchViewModel、FavoritesViewModel、IllustDetailViewModel、NovelReaderViewModel、NovelSeriesViewModel、UserProfileViewModel、FollowingViewModel、BlockedContentViewModel、SettingsViewModel、AuthorDetailViewModel、CachedNovelsViewModel、SeriesDetailViewModel、CacheSettingsViewModel、TranslationSettingsViewModel、ProxySettingsViewModel、CommentsViewModel、LoginViewModel、CardViewModels
+
+### 图片组件标准化
+- **ImageComponent**：`entry/src/main/ets/components/ImageComponent.ets` — @Reusable 统一图片组件，封装网络下载缓存、ShimmerLoading 占位、失败兜底
+- **替换文件**：IllustCard、NovelCard、UserCard、CommentsComponent（4 个组件中的直接 Image 用法）
+- **@Require 添加**：IllustCard.index、NovelCard.index、UserCard.index、SegmentedTabBar.currentIndex/swipeProgress（6 处 @Prop）
+
+### 路由架构：router.pushUrl → Navigation + NavPathStack
+- **Index.ets 重构**：外层包裹 Navigation(rootStack)，添加 navDestination 路由分发（pagesBuilder），15 个页面路由注册
+- **@Entry 移除**：IllustDetailPage、IllustCommentsPage、NovelReaderPage、NovelSeriesPage、NovelCommentsPage、UserProfilePage、LoginPage、FavoritesPage、FollowingPage、BlockedContentPage、SettingsPage、AuthorDetailPage、CachedNovelsPage、CachedNovelsSimplePage、SeriesDetailPage（共 15 个页面）
+- **@Builder 导出**：每个页面添加对应的 Builder 导出函数
+- **参数获取**：router.getParams() → NavDestinationContext.onReady()
+- **返回操作**：router.back() → PageContext.popPage()
+- **main_pages.json**：仅保留 pages/Index，其余 15 个页面从配置中移除
+
+### 测试新增
+- **PageContext.test.ets**：NavPathStack 封装测试
+- **LoadingModel.test.ets**：加载状态模型测试
+- **BaseVM.test.ets**：ViewModel 基类事件分发测试
+- **Constants.test.ets**：PageEnum + StorageKeys 常量验证
+- **List.test.ets**：注册 4 个新测试套件
+
+### 修复
+- **EntryAbility.ets**：AppStorage.SetOrCreate → setOrCreate（API 大小写修正）
+- **CMake 缓存清理**：删除 entry/.cxx 确保原生构建通过

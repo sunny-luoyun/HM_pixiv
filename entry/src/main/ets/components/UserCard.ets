@@ -1,13 +1,15 @@
-import router from '@ohos.router';
 import { curves } from '@kit.ArkUI';
 import { PixivService } from '../services/PixivService';
 import { UserSearchResult } from '../models/PixivModels';
-import { ShimmerLoading } from './ShimmerLoading';
+import { ImageComponent } from './ImageComponent';
+import { UserProfileParam } from '../common/constants/PageParamTypes';
+import { PageContext } from '../common/utils/PageContext';
+import { PageEnum } from '../common/constants/PageEnum';
 
 @Component
 export struct UserCard {
   private item!: UserSearchResult;
-  @Prop index: number = 0;
+  @Prop @Require index: number;
   @State cardOpacity: number = 0;
   @State cardTranslateY: number = 20;
   @State avatarOpacity: number = 0;
@@ -31,30 +33,21 @@ export struct UserCard {
     if (path) {
       this.avatarOpacity = 0;
       this.localAvatar = path;
+      setTimeout(() => {
+        animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
+          this.avatarOpacity = 1;
+        });
+      }, this.index * 60 + 200);
     }
     this.isCaching = false;
   }
 
   build() {
     Row() {
-      if (this.localAvatar) {
-        Image(this.localAvatar)
+      ImageComponent({ src: this.localAvatar, imgBorderRadius: 25, objectFit: ImageFit.Cover })
           .width(48)
           .height(48)
-          .objectFit(ImageFit.Cover)
-          .borderRadius(24)
           .opacity(this.avatarOpacity)
-          .onComplete(() => {
-            animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
-              this.avatarOpacity = 1;
-            });
-          })
-      } else {
-        ShimmerLoading()
-          .width(48)
-          .height(48)
-          .borderRadius(24)
-      }
 
       Column() {
         Text(this.item.name)
@@ -86,14 +79,15 @@ export struct UserCard {
     .opacity(this.cardOpacity)
     .translate({ y: this.cardTranslateY })
     .onClick(() => {
-      router.pushUrl({
-        url: 'pages/user/UserProfilePage',
-        params: {
+      const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+      if (pageCtx) {
+        const params: UserProfileParam = {
           userId: this.item.userId,
           userName: this.item.name,
           userAvatar: this.item.imageBig || this.item.image
-        }
-      });
+        };
+        pageCtx.openPage(PageEnum.USER_PROFILE, params as Object);
+      }
     })
   }
 }

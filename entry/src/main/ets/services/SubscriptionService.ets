@@ -149,7 +149,7 @@ export class SubscriptionService {
   }
 
   static async saveToFile(content: string): Promise<string> {
-    const ctx = globalThis.appContext as common.UIAbilityContext;
+    const ctx = AppStorage.get<common.UIAbilityContext>('appContext');
     if (!ctx) return '';
     const cacheDir: string = ctx.cacheDir;
     const fileName = `proxy_subscription_${Date.now()}.yaml`;
@@ -168,7 +168,7 @@ export class SubscriptionService {
   }
 
   static getSavedFilePath(fileName: string): string {
-    const ctx = globalThis.appContext as common.UIAbilityContext;
+    const ctx = AppStorage.get<common.UIAbilityContext>('appContext');
     if (!ctx) return '';
     return ctx.cacheDir + '/' + fileName;
   }

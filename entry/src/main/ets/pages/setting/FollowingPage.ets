@@ -1,9 +1,9 @@
-import router from '@ohos.router';
 import { PixivService } from '../../services/PixivService';
 import { UserSearchResult, FollowingUserRaw } from '../../models/PixivModels';
 import { UserCard } from '../../components/UserCard';
 import { BasicDataSource } from '../../common/utils/BasicDataSource';
 import { appState } from '../../store/AppState';
+import { PageContext } from '../../common/utils/PageContext';
 
 const PAGE_LIMIT = 30;
 
@@ -20,7 +20,6 @@ function toUserSearchResult(raw: FollowingUserRaw): UserSearchResult {
   };
 }
 
-@Entry
 @Component
 struct FollowingPage {
   private isActive: boolean = true;
@@ -96,63 +95,71 @@ struct FollowingPage {
   }
 
   build() {
-    Column() {
-      this.TopBar()
+    NavDestination() {
+      Column() {
+        this.TopBar()
 
-      if (this.isLoading) {
-        LoadingProgress().width(40).height(40).margin({ top: 100 })
-      } else if (this.error && this.userSource.totalCount() === 0) {
-        Column() {
-          Text(this.error).fontSize(14).fontColor($r('app.color.text_secondary'))
-          Button('重试').margin({ top: 12 }).onClick(() => this.loadUsers())
-        }
-        .margin({ top: 80 })
-        .alignItems(HorizontalAlign.Center)
-      } else if (this.userSource.totalCount() === 0) {
-        Text('暂无关注').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
-      } else {
-        Scroll() {
+        if (this.isLoading) {
+          LoadingProgress().width(40).height(40).margin({ top: 100 })
+        } else if (this.error && this.userSource.totalCount() === 0) {
           Column() {
-            Grid() {
-              LazyForEach(this.userSource, (item: UserSearchResult, index: number) => {
-                GridItem() {
-                  UserCard({ item: item, index: index })
-                }
-              }, (item: UserSearchResult) => item.userId)
-            }
-            .columnsTemplate('1fr')
-            .columnsGap(8)
-            .rowsGap(8)
-            .padding(12)
-            .width('100%')
+            Text(this.error).fontSize(14).fontColor($r('app.color.text_secondary'))
+            Button('重试').margin({ top: 12 }).onClick(() => this.loadUsers())
+          }
+          .margin({ top: 80 })
+          .alignItems(HorizontalAlign.Center)
+        } else if (this.userSource.totalCount() === 0) {
+          Text('暂无关注').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
+        } else {
+          Scroll() {
+            Column() {
+              Grid() {
+                LazyForEach(this.userSource, (item: UserSearchResult, index: number) => {
+                  GridItem() {
+                    UserCard({ item: item, index: index })
+                  }
+                }, (item: UserSearchResult) => item.userId)
+              }
+              .columnsTemplate('1fr')
+              .columnsGap(8)
+              .rowsGap(8)
+              .padding(12)
+              .width('100%')
 
-            if (this.isLoadingMore) {
-              LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
+              if (this.isLoadingMore) {
+                LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
+              }
+              if (!this.isLoadingMore && !this.hasMore && this.userSource.totalCount() > 0) {
+                Text('- 已显示全部关注 -')
+                  .fontSize(12)
+                  .fontColor($r('app.color.text_secondary'))
+                  .width('100%')
+                  .textAlign(TextAlign.Center)
+                  .margin({ top: 8, bottom: 24 })
+              }
             }
-            if (!this.isLoadingMore && !this.hasMore && this.userSource.totalCount() > 0) {
-              Text('- 已显示全部关注 -')
-                .fontSize(12)
-                .fontColor($r('app.color.text_secondary'))
-                .width('100%')
-                .textAlign(TextAlign.Center)
-                .margin({ top: 8, bottom: 24 })
-            }
+            .width('100%')
+            .padding({ bottom: 120 })
           }
           .width('100%')
-          .padding({ bottom: 120 })
+          .edgeEffect(EdgeEffect.Spring)
+          .onReachEnd(() => {
+            if (this.hasMore && !this.isLoadingMore) {
+              this.loadMoreUsers();
+            }
+          })
         }
-        .width('100%')
-        .edgeEffect(EdgeEffect.Spring)
-        .onReachEnd(() => {
-          if (this.hasMore && !this.isLoadingMore) {
-            this.loadMoreUsers();
-          }
-        })
       }
+      .width('100%')
+      .height('100%')
+      .backgroundColor($r('app.color.page_background'))
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor($r('app.color.page_background'))
+    .onBackPressed(() => {
+      const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+      if (pageCtx) { pageCtx.popPage(); }
+      return true;
+    })
+    .hideTitleBar(true)
   }
 
   @Builder
@@ -162,7 +169,8 @@ struct FollowingPage {
         .fontSize(28)
         .fontColor($r('app.color.tab_selected'))
         .onClick(() => {
-          router.back();
+          const ctx = AppStorage.get<PageContext>('rootPageContext');
+          if (ctx) { ctx.popPage(); }
         })
       Text('我的关注')
         .fontSize(18)
@@ -175,4 +183,9 @@ struct FollowingPage {
     .padding({ left: 16, right: 16 })
     .backgroundColor($r('app.color.glass_bg'))
   }
+}
+
+@Builder
+export function FollowingBuilder(): void {
+  FollowingPage()
 }

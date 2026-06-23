@@ -1,4 +1,3 @@
-import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
 import common from '@ohos.app.ability.common';
 import { curves } from '@kit.ArkUI';
@@ -7,7 +6,10 @@ import { PixivService } from '../services/PixivService';
 import { pixivCacheDB } from '../database/PixivCacheDB';
 import { CacheStatus, getCacheStatusDisplay, PixivTag } from '../models/PixivModels';
 import { getDeepSeekService } from '../services/DeepSeekService';
-import { ShimmerLoading } from './ShimmerLoading';
+import { ImageComponent } from './ImageComponent';
+import { NovReaderParam, NovSeriesParam, UserProfileParam, NovCommentsParam } from '../common/constants/PageParamTypes';
+import { PageContext } from '../common/utils/PageContext';
+import { PageEnum } from '../common/constants/PageEnum';
 
 interface DialogButton {
   text: string;
@@ -17,7 +19,7 @@ interface DialogButton {
 @Component
 export struct NovelCard {
   private item!: NovelBookmark;
-  @Prop index: number = 0;
+  @Prop @Require index: number;
   @State cardOpacity: number = 0;
   @State cardTranslateY: number = 20;
   @State coverImageOpacity: number = 0;
@@ -45,6 +47,11 @@ export struct NovelCard {
     if (path) {
       this.coverImageOpacity = 0;
       this.localCoverPath = path;
+      setTimeout(() => {
+        animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
+          this.coverImageOpacity = 1;
+        });
+      }, this.index * 60 + 200);
     }
     this.isBookmarked = !!this.item.bookmarkData;
 
@@ -303,17 +310,18 @@ export struct NovelCard {
   }
 
   private navigateToReader() {
-    router.pushUrl({
-      url: 'pages/novel/NovelReaderPage',
-      params: {
+    const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+    if (pageCtx) {
+      const params: NovReaderParam = {
         novelId: this.item.id,
         title: this.item.title,
         author: this.item.userName,
         cached: true,
         translatedTitle: this.translatedTitle || '',
         hasTitleTranslation: this.hasTitleTranslation
-      }
-    });
+      };
+      pageCtx.openPage(PageEnum.NOVEL_READER, params as Object);
+    }
   }
 
   build() {
@@ -410,26 +418,11 @@ export struct NovelCard {
 
   @Builder
   CoverImage() {
-    if (this.localCoverPath) {
-      Image(this.localCoverPath)
-        .width(80)
-        .height(110)
-        .objectFit(ImageFit.Cover)
-        .borderRadius(8)
-        .margin({ right: 14 })
-        .opacity(this.coverImageOpacity)
-        .onComplete(() => {
-          animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
-            this.coverImageOpacity = 1;
-          });
-        })
-    } else {
-      ShimmerLoading()
-        .width(80)
-        .height(110)
-        .borderRadius(8)
-        .margin({ right: 14 })
-    }
+    ImageComponent({ src: this.localCoverPath, imgBorderRadius: 10 })
+      .width(80)
+      .height(110)
+      .margin({ right: 14 })
+      .opacity(this.coverImageOpacity)
   }
 
   @Builder
@@ -475,13 +468,14 @@ export struct NovelCard {
           .onClick(() => {
             const sid = this.item.series?.id ?? this.item.seriesId;
             if (sid) {
-              router.pushUrl({
-                url: 'pages/novel/NovelSeriesPage',
-                params: {
+              const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+              if (pageCtx) {
+                const params: NovSeriesParam = {
                   seriesId: String(sid),
-                  seriesTitle: this.item.seriesTitle
-                }
-              });
+                  seriesTitle: this.item.seriesTitle ?? ''
+                };
+                pageCtx.openPage(PageEnum.NOVEL_SERIES, params as Object);
+              }
             }
           })
       }
@@ -493,13 +487,14 @@ export struct NovelCard {
         .margin({ top: 4 })
         .width('100%')
         .onClick(() => {
-          router.pushUrl({
-            url: 'pages/user/UserProfilePage',
-            params: {
+          const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+          if (pageCtx) {
+            const params: UserProfileParam = {
               userId: this.item.userId,
               userName: this.item.userName
-            }
-          });
+            };
+            pageCtx.openPage(PageEnum.USER_PROFILE, params as Object);
+          }
         })
 
       if (this.item.tags && this.item.tags.length > 0) {
@@ -528,12 +523,13 @@ export struct NovelCard {
           .fontSize(10)
           .fontColor($r('app.color.tab_selected'))
           .onClick(() => {
-            router.pushUrl({
-              url: 'pages/novel/NovelCommentsPage',
-              params: {
+            const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+            if (pageCtx) {
+              const params: NovCommentsParam = {
                 novelId: this.item.id
-              }
-            });
+              };
+              pageCtx.openPage(PageEnum.NOVEL_COMMENTS, params as Object);
+            }
           })
       }
       .width('100%')

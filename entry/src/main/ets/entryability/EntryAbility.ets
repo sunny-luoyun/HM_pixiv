@@ -6,6 +6,8 @@ import { CookieStorage } from '../common/utils/CookieStorage';
 import { TranslationStorage } from '../common/utils/TranslationStorage';
 import { ProxyService } from '../services/ProxyService';
 import { pixivCacheDB } from '../database/PixivCacheDB';
+import { StorageKeys } from '../common/constants/StorageKeys';
+import { appState } from '../store/AppState';
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
@@ -32,19 +34,19 @@ export default class EntryAbility extends UIAbility {
     });
 
     this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
-    globalThis.appContext = this.context;
 
-    globalThis.isDarkMode = this.context.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
-    AppStorage.SetOrCreate('isDarkMode', globalThis.isDarkMode);
+    const isDark = this.context.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
+    AppStorage.setOrCreate(StorageKeys.APP_CONTEXT, this.context);
+    AppStorage.setOrCreate(StorageKeys.IS_DARK_MODE, isDark);
+    AppStorage.setOrCreate('appState', appState);
+    AppStorage.setOrCreate('isLoggedIn', appState.isLoggedIn);
   }
 
   onConfigurationUpdate(newConfig: Configuration): void {
-    // 监听配置变化（包括颜色模式）
-    globalThis.isDarkMode = newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
-    AppStorage.SetOrCreate('isDarkMode', globalThis.isDarkMode);
+    const isDark = newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
+    AppStorage.setOrCreate(StorageKeys.IS_DARK_MODE, isDark);
 
-    // 颜色模式切换时同步更新状态栏内容颜色
-    const contentColor = globalThis.isDarkMode ? '#FFFFFF' : '#000000';
+    const contentColor = isDark ? '#FFFFFF' : '#000000';
     window.getLastWindow(this.context).then((w: window.Window) => {
       w.setWindowSystemBarProperties({
         statusBarContentColor: contentColor,
@@ -54,8 +56,7 @@ export default class EntryAbility extends UIAbility {
   }
 
   onWindowStageCreate(windowStage: window.WindowStage): void {
-    // 沉浸式窗口设置：透明系统栏，内容区域由系统自动避让状态栏
-    const contentColor = globalThis.isDarkMode ? '#FFFFFF' : '#000000';
+    const contentColor = AppStorage.get<boolean>(StorageKeys.IS_DARK_MODE) ? '#FFFFFF' : '#000000';
     windowStage.getMainWindow().then((mainWindow: window.Window) => {
       mainWindow.setWindowSystemBarProperties({
         statusBarContentColor: contentColor,

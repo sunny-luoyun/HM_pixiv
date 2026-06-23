@@ -1,19 +1,19 @@
-import router from '@ohos.router';
+import { PageContext } from '../../common/utils/PageContext';
 import { CommentsComponent } from '../../components/CommentsComponent';
 import { AppApiService } from '../../services/AppApiService';
 import { PixivService } from '../../services/PixivService';
 
-@Entry
 @Component
 struct IllustCommentsPage {
-  private illustId: string = '';
+  @State navParams: Record<string, Object> = {};
+  @State illustId: string = '';
 
   aboutToAppear() {
-    const params = router.getParams() as Record<string, Object>;
-    this.illustId = params['illustId'] as string || '';
+    // 参数由 onReady 获取
   }
 
   build() {
+    NavDestination() {
     Column() {
       CommentsComponent({
         entityId: this.illustId,
@@ -24,5 +24,24 @@ struct IllustCommentsPage {
     }
     .width('100%')
     .height('100%')
+    }
+    .onReady((ctx: NavDestinationContext) => {
+      const params = ctx.pathInfo.param as Record<string, Object>;
+      if (params) {
+        const illustId = params['illustId'] as string;
+        if (illustId) { this.illustId = illustId; }
+      }
+    })
+    .onBackPressed(() => {
+      const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+      if (pageCtx) { pageCtx.popPage(); }
+      return true;
+    })
+    .hideTitleBar(true)
   }
+}
+
+@Builder
+export function IllustCommentsBuilder(): void {
+  IllustCommentsPage()
 }

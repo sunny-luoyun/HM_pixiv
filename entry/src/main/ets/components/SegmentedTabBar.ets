@@ -3,8 +3,8 @@ import { curves } from '@kit.ArkUI';
 @Component
 export struct SegmentedTabBar {
   private tabs: string[] = [];
-  @Prop @Watch('syncIndex') currentIndex: number = 0;
-  @Prop swipeProgress: number = 0;
+  @Prop @Require @Watch('syncIndex') currentIndex: number;
+  @Prop @Require swipeProgress: number;
   onChange?: (index: number) => void;
 
   @State private animIndex: number = 0;

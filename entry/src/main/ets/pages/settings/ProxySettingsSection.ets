@@ -157,7 +157,8 @@ export struct ProxySettingsSection {
     }
     if (!this.pageActive) return;
 
-    const ctx = globalThis.appContext as common.UIAbilityContext;
+    const ctx = AppStorage.get<common.UIAbilityContext>('appContext');
+    if (!ctx) return;
     const preparedPath = ctx.cacheDir + '/prepared_config.yaml';
     const encoder = new util.TextEncoder();
     const uint8Arr = encoder.encodeInto(configYaml);
@@ -220,6 +221,7 @@ export struct ProxySettingsSection {
       SegmentedTabBar({
         tabs: ['关闭', '手动', '订阅'],
         currentIndex: this.proxyMode === 'off' ? 0 : this.proxyMode === 'manual' ? 1 : 2,
+        swipeProgress: 0,
         onChange: (index: number) => {
           const modes: ProxyMode[] = ['off', 'manual', 'subscription'];
           this.proxyMode = modes[index];

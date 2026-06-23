@@ -31,7 +31,7 @@ export struct TranslationSettingsSection {
   }
 
   async loadRatioInfo(): Promise<void> {
-    const ctx = globalThis.appContext as common.UIAbilityContext;
+    const ctx = AppStorage.get<common.UIAbilityContext>('appContext');
     if (ctx) {
       const service = getDeepSeekService();
       await service.loadRatio(ctx);

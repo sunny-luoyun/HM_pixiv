@@ -201,7 +201,7 @@ export class ImageCacheService {
   }
 
   static getCacheDir(): string {
-    const appContext = globalThis.appContext as common.UIAbilityContext;
+    const appContext = AppStorage.get<common.UIAbilityContext>('appContext');
     if (!appContext) return '';
     const imageDir = appContext.filesDir + '/image_cache';
     try {

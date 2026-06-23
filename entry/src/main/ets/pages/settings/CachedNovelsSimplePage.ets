@@ -1,10 +1,9 @@
-import router from '@ohos.router';
 import common from '@ohos.app.ability.common';
 import promptAction from '@ohos.promptAction';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { PixivNovel, formatTextLength, formatPixivDate } from '../../models/PixivModels';
+import { PageContext } from '../../common/utils/PageContext';
 
-@Entry
 @Component
 export struct CachedNovelsSimplePage {
   @State cachedNovels: PixivNovel[] = [];
@@ -17,8 +16,10 @@ export struct CachedNovelsSimplePage {
   async loadCachedNovels() {
     this.isLoading = true;
     try {
-      const ctx = globalThis.appContext as common.UIAbilityContext;
-      await pixivCacheDB.init(ctx);
+      const ctx = AppStorage.get<common.UIAbilityContext>('appContext');
+      if (ctx) {
+        await pixivCacheDB.init(ctx);
+      }
       const novels = await pixivCacheDB.getAllCachedNovels();
       this.cachedNovels = novels;
     } catch (err) {
@@ -56,74 +57,82 @@ export struct CachedNovelsSimplePage {
   }
 
   build() {
-    Column() {
-      Row() {
-        Text('‹')
-          .fontSize(28)
-          .onClick(() => router.back())
-        Text('查看缓存')
-          .fontSize(22)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('app.color.user_name'))
-          .margin({ left: 12 })
-        Blank()
-        Text(`${this.cachedNovels.length}`)
-          .fontSize(14)
-          .fontColor($r('app.color.text_secondary'))
-      }
-      .width('100%')
-      .padding({ left: 16, right: 24, top: 16 })
-
-      if (!this.isLoading) {
+    NavDestination() {
+      Column() {
         Row() {
-          Text(`共 ${this.cachedNovels.length} 本缓存小说`)
-            .fontSize(13)
-            .fontColor($r('app.color.text_secondary'))
-        }
-        .width('100%')
-        .padding({ left: 20, right: 20, top: 8, bottom: 4 })
-      }
-
-      if (this.isLoading) {
-        Column() {
-          LoadingProgress()
-            .width(40).height(40)
-            .color($r('app.color.tab_selected'))
-          Text('加载中...')
+          Text('‹')
+            .fontSize(28)
+            .onClick(() => { const ctx = AppStorage.get<PageContext>('rootPageContext'); if (ctx) { ctx.popPage(); } })
+          Text('查看缓存')
+            .fontSize(22)
+            .fontWeight(FontWeight.Bold)
+            .fontColor($r('app.color.user_name'))
+            .margin({ left: 12 })
+          Blank()
+          Text(`${this.cachedNovels.length}`)
             .fontSize(14)
             .fontColor($r('app.color.text_secondary'))
-            .margin({ top: 12 })
         }
         .width('100%')
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-      } else if (this.cachedNovels.length === 0) {
-        Column() {
-          Text('暂无已缓存的小说')
-            .fontSize(16)
-            .fontColor($r('app.color.text_secondary'))
-            .margin({ top: 60 })
+        .padding({ left: 16, right: 24, top: 16 })
+
+        if (!this.isLoading) {
+          Row() {
+            Text(`共 ${this.cachedNovels.length} 本缓存小说`)
+              .fontSize(13)
+              .fontColor($r('app.color.text_secondary'))
+          }
+          .width('100%')
+          .padding({ left: 20, right: 20, top: 8, bottom: 4 })
         }
-        .width('100%')
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Center)
-      } else {
-        List({ space: 8 }) {
-          ForEach(this.cachedNovels, (novel: PixivNovel) => {
-            ListItem() {
-              this.NovelCard(novel)
-            }
-          }, (novel: PixivNovel): string => novel.id)
+
+        if (this.isLoading) {
+          Column() {
+            LoadingProgress()
+              .width(40).height(40)
+              .color($r('app.color.tab_selected'))
+            Text('加载中...')
+              .fontSize(14)
+              .fontColor($r('app.color.text_secondary'))
+              .margin({ top: 12 })
+          }
+          .width('100%')
+          .layoutWeight(1)
+          .justifyContent(FlexAlign.Center)
+        } else if (this.cachedNovels.length === 0) {
+          Column() {
+            Text('暂无已缓存的小说')
+              .fontSize(16)
+              .fontColor($r('app.color.text_secondary'))
+              .margin({ top: 60 })
+          }
+          .width('100%')
+          .layoutWeight(1)
+          .alignItems(HorizontalAlign.Center)
+        } else {
+          List({ space: 8 }) {
+            ForEach(this.cachedNovels, (novel: PixivNovel) => {
+              ListItem() {
+                this.NovelCard(novel)
+              }
+            }, (novel: PixivNovel): string => novel.id)
+          }
+          .width('100%')
+          .layoutWeight(1)
+          .edgeEffect(EdgeEffect.Spring)
+          .padding({ left: 16, right: 16, top: 8, bottom: 120 })
         }
-        .width('100%')
-        .layoutWeight(1)
-        .edgeEffect(EdgeEffect.Spring)
-        .padding({ left: 16, right: 16, top: 8, bottom: 120 })
       }
+      .width('100%')
+      .height('100%')
+      .backgroundColor($r('app.color.page_background'))
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor($r('app.color.page_background'))
+    .onBackPressed(() => {
+      const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+      if (pageCtx) { pageCtx.popPage(); }
+      return true;
+    })
+    .hideTitleBar(true)
   }
 
   @Builder
@@ -183,4 +192,9 @@ export struct CachedNovelsSimplePage {
     .backgroundColor($r('app.color.loading_card'))
     .borderRadius(12)
   }
+}
+
+@Builder
+export function CachedNovelsSimpleBuilder(): void {
+  CachedNovelsSimplePage()
 }

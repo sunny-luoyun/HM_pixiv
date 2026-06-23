@@ -43,7 +43,7 @@ export class LoginPageViewModel {
         await CookieManager.saveAvatarUrl(avatarUrl);
         await appState.cacheAvatar();
         if (appState.avatarUrl) {
-          AppStorage.SetOrCreate('avatarUrl', appState.avatarUrl);
+          AppStorage.setOrCreate('avatarUrl', appState.avatarUrl);
         }
       }
     } catch (err) {

@@ -1,4 +1,3 @@
-import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
 import common from '@ohos.app.ability.common';
 import {
@@ -10,6 +9,9 @@ import { PixivService } from '../../services/PixivService';
 import { NovelBookmark, NovelSeries } from '../../models/PixivModels';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { NovelCard } from '../../components/NovelCard';
+import { PageContext } from '../../common/utils/PageContext';
+import { PageEnum } from '../../common/constants/PageEnum';
+import { UserProfileParam } from '../../common/constants/PageParamTypes';
 
 interface RouterParams {
   seriesId: string;
@@ -56,9 +58,9 @@ function pixivNovelToBookmark(novel: PixivNovel, seriesTitle: string): NovelBook
   };
 }
 
-@Entry
 @Component
 struct NovelSeriesPage {
+  @State navParams: Record<string, Object> = {};
   private isActive: boolean = true;
   @State seriesId: string = '';
   @State seriesTitle: string = '系列详情';
@@ -83,24 +85,12 @@ struct NovelSeriesPage {
       onConfigurationUpdated: this.configChangeCallback,
       onMemoryLevel: (_level: number) => {}
     });
-
-    const params = router.getParams() as RouterParams;
-    if (params?.seriesId) {
-      this.seriesId = params.seriesId;
-      if (params.seriesTitle) {
-        this.seriesTitle = params.seriesTitle;
-      }
-      await pixivCacheDB.init(ctx);
-    }
-
-    if (!this.isActive) return;
-    await this.loadSeriesNovels(1);
   }
 
   aboutToDisappear(): void {
     this.isActive = false;
     const ctx = getContext(this) as common.UIAbilityContext;
-    if (this.configCallbackId !== -1) {
+    if (ctx && this.configCallbackId !== -1) {
       ctx.getApplicationContext().off('environment', this.configCallbackId);
     }
   }
@@ -184,30 +174,25 @@ struct NovelSeriesPage {
     if (!this.seriesNovels.length) return;
     const authorId = this.seriesNovels[0]?.authorId;
     if (authorId) {
-      router.pushUrl({
-        url: 'pages/user/UserProfilePage',
-        params: {
+      const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+      if (pageCtx) {
+        const params: UserProfileParam = {
           userId: authorId,
           userName: this.authorName || this.seriesNovels[0].author
-        }
-      });
+        };
+        pageCtx.openPage(PageEnum.USER_PROFILE, params as Object);
+      }
     }
   }
 
-  pageTransition() {
-    PageTransitionEnter({ duration: 300, curve: Curve.Friction })
-      .slide(SlideEffect.Right)
-    PageTransitionExit({ duration: 300, curve: Curve.Friction })
-      .slide(SlideEffect.Right)
-  }
-
   build() {
+    NavDestination() {
     Column() {
       Row() {
         Text('‹')
           .fontSize(28)
           .fontColor($r('app.color.tab_selected'))
-          .onClick(() => router.back())
+          .onClick(() => { const ctx = AppStorage.get<PageContext>('rootPageContext'); if (ctx) { ctx.popPage(); } })
         Text(this.seriesTitle)
           .fontSize(18)
           .fontWeight(FontWeight.Medium)
@@ -345,5 +330,31 @@ struct NovelSeriesPage {
     .width('100%')
     .height('100%')
     .backgroundColor($r('app.color.page_background'))
+    }
+    .onReady((ctx: NavDestinationContext) => {
+      this.navParams = ctx.pathInfo.param as Record<string, Object> ?? {};
+      const params = this.navParams as Record<string, Object>;
+      if (params['seriesId']) {
+        this.seriesId = params['seriesId'] as string;
+        if (params['seriesTitle']) {
+          this.seriesTitle = params['seriesTitle'] as string;
+        }
+        const uiCtx = getContext(this) as common.UIAbilityContext;
+        pixivCacheDB.init(uiCtx).then(() => {
+          this.loadSeriesNovels(1);
+        });
+      }
+    })
+    .onBackPressed(() => {
+      const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+      if (pageCtx) { pageCtx.popPage(); }
+      return true;
+    })
+    .hideTitleBar(true)
   }
+}
+
+@Builder
+export function NovelSeriesBuilder(): void {
+  NovelSeriesPage()
 }

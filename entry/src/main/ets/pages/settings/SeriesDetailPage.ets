@@ -1,11 +1,13 @@
-import router from '@ohos.router';
 import common from '@ohos.app.ability.common';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { PixivNovel, formatTextLength, formatPixivDate } from '../../models/PixivModels';
+import { PageContext } from '../../common/utils/PageContext';
+import { PageEnum } from '../../common/constants/PageEnum';
+import { NovReaderParam, NovSeriesParam } from '../../common/constants/PageParamTypes';
 
-@Entry
 @Component
 export struct SeriesDetailPage {
+  @State navParams: Record<string, Object> = {};
   private seriesId: string = '';
   private seriesTitle: string = '';
   private authorName: string = '';
@@ -13,18 +15,16 @@ export struct SeriesDetailPage {
   @State isLoading: boolean = true;
 
   aboutToAppear() {
-    const params = router.getParams() as Record<string, Object>;
-    this.seriesId = params['seriesId'] as string;
-    this.seriesTitle = params['seriesTitle'] as string;
-    this.authorName = params['authorName'] as string;
-    this.loadSeriesNovels();
+    // 参数由 onReady 获取
   }
 
   async loadSeriesNovels() {
     this.isLoading = true;
     try {
-      const ctx = globalThis.appContext as common.UIAbilityContext;
-      await pixivCacheDB.init(ctx);
+      const ctx = AppStorage.get<common.UIAbilityContext>('appContext');
+      if (ctx) {
+        await pixivCacheDB.init(ctx);
+      }
       this.novels = await pixivCacheDB.getNovelsBySeriesId(this.seriesId);
     } catch (err) {
       console.error('获取系列小说失败:', err);
@@ -33,32 +33,27 @@ export struct SeriesDetailPage {
   }
 
   openReader(novel: PixivNovel) {
-    router.pushUrl({
-      url: 'pages/novel/NovelReaderPage',
-      params: {
+    const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+    if (pageCtx) {
+      const params: NovReaderParam = {
         novelId: novel.id,
         title: novel.title,
         author: novel.author,
         cached: true,
         translatedTitle: novel.titleTranslated || '',
         hasTitleTranslation: !!novel.hasTitleTranslation
-      }
-    });
-  }
-
-  pageTransition() {
-    PageTransitionEnter({ duration: 300, curve: Curve.Friction })
-      .slide(SlideEffect.Right)
-    PageTransitionExit({ duration: 300, curve: Curve.Friction })
-      .slide(SlideEffect.Right)
+      };
+      pageCtx.openPage(PageEnum.NOVEL_READER, params as Object);
+    }
   }
 
   build() {
+    NavDestination() {
     Column() {
       Row() {
         Text('‹')
           .fontSize(28)
-          .onClick(() => router.back())
+          .onClick(() => { const ctx = AppStorage.get<PageContext>('rootPageContext'); if (ctx) { ctx.popPage(); } })
         Text(this.seriesTitle)
           .fontSize(22)
           .fontWeight(FontWeight.Bold)
@@ -120,13 +115,14 @@ export struct SeriesDetailPage {
         .borderRadius(12)
         .margin({ left: 16, right: 16, top: 8 })
         .onClick(() => {
-          router.pushUrl({
-            url: 'pages/novel/NovelSeriesPage',
-            params: {
+          const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+          if (pageCtx) {
+            const params: NovSeriesParam = {
               seriesId: this.seriesId,
               seriesTitle: this.seriesTitle
-            }
-          });
+            };
+            pageCtx.openPage(PageEnum.NOVEL_SERIES, params as Object);
+          }
         })
 
         List({ space: 8 }) {
@@ -145,6 +141,20 @@ export struct SeriesDetailPage {
     .width('100%')
     .height('100%')
     .backgroundColor($r('app.color.page_background'))
+    }
+    .onReady((ctx: NavDestinationContext) => {
+      this.navParams = ctx.pathInfo.param as Record<string, Object> ?? {};
+      this.seriesId = (this.navParams['seriesId'] as string) || '';
+      this.seriesTitle = (this.navParams['seriesTitle'] as string) || '';
+      this.authorName = (this.navParams['authorName'] as string) || '';
+      this.loadSeriesNovels();
+    })
+    .onBackPressed(() => {
+      const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+      if (pageCtx) { pageCtx.popPage(); }
+      return true;
+    })
+    .hideTitleBar(true)
   }
 
   @Builder
@@ -209,4 +219,9 @@ export struct SeriesDetailPage {
     .borderRadius(12)
     .onClick(() => { this.openReader(novel) })
   }
+}
+
+@Builder
+export function SeriesDetailBuilder(): void {
+  SeriesDetailPage()
 }

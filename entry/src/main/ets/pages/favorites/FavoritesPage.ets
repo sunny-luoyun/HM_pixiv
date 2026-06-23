@@ -1,4 +1,3 @@
-import router from '@ohos.router';
 import { curves } from '@kit.ArkUI';
 import { PixivService } from '../../services/PixivService';
 import { IllustBookmark, NovelBookmark } from '../../models/PixivModels';
@@ -7,10 +6,10 @@ import { IllustCard } from '../../components/IllustCard';
 import { SegmentedTabBar } from '../../components/SegmentedTabBar';
 import { BasicDataSource } from '../../common/utils/BasicDataSource';
 import { appState } from '../../store/AppState';
+import { PageContext } from '../../common/utils/PageContext';
 
 const PAGE_SIZE = 30;
 
-@Entry
 @Component
 struct FavoritesPage {
   private isActive: boolean = true;
@@ -146,17 +145,25 @@ struct FavoritesPage {
   }
 
   build() {
-    Column() {
-      this.TopBar()
-      if (!appState.isLoggedIn) {
-        this.NotLoggedInView()
-      } else {
-        this.TabsSection()
+    NavDestination() {
+      Column() {
+        this.TopBar()
+        if (!appState.isLoggedIn) {
+          this.NotLoggedInView()
+        } else {
+          this.TabsSection()
+        }
       }
+      .width('100%')
+      .height('100%')
+      .backgroundColor($r('app.color.page_background'))
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor($r('app.color.page_background'))
+    .onBackPressed(() => {
+      const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+      if (pageCtx) { pageCtx.popPage(); }
+      return true;
+    })
+    .hideTitleBar(true)
   }
 
   @Builder
@@ -166,7 +173,8 @@ struct FavoritesPage {
         .fontSize(28)
         .fontColor($r('app.color.tab_selected'))
         .onClick(() => {
-          router.back();
+          const ctx = AppStorage.get<PageContext>('rootPageContext');
+          if (ctx) { ctx.popPage(); }
         })
       Text('我的收藏')
         .fontSize(18)
@@ -190,7 +198,8 @@ struct FavoritesPage {
       Button('去登录')
         .margin({ top: 16 })
         .onClick(() => {
-          router.back();
+          const ctx = AppStorage.get<PageContext>('rootPageContext');
+          if (ctx) { ctx.popPage(); }
         })
     }
     .width('100%')
@@ -389,4 +398,9 @@ struct FavoritesPage {
     }
     .width('100%')
   }
+}
+
+@Builder
+export function FavoritesBuilder(): void {
+  FavoritesPage()
 }

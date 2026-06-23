@@ -1,19 +1,21 @@
-import router from '@ohos.router';
 import abilityAccessCtrl, { Permissions } from '@ohos.abilityAccessCtrl';
 import promptAction from '@ohos.promptAction';
 import { common } from '@kit.AbilityKit';
 import { curves, display } from '@kit.ArkUI';
 import { PixivService } from '../../services/PixivService';
 import { IllustDetailBody } from '../../models/PixivModels';
+import { PageContext } from '../../common/utils/PageContext';
+import { PageEnum } from '../../common/constants/PageEnum';
+import { IllustCommentsParam } from '../../common/constants/PageParamTypes';
 
 interface ImageRenderSize {
   width: number;
   height: number;
 }
 
-@Entry
 @Component
 struct IllustDetailPage {
+  @State navParams: Record<string, Object> = {};
   @State illustId: string = '';
   @State thumbnailLocalUrl: string = '';
   @State detail: IllustDetailBody | null = null;
@@ -55,27 +57,9 @@ struct IllustDetailPage {
 
   async aboutToAppear() {
     this.isActive = true;
-    const params = router.getParams() as Record<string, Object>;
-    this.illustId = params['id'] as string;
-    this.thumbnailLocalUrl = params['thumbnailLocalUrl'] as string || '';
-    if (!this.illustId) {
-      this.errorMsg = '缺少插图ID';
-      this.isLoading = false;
-      return;
-    }
-    if (this.thumbnailLocalUrl) {
-      this.localImageUrls = [this.thumbnailLocalUrl];
-      this.imageOpacityArray = [0];
-      this.backgroundImageUrl = this.thumbnailLocalUrl;
-      this.illustPageCount = 1;
-      animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
-        this.backgroundOpacity = 0.5;
-      });
-    }
     const defaultDisplay = display.getDefaultDisplaySync();
     this.screenWidth = px2vp(defaultDisplay.width);
     this.screenHeight = px2vp(defaultDisplay.height);
-    await this.loadDetail();
   }
 
   aboutToDisappear() {
@@ -87,10 +71,12 @@ struct IllustDetailPage {
     if (this.currentIndex > 0 && this.illustPageCount > 1) {
       this.currentIndex = 0;
       setTimeout(() => {
-        router.back();
+        const ctx = AppStorage.get<PageContext>('rootPageContext');
+        if (ctx) { ctx.popPage(); }
       }, 350);
     } else {
-      router.back();
+      const ctx = AppStorage.get<PageContext>('rootPageContext');
+      if (ctx) { ctx.popPage(); }
     }
   }
 
@@ -244,20 +230,14 @@ struct IllustDetailPage {
     this.translateY = Math.max(-maxY, Math.min(maxY, this.translateY));
   }
 
-  pageTransition() {
-    PageTransitionEnter({ duration: 300, curve: Curve.Friction })
-      .slide(SlideEffect.Right)
-    PageTransitionExit({ duration: 300, curve: Curve.Friction })
-      .slide(SlideEffect.Right)
-  }
-
   build() {
+    NavDestination() {
     Column() {
       if (this.errorMsg) {
         Column() {
           Text(this.errorMsg).fontSize(14).fontColor($r('app.color.text_secondary'))
           Button('重试').margin({ top: 12 }).onClick(() => this.loadDetail())
-          Button('返回').margin({ top: 8 }).onClick(() => router.back())
+          Button('返回').margin({ top: 8 }).onClick(() => { const ctx = AppStorage.get<PageContext>('rootPageContext'); if (ctx) { ctx.popPage(); } })
         }
         .width('100%')
         .height('100%')
@@ -516,12 +496,13 @@ struct IllustDetailPage {
                 .fontColor('#66FFFFFF')
                 .margin({ top: 4 })
                 .onClick(() => {
-                  router.pushUrl({
-                    url: 'pages/illust/IllustCommentsPage',
-                    params: {
+                  const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+                  if (pageCtx) {
+                    const params: IllustCommentsParam = {
                       illustId: this.illustId
-                    }
-                  });
+                    };
+                    pageCtx.openPage(PageEnum.ILLUST_COMMENTS, params as Object);
+                  }
                 })
               if (this.downloadFail) {
                 Text('保存失败').fontSize(12).fontColor($r('app.color.danger')).margin({ top: 4 })
@@ -546,5 +527,38 @@ struct IllustDetailPage {
     .width('100%')
     .height('100%')
     .backgroundColor(this.bgColor)
+    }
+    .onReady((ctx: NavDestinationContext) => {
+      this.navParams = ctx.pathInfo.param as Record<string, Object> ?? {};
+      const id = this.navParams['id'] as string;
+      if (!id) {
+        this.errorMsg = '缺少插图ID';
+        this.isLoading = false;
+        return;
+      }
+      this.illustId = id;
+      this.thumbnailLocalUrl = (this.navParams['thumbnailLocalUrl'] as string) || '';
+      if (this.thumbnailLocalUrl) {
+        this.localImageUrls = [this.thumbnailLocalUrl];
+        this.imageOpacityArray = [0];
+        this.backgroundImageUrl = this.thumbnailLocalUrl;
+        this.illustPageCount = 1;
+        animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
+          this.backgroundOpacity = 0.5;
+        });
+      }
+      this.loadDetail();
+    })
+    .onBackPressed(() => {
+      const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+      if (pageCtx) { pageCtx.popPage(); }
+      return true;
+    })
+    .hideTitleBar(true)
   }
+}
+
+@Builder
+export function IllustDetailBuilder(): void {
+  IllustDetailPage()
 }

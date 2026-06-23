@@ -1,4 +1,3 @@
-import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
 import common from '@ohos.app.ability.common';
 import { curves } from '@kit.ArkUI';
@@ -9,6 +8,9 @@ import { TranslationController, PrepareFullTranslationError, PrepareFullTranslat
 import preferences from '@ohos.data.preferences';
 import { ReaderColors, getReaderColors } from '../../common/utils/ThemeUtil';
 import { ContentBlock, parsePixivBlocks } from '../../common/utils/NovelParser';
+import { PageContext } from '../../common/utils/PageContext';
+import { PageEnum } from '../../common/constants/PageEnum';
+import { NovCommentsParam } from '../../common/constants/PageParamTypes';
 
 interface ReaderRouterParams {
   novelId: string;
@@ -19,9 +21,9 @@ interface ReaderRouterParams {
   hasTitleTranslation?: boolean;
 }
 
-@Entry
 @Component
 struct NovelReaderPage {
+  @State navParams: Record<string, Object> = {};
   private params: ReaderRouterParams | null = null;
 
   @State private isCachedMode: boolean = false;
@@ -61,27 +63,7 @@ struct NovelReaderPage {
   private readonly AUTO_READ_TICK_INTERVAL = 8;
 
   aboutToAppear(): void {
-    this.params = router.getParams() as ReaderRouterParams;
-    this.isCachedMode = this.params?.cached === true;
-    this.novelTitle = this.params?.title ?? '小说阅读';
-    this.novelAuthor = this.params?.author ?? '';
-    if (this.params?.translatedTitle) {
-      this.translatedTitle = this.params.translatedTitle;
-    }
-    if (this.params?.hasTitleTranslation) {
-      this.showTranslation = true;
-    }
-
-    if (this.isCachedMode && this.params?.novelId) {
-      AppStorage.setOrCreate('bgNovelId', this.params.novelId);
-      AppStorage.setOrCreate('bgIsTranslated', !this.showOriginal);
-      this.loadOfflineContent(this.params.novelId);
-      this.fetchCommentCount();
-      this.startAutoSave();
-    } else if (this.params?.novelId) {
-      promptAction.showToast({ message: '小说尚未缓存，请先缓存' });
-      setTimeout(() => router.back(), 1000);
-    }
+    // 参数由 onReady 获取
   }
 
   onPageHide(): void {
@@ -97,9 +79,12 @@ struct NovelReaderPage {
     this.stopAutoRead();
     this.stopAutoSave();
     if (this.params?.novelId && this.isCachedMode) {
-      const yOffset = Math.floor(this.scroller.currentOffset().yOffset);
-      if (yOffset > 0) {
-        this.saveProgressInternal(yOffset);
+      const offset = this.scroller.currentOffset();
+      if (offset) {
+        const yOffset = Math.floor(offset.yOffset);
+        if (yOffset > 0) {
+          this.saveProgressInternal(yOffset);
+        }
       }
     }
     if (this.saveProgressTimer !== -1) {
@@ -120,7 +105,8 @@ struct NovelReaderPage {
       const text = await pixivCacheDB.getFullText(novelId);
       if (!text) {
         promptAction.showToast({ message: '缓存内容丢失，请重新缓存' });
-        router.back();
+        const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+        if (pageCtx) { pageCtx.popPage(); }
         return;
       }
 
@@ -316,8 +302,7 @@ struct NovelReaderPage {
 
   private toggleDarkMode(): void {
     this.isDark = !this.isDark;
-    globalThis.isDarkMode = this.isDark;
-    AppStorage.Set('isDarkMode', this.isDark);
+    AppStorage.setOrCreate('isDarkMode', this.isDark);
   }
 
   private getSpeedMultiplier(): number {
@@ -404,7 +389,8 @@ struct NovelReaderPage {
       .backgroundColor(this.getColors().iconBtnBg)
       .onClick(() => {
         this.stopAutoRead();
-        router.back();
+        const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+        if (pageCtx) { pageCtx.popPage(); }
       })
 
       Column() {
@@ -455,12 +441,13 @@ struct NovelReaderPage {
       .backgroundColor(this.getColors().iconBtnBg)
       .onClick(() => {
         this.stopAutoRead();
-        router.pushUrl({
-          url: 'pages/novel/NovelCommentsPage',
-          params: {
+        const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+        if (pageCtx) {
+          const params: NovCommentsParam = {
             novelId: this.params?.novelId ?? ''
-          }
-        });
+          };
+          pageCtx.openPage(PageEnum.NOVEL_COMMENTS, params as Object);
+        }
       })
     }
     .width('100%')
@@ -688,8 +675,7 @@ struct NovelReaderPage {
           Toggle({ type: ToggleType.Switch, isOn: this.isDark })
             .onChange((value: boolean) => {
               this.isDark = value;
-              globalThis.isDarkMode = value;
-              AppStorage.Set('isDarkMode', value);
+              AppStorage.setOrCreate('isDarkMode', value);
             })
         }
         .width('100%')
@@ -807,14 +793,8 @@ struct NovelReaderPage {
     .borderRadius(20)
   }
 
-  pageTransition() {
-    PageTransitionEnter({ duration: 300, curve: Curve.Friction })
-      .slide(SlideEffect.Right)
-    PageTransitionExit({ duration: 300, curve: Curve.Friction })
-      .slide(SlideEffect.Right)
-  }
-
   build() {
+    NavDestination() {
     Stack() {
       Column() {
         this.HeaderBar()
@@ -855,5 +835,43 @@ struct NovelReaderPage {
     }
     .width('100%')
     .height('100%')
+    }
+    .onReady((ctx: NavDestinationContext) => {
+      this.params = ctx.pathInfo.param as ReaderRouterParams;
+      this.isCachedMode = this.params?.cached === true;
+      this.novelTitle = this.params?.title ?? '小说阅读';
+      this.novelAuthor = this.params?.author ?? '';
+      if (this.params?.translatedTitle) {
+        this.translatedTitle = this.params.translatedTitle;
+      }
+      if (this.params?.hasTitleTranslation) {
+        this.showTranslation = true;
+      }
+
+      if (this.isCachedMode && this.params?.novelId) {
+        AppStorage.setOrCreate('bgNovelId', this.params.novelId);
+        AppStorage.setOrCreate('bgIsTranslated', !this.showOriginal);
+        this.loadOfflineContent(this.params.novelId);
+        this.fetchCommentCount();
+        this.startAutoSave();
+      } else if (this.params?.novelId) {
+        promptAction.showToast({ message: '小说尚未缓存，请先缓存' });
+        setTimeout(() => {
+          const ctx = AppStorage.get<PageContext>('rootPageContext');
+          if (ctx) { ctx.popPage(); }
+        }, 1000);
+      }
+    })
+    .onBackPressed(() => {
+      const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+      if (pageCtx) { pageCtx.popPage(); }
+      return true;
+    })
+    .hideTitleBar(true)
   }
+}
+
+@Builder
+export function NovelReaderBuilder(): void {
+  NovelReaderPage()
 }

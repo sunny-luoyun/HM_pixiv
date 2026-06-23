@@ -62,9 +62,10 @@ export class TranslationController {
       return r;
     }
 
-    const ctx = globalThis.appContext as common.UIAbilityContext;
+    const ctx = AppStorage.get<common.UIAbilityContext>('appContext');
     if (ctx) {
       await pixivCacheDB.init(ctx);
+      await service.initTokenizer(ctx);
     }
     const originalText = await pixivCacheDB.getFullText(novelId);
 
@@ -72,8 +73,6 @@ export class TranslationController {
       const r: PrepareFullTranslationError = { error: '找不到原文内容' };
       return r;
     }
-
-    await service.initTokenizer(ctx);
     const inputTokens = service.estimateTokens(originalText);
     const estimatedMs = service.estimateTime(inputTokens);
     const totalSec = Math.round(estimatedMs / 1000);

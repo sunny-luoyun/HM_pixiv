@@ -20,6 +20,10 @@ import indexPageTest from './IndexPage.test';
 import localUnitTest from './LocalUnit.test';
 import statusBarThemeTest from './StatusBarTheme.test';
 import segmentedTabBarTest from './SegmentedTabBar.test';
+import pageContextTest from './PageContext.test';
+import loadingModelTest from './LoadingModel.test';
+import baseVMTest from './BaseVM.test';
+import constantsTest from './Constants.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -44,4 +48,8 @@ export default function testsuite() {
   indexPageTest();
   statusBarThemeTest();
   segmentedTabBarTest();
+  pageContextTest();
+  loadingModelTest();
+  baseVMTest();
+  constantsTest();
 }

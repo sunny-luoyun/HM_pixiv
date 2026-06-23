@@ -1,7 +1,9 @@
-import router from '@ohos.router';
 import common from '@ohos.app.ability.common';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { PixivNovel, formatTextLength, formatPixivDate } from '../../models/PixivModels';
+import { PageContext } from '../../common/utils/PageContext';
+import { PageEnum } from '../../common/constants/PageEnum';
+import { NovReaderParam, SeriesDetailParam, UserProfileParam } from '../../common/constants/PageParamTypes';
 
 interface SeriesGroup {
   seriesId: string;
@@ -54,26 +56,25 @@ function groupNovels(novels: PixivNovel[]): AuthorGroup[] {
   );
 }
 
-@Entry
 @Component
 export struct AuthorDetailPage {
+  @State navParams: Record<string, Object> = {};
   private authorId: string = '';
   private authorName: string = '';
   @State authorGroup: AuthorGroup | null = null;
   @State isLoading: boolean = true;
 
   aboutToAppear() {
-    const params = router.getParams() as Record<string, Object>;
-    this.authorId = params['authorId'] as string;
-    this.authorName = params['authorName'] as string;
-    this.loadAuthorNovels();
+    // 参数由 onReady 获取
   }
 
   async loadAuthorNovels() {
     this.isLoading = true;
     try {
-      const ctx = globalThis.appContext as common.UIAbilityContext;
-      await pixivCacheDB.init(ctx);
+      const ctx = AppStorage.get<common.UIAbilityContext>('appContext');
+      if (ctx) {
+        await pixivCacheDB.init(ctx);
+      }
       const novels = await pixivCacheDB.getAllCachedNovels();
       const filtered = novels.filter(n => n.authorId === this.authorId && n.cacheStatus === 'cached');
       const groups = groupNovels(filtered);
@@ -85,43 +86,39 @@ export struct AuthorDetailPage {
   }
 
   openReader(novel: PixivNovel) {
-    router.pushUrl({
-      url: 'pages/novel/NovelReaderPage',
-      params: {
+    const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+    if (pageCtx) {
+      const params: NovReaderParam = {
         novelId: novel.id,
         title: novel.title,
         author: novel.author,
         cached: true,
         translatedTitle: novel.titleTranslated || '',
         hasTitleTranslation: !!novel.hasTitleTranslation
-      }
-    });
+      };
+      pageCtx.openPage(PageEnum.NOVEL_READER, params as Object);
+    }
   }
 
   openSeries(sg: SeriesGroup) {
-    router.pushUrl({
-      url: 'pages/settings/SeriesDetailPage',
-      params: {
+    const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+    if (pageCtx) {
+      const params: SeriesDetailParam = {
         seriesId: sg.seriesId,
         seriesTitle: sg.seriesTitle,
         authorName: this.authorName
-      }
-    });
-  }
-
-  pageTransition() {
-    PageTransitionEnter({ duration: 300, curve: Curve.Friction })
-      .slide(SlideEffect.Right)
-    PageTransitionExit({ duration: 300, curve: Curve.Friction })
-      .slide(SlideEffect.Right)
+      };
+      pageCtx.openPage(PageEnum.SERIES_DETAIL, params as Object);
+    }
   }
 
   build() {
+    NavDestination() {
     Column() {
       Row() {
         Text('‹')
           .fontSize(28)
-          .onClick(() => router.back())
+          .onClick(() => { const ctx = AppStorage.get<PageContext>('rootPageContext'); if (ctx) { ctx.popPage(); } })
         Text(this.authorName)
           .fontSize(22)
           .fontWeight(FontWeight.Bold)
@@ -195,13 +192,14 @@ export struct AuthorDetailPage {
         .borderRadius(12)
         .margin({ bottom: 8 })
         .onClick(() => {
-          router.pushUrl({
-            url: 'pages/user/UserProfilePage',
-            params: {
+          const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+          if (pageCtx) {
+            const params: UserProfileParam = {
               userId: this.authorId,
               userName: this.authorName
-            }
-          });
+            };
+            pageCtx.openPage(PageEnum.USER_PROFILE, params as Object);
+          }
         })
 
             // Series section
@@ -257,6 +255,19 @@ export struct AuthorDetailPage {
     .width('100%')
     .height('100%')
     .backgroundColor($r('app.color.page_background'))
+    }
+    .onReady((ctx: NavDestinationContext) => {
+      this.navParams = ctx.pathInfo.param as Record<string, Object> ?? {};
+      this.authorId = (this.navParams['authorId'] as string) || '';
+      this.authorName = (this.navParams['authorName'] as string) || '';
+      this.loadAuthorNovels();
+    })
+    .onBackPressed(() => {
+      const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+      if (pageCtx) { pageCtx.popPage(); }
+      return true;
+    })
+    .hideTitleBar(true)
   }
 
   @Builder
@@ -379,4 +390,9 @@ export struct AuthorDetailPage {
     .borderRadius(12)
     .onClick(() => { this.openReader(novel) })
   }
+}
+
+@Builder
+export function AuthorDetailBuilder(): void {
+  AuthorDetailPage()
 }

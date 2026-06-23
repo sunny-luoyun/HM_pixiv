@@ -1,8 +1,9 @@
-import router from '@ohos.router';
+import { PageContext } from '../common/utils/PageContext';
 import promptAction from '@ohos.promptAction';
 import { AjaxComment, AjaxCommentsResponse } from '../models/PixivModels';
 import { BasicDataSource } from '../common/utils/BasicDataSource';
 import { AppState } from '../store/AppState';
+import { ImageComponent } from './ImageComponent';
 
 @Component
 export struct CommentsComponent {
@@ -114,7 +115,10 @@ export struct CommentsComponent {
         }
         .width(36).height(36)
         .backgroundColor($r('app.color.overlay_light'))
-        .onClick(() => router.back())
+        .onClick(() => {
+          const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+          if (pageCtx) { pageCtx.popPage(); }
+        })
 
         Text(`${this.titleLabel} (${this.totalComments})`)
           .fontSize(16)
@@ -202,10 +206,8 @@ export struct CommentsComponent {
     Column() {
       Row() {
         if (comment.img) {
-          Image(comment.img)
+          ImageComponent({ src: comment.img, imgBorderRadius: 16, objectFit: ImageFit.Cover })
             .width(36).height(36)
-            .borderRadius(18)
-            .objectFit(ImageFit.Cover)
         } else {
           Circle()
             .width(36).height(36)

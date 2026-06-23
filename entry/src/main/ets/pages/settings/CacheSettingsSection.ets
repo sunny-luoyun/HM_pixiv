@@ -1,8 +1,9 @@
-import router from '@ohos.router';
 import common from '@ohos.app.ability.common';
 import { PixivService } from '../../services/PixivService';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { formatFileSize } from '../../common/utils/FormatUtil';
+import { PageContext } from '../../common/utils/PageContext';
+import { PageEnum } from '../../common/constants/PageEnum';
 
 @Component
 export struct CacheSettingsSection {
@@ -26,7 +27,7 @@ export struct CacheSettingsSection {
   }
 
   async initCache() {
-    const ctx = globalThis.appContext as common.UIAbilityContext;
+    const ctx = AppStorage.get<common.UIAbilityContext>('appContext');
     if (ctx) {
       await pixivCacheDB.init(ctx);
     }
@@ -188,7 +189,8 @@ export struct CacheSettingsSection {
             .fontColor($r('app.color.tab_selected'))
             .margin({ right: 12 })
             .onClick(() => {
-              router.pushUrl({ url: 'pages/settings/CachedNovelsSimplePage' });
+              const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+              if (pageCtx) { pageCtx.openPage(PageEnum.CACHED_NOVELS_SIMPLE); }
             })
           Button('清除全部')
             .fontSize(13)

@@ -1,0 +1,79 @@
+{
+  "routerMap": [
+    {
+      "name": "IllustDetail",
+      "pageSourceFile": "src/main/ets/pages/illust/IllustDetailPage.ets",
+      "buildFunction": "IllustDetailBuilder"
+    },
+    {
+      "name": "IllustComments",
+      "pageSourceFile": "src/main/ets/pages/illust/IllustCommentsPage.ets",
+      "buildFunction": "IllustCommentsBuilder"
+    },
+    {
+      "name": "NovelReader",
+      "pageSourceFile": "src/main/ets/pages/novel/NovelReaderPage.ets",
+      "buildFunction": "NovelReaderBuilder"
+    },
+    {
+      "name": "NovelSeries",
+      "pageSourceFile": "src/main/ets/pages/novel/NovelSeriesPage.ets",
+      "buildFunction": "NovelSeriesBuilder"
+    },
+    {
+      "name": "NovelComments",
+      "pageSourceFile": "src/main/ets/pages/novel/NovelCommentsPage.ets",
+      "buildFunction": "NovelCommentsBuilder"
+    },
+    {
+      "name": "UserProfile",
+      "pageSourceFile": "src/main/ets/pages/user/UserProfilePage.ets",
+      "buildFunction": "UserProfileBuilder"
+    },
+    {
+      "name": "Login",
+      "pageSourceFile": "src/main/ets/pages/login/LoginPage.ets",
+      "buildFunction": "LoginBuilder"
+    },
+    {
+      "name": "Favorites",
+      "pageSourceFile": "src/main/ets/pages/favorites/FavoritesPage.ets",
+      "buildFunction": "FavoritesBuilder"
+    },
+    {
+      "name": "Following",
+      "pageSourceFile": "src/main/ets/pages/setting/FollowingPage.ets",
+      "buildFunction": "FollowingBuilder"
+    },
+    {
+      "name": "BlockedContent",
+      "pageSourceFile": "src/main/ets/pages/setting/BlockedContentPage.ets",
+      "buildFunction": "BlockedContentBuilder"
+    },
+    {
+      "name": "Settings",
+      "pageSourceFile": "src/main/ets/pages/settings/SettingsPage.ets",
+      "buildFunction": "SettingsBuilder"
+    },
+    {
+      "name": "AuthorDetail",
+      "pageSourceFile": "src/main/ets/pages/settings/AuthorDetailPage.ets",
+      "buildFunction": "AuthorDetailBuilder"
+    },
+    {
+      "name": "CachedNovels",
+      "pageSourceFile": "src/main/ets/pages/settings/CachedNovelsPage.ets",
+      "buildFunction": "CachedNovelsBuilder"
+    },
+    {
+      "name": "CachedNovelsSimple",
+      "pageSourceFile": "src/main/ets/pages/settings/CachedNovelsSimplePage.ets",
+      "buildFunction": "CachedNovelsSimpleBuilder"
+    },
+    {
+      "name": "SeriesDetail",
+      "pageSourceFile": "src/main/ets/pages/settings/SeriesDetailPage.ets",
+      "buildFunction": "SeriesDetailBuilder"
+    }
+  ]
+}

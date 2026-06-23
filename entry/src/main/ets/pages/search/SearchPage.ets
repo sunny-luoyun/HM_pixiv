@@ -56,7 +56,7 @@ export struct SearchPage {
   }
 
   loadSearchHistory() {
-    const ctx = globalThis.appContext as common.UIAbilityContext;
+    const ctx = AppStorage.get<common.UIAbilityContext>('appContext');
     if (!ctx) return;
     preferences.getPreferences(ctx, 'app_search_history')
       .then(pref => pref.get('searchHistory', '[]'))
@@ -71,7 +71,7 @@ export struct SearchPage {
   }
 
   saveSearchHistory() {
-    const ctx = globalThis.appContext as common.UIAbilityContext;
+    const ctx = AppStorage.get<common.UIAbilityContext>('appContext');
     if (!ctx) return;
     preferences.getPreferences(ctx, 'app_search_history')
       .then(pref => {

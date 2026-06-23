@@ -1,8 +1,10 @@
-import router from '@ohos.router';
 import common from '@ohos.app.ability.common';
 import promptAction from '@ohos.promptAction';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { PixivNovel } from '../../models/PixivModels';
+import { PageContext } from '../../common/utils/PageContext';
+import { PageEnum } from '../../common/constants/PageEnum';
+import { AuthorDetailParam } from '../../common/constants/PageParamTypes';
 
 interface SeriesGroup {
   seriesId: string;
@@ -55,7 +57,6 @@ function groupNovels(novels: PixivNovel[]): AuthorGroup[] {
   );
 }
 
-@Entry
 @Component
 export struct CachedNovelsPage {
   @State cachedNovels: PixivNovel[] = [];
@@ -69,8 +70,10 @@ export struct CachedNovelsPage {
   async loadCachedNovels() {
     this.isLoading = true;
     try {
-      const ctx = globalThis.appContext as common.UIAbilityContext;
-      await pixivCacheDB.init(ctx);
+      const ctx = AppStorage.get<common.UIAbilityContext>('appContext');
+      if (ctx) {
+        await pixivCacheDB.init(ctx);
+      }
       const novels = await pixivCacheDB.getAllCachedNovels();
       this.cachedNovels = novels;
       this.authorGroups = groupNovels(novels);
@@ -108,13 +111,14 @@ export struct CachedNovelsPage {
   }
 
   openAuthorDetail(ag: AuthorGroup) {
-    router.pushUrl({
-      url: 'pages/settings/AuthorDetailPage',
-      params: {
+    const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+    if (pageCtx) {
+      const params: AuthorDetailParam = {
         authorId: ag.authorId,
         authorName: ag.authorName
-      }
-    });
+      };
+      pageCtx.openPage(PageEnum.AUTHOR_DETAIL, params as Object);
+    }
   }
 
   pageTransition() {
@@ -125,74 +129,82 @@ export struct CachedNovelsPage {
   }
 
   build() {
-    Column() {
-      Row() {
-        Text('‹')
-          .fontSize(28)
-          .onClick(() => router.back())
-        Text('我的缓存小说')
-          .fontSize(22)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('app.color.user_name'))
-          .margin({ left: 12 })
-        Blank()
-        Text(`${this.cachedNovels.length}`)
-          .fontSize(14)
-          .fontColor($r('app.color.text_secondary'))
-      }
-      .width('100%')
-      .padding({ left: 16, right: 24, top: 16 })
-
-      if (!this.isLoading && this.authorGroups.length > 0) {
+    NavDestination() {
+      Column() {
         Row() {
-          Text(`${this.authorGroups.length} 位作者 · ${this.cachedNovels.length} 本缓存`)
-            .fontSize(13)
-            .fontColor($r('app.color.text_secondary'))
-        }
-        .width('100%')
-        .padding({ left: 20, right: 20, top: 8, bottom: 4 })
-      }
-
-      if (this.isLoading) {
-        Column() {
-          LoadingProgress()
-            .width(40).height(40)
-            .color($r('app.color.tab_selected'))
-          Text('加载中...')
+          Text('‹')
+            .fontSize(28)
+            .onClick(() => { const ctx = AppStorage.get<PageContext>('rootPageContext'); if (ctx) { ctx.popPage(); } })
+          Text('我的缓存小说')
+            .fontSize(22)
+            .fontWeight(FontWeight.Bold)
+            .fontColor($r('app.color.user_name'))
+            .margin({ left: 12 })
+          Blank()
+          Text(`${this.cachedNovels.length}`)
             .fontSize(14)
             .fontColor($r('app.color.text_secondary'))
-            .margin({ top: 12 })
         }
         .width('100%')
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-      } else if (this.authorGroups.length === 0) {
-        Column() {
-          Text('暂无已缓存的小说')
-            .fontSize(16)
-            .fontColor($r('app.color.text_secondary'))
-            .margin({ top: 60 })
+        .padding({ left: 16, right: 24, top: 16 })
+
+        if (!this.isLoading && this.authorGroups.length > 0) {
+          Row() {
+            Text(`${this.authorGroups.length} 位作者 · ${this.cachedNovels.length} 本缓存`)
+              .fontSize(13)
+              .fontColor($r('app.color.text_secondary'))
+          }
+          .width('100%')
+          .padding({ left: 20, right: 20, top: 8, bottom: 4 })
         }
-        .width('100%')
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Center)
-      } else {
-        List({ space: 10 }) {
-          ForEach(this.authorGroups, (ag: AuthorGroup) => {
-            ListItem() {
-              this.AuthorCard(ag)
-            }
-          }, (ag: AuthorGroup): string => ag.authorId)
+
+        if (this.isLoading) {
+          Column() {
+            LoadingProgress()
+              .width(40).height(40)
+              .color($r('app.color.tab_selected'))
+            Text('加载中...')
+              .fontSize(14)
+              .fontColor($r('app.color.text_secondary'))
+              .margin({ top: 12 })
+          }
+          .width('100%')
+          .layoutWeight(1)
+          .justifyContent(FlexAlign.Center)
+        } else if (this.authorGroups.length === 0) {
+          Column() {
+            Text('暂无已缓存的小说')
+              .fontSize(16)
+              .fontColor($r('app.color.text_secondary'))
+              .margin({ top: 60 })
+          }
+          .width('100%')
+          .layoutWeight(1)
+          .alignItems(HorizontalAlign.Center)
+        } else {
+          List({ space: 10 }) {
+            ForEach(this.authorGroups, (ag: AuthorGroup) => {
+              ListItem() {
+                this.AuthorCard(ag)
+              }
+            }, (ag: AuthorGroup): string => ag.authorId)
+          }
+          .width('100%')
+          .layoutWeight(1)
+          .edgeEffect(EdgeEffect.Spring)
+          .padding({ left: 16, right: 16, top: 8, bottom: 120 })
         }
-        .width('100%')
-        .layoutWeight(1)
-        .edgeEffect(EdgeEffect.Spring)
-        .padding({ left: 16, right: 16, top: 8, bottom: 120 })
       }
+      .width('100%')
+      .height('100%')
+      .backgroundColor($r('app.color.page_background'))
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor($r('app.color.page_background'))
+    .onBackPressed(() => {
+      const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+      if (pageCtx) { pageCtx.popPage(); }
+      return true;
+    })
+    .hideTitleBar(true)
   }
 
   @Builder
@@ -270,4 +282,9 @@ export struct CachedNovelsPage {
       this.openAuthorDetail(ag);
     })
   }
+}
+
+@Builder
+export function CachedNovelsBuilder(): void {
+  CachedNovelsPage()
 }
