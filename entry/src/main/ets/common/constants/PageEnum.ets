@@ -17,4 +17,5 @@ export class PageEnum {
   static readonly CACHED_NOVELS = 'CachedNovels';
   static readonly CACHED_NOVELS_SIMPLE = 'CachedNovelsSimple';
   static readonly SERIES_DETAIL = 'SeriesDetail';
+  static readonly MAIN_TABS = 'mainTabs';
 }
