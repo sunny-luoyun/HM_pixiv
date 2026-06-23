@@ -3,6 +3,11 @@ export interface IllustDetailParam {
   thumbnailLocalUrl: string;
 }
 
+export interface IllustDetailAnimParam extends IllustDetailParam {
+  clickedComponentId: string;
+  doDefaultTransition: () => void;
+}
+
 export interface UserProfileParam {
   userId: string;
   userName: string;

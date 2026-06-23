@@ -202,6 +202,29 @@
 
 ---
 
+## F26 - 卡片一镜到底转场动画
+
+- **描述**：点击插画卡片进入详情页时，使用 `componentSnapshot` + `customNavContentTransition` 实现一镜到底的转场动画。卡片截图从原位置平滑缩放至全屏，同时详情内容淡入。返回时动画反向播放。
+- **核心机制**：
+  - `componentSnapshot.get()` 截取卡片图像容器为 PixelMap
+  - `CustomTransition` 单例注册动画回调
+  - `Navigation.customNavContentTransition()` 拦截转场提供自定义动画
+  - `LongTakeAnimationProperties`（@Observed）驱动截图的位置/大小/透明度动画
+- **新增文件**：
+  - `entry/src/main/ets/common/utils/SnapShotImage.ets` — PixelMap 持有者
+  - `entry/src/main/ets/common/utils/CustomTransitionUtils.ets` — 动画回调注册单例
+  - `entry/src/main/ets/common/utils/LongTakeAnimationProperties.ets` — @Observed 动画属性类
+- **修改文件**：
+  - `entry/src/main/ets/components/IllustCard.ets` — 图像容器加 `.id()`，onClick 截图并传递参数，转场期间隐藏卡片
+  - `entry/src/main/ets/pages/illust/IllustDetailPage.ets` — onReady 注册自定义转场，叠加截图层，动画驱动
+  - `entry/src/main/ets/pages/Index.ets` — Navigation 添加 `.customNavContentTransition()`，存储 UIContext 到 AppStorage
+  - `entry/src/main/ets/common/constants/PageParamTypes.ets` — 新增 `IllustDetailAnimParam` 接口
+- **测试**：`entry/src/test/CustomTransitionUtils.test.ets`
+- **退路**：截图失败时自动降级为默认导航转场（无动画）；`getRectangleById` 获取卡片位置失败时自动降级
+- **参考项目**：`transitions-collection`（HarmonyOS Samples）中的 `CardLongTakeTransition`
+
+---
+
 ## 手工验证清单
 
 > 每次修改代码后，请逐项检查以下功能是否正常：
@@ -231,6 +254,10 @@
 | 21 | 类型导入 | 所有页面编译无类型错误（类型集中在 PixivModels） | ☐ |
 | 22 | 沉浸光感 | 底部 TabBar 毛玻璃效果正常、深浅色切换稳定、滑动流畅 | ☐ |
 | 23 | 状态栏深浅适配 | 切换系统深色/浅色模式后，状态栏时钟和图标颜色随背景自动变为白色/黑色，可清晰辨识 | ☐ |
+| 24 | 卡片一镜到底（进入） | 在任意列表页点击插画卡片 → 卡片截图平滑缩放至全屏 → 详情内容淡入 | ☐ |
+| 25 | 卡片一镜到底（返回） | 在详情页点击返回 → 详情内容淡出 → 截图平滑缩放回卡片位置 | ☐ |
+| 26 | 截图失败降级 | 截图失败时（如图片未加载）→ 直接进入详情无动画 | ☐ |
+| 27 | 多页作品 | 进入多页作品详情 → 滑动到非首页 → 返回时动画仍正常工作 | ☐ |
 
 ---
 
@@ -288,7 +315,7 @@
 
 ---
 
-> 最后更新：F25 SegmentedTabBar 跟手滑动动画，基于 2026-06-23
+> 最后更新：F26 卡片一镜到底转场动画，基于 2026-06-23
 
 ---
 

@@ -24,6 +24,7 @@ import pageContextTest from './PageContext.test';
 import loadingModelTest from './LoadingModel.test';
 import baseVMTest from './BaseVM.test';
 import constantsTest from './Constants.test';
+import customTransitionTest from './CustomTransitionUtils.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -52,4 +53,5 @@ export default function testsuite() {
   loadingModelTest();
   baseVMTest();
   constantsTest();
+  customTransitionTest();
 }

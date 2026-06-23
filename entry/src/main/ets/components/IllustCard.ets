@@ -1,11 +1,14 @@
 import promptAction from '@ohos.promptAction';
 import { curves } from '@kit.ArkUI';
+import { image } from '@kit.ImageKit';
+import { BusinessError } from '@kit.BasicServicesKit';
 import { PixivService } from '../services/PixivService';
 import { IllustBookmark } from '../models/PixivModels';
 import { ImageComponent } from './ImageComponent';
-import { IllustDetailParam, UserProfileParam } from '../common/constants/PageParamTypes';
+import { IllustDetailParam, IllustDetailAnimParam, UserProfileParam } from '../common/constants/PageParamTypes';
 import { PageContext } from '../common/utils/PageContext';
 import { PageEnum } from '../common/constants/PageEnum';
+import { SnapShotImage } from '../common/utils/SnapShotImage';
 
 @Component
 export struct IllustCard {
@@ -21,6 +24,7 @@ export struct IllustCard {
   @State imageOpacity: number = 0;
   @State hasAppeared: boolean = false;
   @State imageHeight: number = 150;
+  @State cardVisibility: Visibility = Visibility.Visible;
 
   async aboutToAppear() {
     if (this.hasAppeared) return;
@@ -85,7 +89,6 @@ export struct IllustCard {
           ImageComponent({ src: this.localUrl, imgBorderRadius: 12, showLoading: !this.localUrl })
             .width('100%')
             .height(this.imageHeight)
-            .sharedTransition('illust_' + this.item.id, { duration: 350, curve: Curve.Friction })
             .opacity(this.imageOpacity)
           if (this.item.pageCount > 1) {
             Text(`${this.item.pageCount}页`)
@@ -97,6 +100,7 @@ export struct IllustCard {
               .position({ top: 6, right: 6 })
           }
         }
+        .id('CardImage_' + this.item.id)
         .width('100%')
         .height(this.imageHeight)
         Text(this.item.title)
@@ -109,13 +113,32 @@ export struct IllustCard {
       .width('100%')
       .onClick(() => {
         const pageCtx = AppStorage.get<PageContext>('rootPageContext');
-        if (pageCtx) {
-          const params: IllustDetailParam = {
-            id: this.item.id,
-            thumbnailLocalUrl: this.localUrl
-          };
-          pageCtx.openPage(PageEnum.ILLUST_DETAIL, params as Object);
+        if (!pageCtx) {
+          return;
         }
+        const snapId = 'CardImage_' + this.item.id;
+        this.getUIContext().getComponentSnapshot().get(snapId,
+          (error: BusinessError, pixelMap: image.PixelMap) => {
+            if (error) {
+              const params: IllustDetailParam = {
+                id: this.item.id,
+                thumbnailLocalUrl: this.localUrl
+              };
+              pageCtx.openPage(PageEnum.ILLUST_DETAIL, params as Object);
+              return;
+            }
+            SnapShotImage.pixelMap = pixelMap;
+            this.cardVisibility = Visibility.Hidden;
+            const animParams: IllustDetailAnimParam = {
+              id: this.item.id,
+              thumbnailLocalUrl: this.localUrl,
+              clickedComponentId: snapId,
+              doDefaultTransition: () => {
+                this.cardVisibility = Visibility.Visible;
+              }
+            };
+            pageCtx.openPage(PageEnum.ILLUST_DETAIL, animParams as Object);
+          });
       })
 
       Row() {
@@ -160,5 +183,6 @@ export struct IllustCard {
     .shadow({ radius: 8, color: $r('app.color.card_shadow'), offsetY: 2 })
     .opacity(this.cardOpacity)
     .translate({ y: this.cardTranslateY })
+    .visibility(this.cardVisibility)
   }
 }

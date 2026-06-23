@@ -23,6 +23,7 @@ import { AuthorDetailBuilder } from './settings/AuthorDetailPage';
 import { CachedNovelsBuilder } from './settings/CachedNovelsPage';
 import { CachedNovelsSimpleBuilder } from './settings/CachedNovelsSimplePage';
 import { SeriesDetailBuilder } from './settings/SeriesDetailPage';
+import { AnimateCallback, CustomTransition } from '../common/utils/CustomTransitionUtils';
 
 interface TabConfig {
   iconNormal: SymbolGlyphModifier;
@@ -77,6 +78,7 @@ struct Index {
   @Provide('isLoggedIn') isLoggedIn: boolean = false;
   @State materialLevel: hdsMaterial.MaterialLevel = hdsMaterial.MaterialLevel.EXQUISITE;
   @State bottomInsetVp: number = 0;
+  @State isNavigationEnabled: boolean = true;
   private tabsController: HdsTabsController = new HdsTabsController();
   private rootStack: NavPathStack = new NavPathStack();
   private rootPageContext: PageContext = new PageContext(this.rootStack);
@@ -97,6 +99,7 @@ struct Index {
     console.info(`🔄 检查登录状态: ${appState.isLoggedIn ? '已登录' : '未登录'}`);
     console.info(`👤 用户: ${appState.userName || '未知用户'} (${appState.userId || '无ID'})`);
     AppStorage.setOrCreate('rootPageContext', this.rootPageContext);
+    AppStorage.setOrCreate('uiContext', this.getUIContext());
     this.isReady = true;
   }
 
@@ -229,5 +232,44 @@ struct Index {
     .mode(NavigationMode.Stack)
     .hideTitleBar(true)
     .hideToolBar(true)
+    .enabled(this.isNavigationEnabled)
+    .customNavContentTransition((from: NavContentInfo, to: NavContentInfo,
+      operation: NavigationOperation) => {
+      if (operation === NavigationOperation.PUSH) {
+        if (!to || !to.navDestinationId) {
+          return undefined;
+        }
+      } else {
+        if (!to || to.navDestinationId) {
+          return undefined;
+        }
+      }
+      let fromParam: AnimateCallback = from?.navDestinationId
+        ? CustomTransition.getInstance().getAnimateParam(from.navDestinationId)
+        : {} as AnimateCallback;
+      let toParam: AnimateCallback = to?.navDestinationId
+        ? CustomTransition.getInstance().getAnimateParam(to.navDestinationId)
+        : {} as AnimateCallback;
+      CustomTransition.getInstance().operation = operation;
+      if (!fromParam.animation && !toParam.animation) {
+        return undefined;
+      }
+      let customAnimation: NavigationAnimatedTransition = {
+        onTransitionEnd: () => {
+          this.isNavigationEnabled = true;
+        },
+        timeout: 1500,
+        transition: (transitionProxy: NavigationTransitionProxy) => {
+          this.isNavigationEnabled = false;
+          if (fromParam.animation) {
+            fromParam.animation(transitionProxy);
+          }
+          if (toParam.animation) {
+            toParam.animation(transitionProxy);
+          }
+        }
+      };
+      return customAnimation;
+    })
   }
 }
