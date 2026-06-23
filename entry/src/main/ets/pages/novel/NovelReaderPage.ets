@@ -573,7 +573,7 @@ struct NovelReaderPage {
     if (this.isTranslating) {
       Column() {
         Row() {
-          Text(`翻译中... ${this.translationProgress}%`)
+          Text('翻译中...')
             .fontSize(12)
             .fontColor(this.getColors().secondaryText)
           Blank()
@@ -584,12 +584,23 @@ struct NovelReaderPage {
         Progress({
           value: this.translationProgress,
           total: 100,
-          type: ProgressType.Linear
+          type: ProgressType.Capsule
         })
           .width('100%')
-          .height(4)
+          .height(24)
           .color(this.getColors().accentText)
           .backgroundColor(this.getColors().translationProgressBg)
+          .style({
+            borderColor: this.getColors().accentText,
+            borderWidth: 1,
+            content: `${this.translationProgress}%`,
+            font: {
+              size: 13,
+              style: FontStyle.Normal,
+              weight: FontWeight.Medium,
+            },
+            fontColor: Color.White,
+          })
       }
       .width('100%')
       .backgroundColor(this.getColors().headerBg)
