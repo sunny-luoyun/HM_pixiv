@@ -75,7 +75,7 @@ const TAB_CONFIG: TabConfig[] = [
 struct Index {
   @State currentIndex: number = 0;
   @State isReady: boolean = false;
-  @Provide('isLoggedIn') isLoggedIn: boolean = false;
+  @StorageLink('isLoggedIn') isLoggedIn: boolean = false;
   @State materialLevel: hdsMaterial.MaterialLevel = hdsMaterial.MaterialLevel.EXQUISITE;
   @State bottomInsetVp: number = 0;
   @State isNavigationEnabled: boolean = true;
@@ -95,16 +95,11 @@ struct Index {
     }
 
     await appState.checkLoginStatus(true);
-    this.isLoggedIn = appState.isLoggedIn;
     console.info(`🔄 检查登录状态: ${appState.isLoggedIn ? '已登录' : '未登录'}`);
     console.info(`👤 用户: ${appState.userName || '未知用户'} (${appState.userId || '无ID'})`);
     AppStorage.setOrCreate('rootPageContext', this.rootPageContext);
     AppStorage.setOrCreate('uiContext', this.getUIContext());
     this.isReady = true;
-  }
-
-  onPageShow() {
-    this.isLoggedIn = appState.isLoggedIn;
   }
 
   private readBottomInset(): void {

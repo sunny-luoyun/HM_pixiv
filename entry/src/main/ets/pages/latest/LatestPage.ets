@@ -11,7 +11,7 @@ import common from '@ohos.app.ability.common';
 
 @Component
 export struct LatestPage {
-  @Consume('isLoggedIn') @Watch('onLoginStateChange') isLoggedIn: boolean;
+  @StorageLink('isLoggedIn') @Watch('onLoginStateChange') isLoggedIn: boolean = false;
   @State currentTab: number = 0;
   private illustSource: BasicDataSource<IllustBookmark> = new BasicDataSource();
   private novelSource: BasicDataSource<NovelBookmark> = new BasicDataSource();

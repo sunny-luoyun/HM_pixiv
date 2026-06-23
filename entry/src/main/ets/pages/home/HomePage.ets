@@ -16,7 +16,7 @@ const MAX_EMPTY_RETRIES = 3;
 
 @Component
 export struct HomePage {
-  @Consume('isLoggedIn') @Watch('onLoginStateChange') isLoggedIn: boolean;
+  @StorageLink('isLoggedIn') @Watch('onLoginStateChange') isLoggedIn: boolean = false;
   @State currentTab: number = 0;
   @State illustCount: number = 0;
   @State novelCount: number = 0;

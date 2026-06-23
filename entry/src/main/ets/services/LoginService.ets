@@ -73,6 +73,7 @@ export class LoginService {
       appState.userName = userData.userName;
       appState.userId = userData.userId;
       appState.isLoggedIn = true;
+      AppStorage.setOrCreate('isLoggedIn', true);
       console.info(`✅ 用户信息已保存: ${userData.userName} (ID: ${userData.userId})`);
     } catch (err) {
       console.error('❌ 保存用户信息失败:', err);

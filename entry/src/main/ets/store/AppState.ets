@@ -28,6 +28,7 @@ export class AppState {
     try {
       const cookieStr = await CookieManager.getFullCookie();
       this.isLoggedIn = cookieStr !== '';
+      AppStorage.setOrCreate('isLoggedIn', this.isLoggedIn);
 
       if (this.isLoggedIn) {
         const savedUserId = await CookieManager.getUserId();
@@ -67,6 +68,7 @@ export class AppState {
     } catch (err) {
       console.error('检查登录状态失败', err);
       this.isLoggedIn = false;
+      AppStorage.setOrCreate('isLoggedIn', false);
       this.userId = '';
       this.userName = '';
     }
@@ -134,6 +136,7 @@ export class AppState {
   async logout() {
     await CookieManager.clearAll();
     this.isLoggedIn = false;
+    AppStorage.setOrCreate('isLoggedIn', false);
     this.userId = '';
     this.userName = '';
     this.avatarUrl = '';
