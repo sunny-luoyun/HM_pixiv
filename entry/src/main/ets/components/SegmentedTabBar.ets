@@ -8,7 +8,7 @@ export struct SegmentedTabBar {
   onChange?: (index: number) => void;
 
   @State private animIndex: number = 0;
-  private pillWidth: number = 0;
+  @State private pillWidth: number = 0;
 
   aboutToAppear() {
     this.animIndex = this.currentIndex;
