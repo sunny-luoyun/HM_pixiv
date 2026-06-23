@@ -35,12 +35,17 @@
 
 ---
 
-## F04 - 多维度搜索
+## F04 - 多维度搜索（含过滤条件）
 
-- **描述**：按插画/小说/用户多维度搜索，含搜索建议
+- **描述**：按插画/小说/用户多维度搜索，支持排序（最新/最早/最多收藏）、匹配模式（标签部分/完全/标题说明）、内容类型（插画/动图/漫画）、R18 筛选
 - **页面**：`entry/src/main/ets/pages/search/SearchPage.ets`
 - **API**：`entry/src/main/ets/services/PixivApiService.ets`（`searchIllusts`、`searchNovels`、`searchUsers`）
 - **组件**：`entry/src/main/ets/components/SegmentedTabBar.ets`
+- **过滤参数**（2025-06-23 新增）：
+  - `sortOrder`：`date_d`(最新)/`date`(最旧)/`popular_d`(最多收藏)
+  - `searchMode`：`s_tag`(标签部分)/`s_tag_full`(标签完全)/`s_tc`(标题说明)
+  - `contentType`：`illust_and_ugoira`(全部)/`illust`(插画)/`ugoira`(动图)/`manga`(漫画)
+  - `r18Mode`：`all`(全部)/`safe`(全年龄)/`r18`(R-18)
 
 ---
 

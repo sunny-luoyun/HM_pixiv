@@ -70,12 +70,12 @@ export class PixivService {
     return PixivApiService.fetchNovelText(novelId);
   }
 
-  static async searchIllusts(keyword: string, page: number = 1, sMode: string = 's_tag', type: string = 'illust_and_ugoira'): Promise<SearchIllustResponse> {
-    return PixivApiService.searchIllusts(keyword, page, sMode, type);
+  static async searchIllusts(keyword: string, page: number = 1, sMode: string = 's_tag', type: string = 'illust_and_ugoira', order: string = 'date_d', mode: string = 'all'): Promise<SearchIllustResponse> {
+    return PixivApiService.searchIllusts(keyword, page, sMode, type, order, mode);
   }
 
-  static async searchNovels(keyword: string, page: number = 1, sMode: string = 's_tag'): Promise<SearchNovelResponse> {
-    return PixivApiService.searchNovels(keyword, page, sMode);
+  static async searchNovels(keyword: string, page: number = 1, sMode: string = 's_tag', order: string = 'date_d', mode: string = 'all'): Promise<SearchNovelResponse> {
+    return PixivApiService.searchNovels(keyword, page, sMode, order, mode);
   }
 
   static async searchUsers(keyword: string, page: number = 1): Promise<SearchUserResponse> {

@@ -50,6 +50,10 @@ export struct SearchPage {
   @State userError: string = '';
 
   @State hasSearched: boolean = false;
+  @State sortOrder: string = 'date_d';
+  @State searchMode: string = 's_tag';
+  @State contentType: string = 'illust_and_ugoira';
+  @State r18Mode: string = 'all';
 
   aboutToAppear() {
     this.loadSearchHistory();
@@ -136,7 +140,7 @@ export struct SearchPage {
       this.illustSource.reset([]);
     }
     try {
-      const res = await PixivService.searchIllusts(this.keyword.trim(), page, 's_tag', 'illust_and_ugoira');
+      const res = await PixivService.searchIllusts(this.keyword.trim(), page, this.searchMode, this.contentType, this.sortOrder, this.r18Mode);
       if (!res.error) {
         const raw = res.body?.illust?.data ?? [];
         const works: IllustBookmark[] = [];
@@ -173,7 +177,7 @@ export struct SearchPage {
       this.novelSource.reset([]);
     }
     try {
-      const res = await PixivService.searchNovels(this.keyword.trim(), page, 's_tag');
+      const res = await PixivService.searchNovels(this.keyword.trim(), page, this.searchMode, this.sortOrder, this.r18Mode);
       if (!res.error) {
         const raw = res.body?.novel?.data ?? [];
         const works: NovelBookmark[] = [];
@@ -401,6 +405,175 @@ export struct SearchPage {
     .alignItems(HorizontalAlign.Center)
   }
 
+  private sortOrderLabel(): string {
+    const m: Record<string, string> = {
+      'date_d': '最新发布',
+      'date': '最早发布',
+      'popular_d': '最多收藏'
+    };
+    return m[this.sortOrder] ?? '最新发布';
+  }
+
+  private searchModeLabel(): string {
+    const m: Record<string, string> = {
+      's_tag': '标签部分',
+      's_tag_full': '标签完全',
+      's_tc': '标题说明'
+    };
+    return m[this.searchMode] ?? '标签部分';
+  }
+
+  private contentTypeLabel(): string {
+    const m: Record<string, string> = {
+      'illust_and_ugoira': '全部',
+      'illust': '插画',
+      'ugoira': '动图',
+      'manga': '漫画'
+    };
+    return m[this.contentType] ?? '全部';
+  }
+
+  private r18ModeLabel(): string {
+    const m: Record<string, string> = {
+      'all': '全部',
+      'safe': '全年龄',
+      'r18': 'R-18'
+    };
+    return m[this.r18Mode] ?? '全部';
+  }
+
+  private showSortPicker() {
+    const labels: string[] = ['最新发布', '最早发布', '最多收藏'];
+    const vals: string[] = ['date_d', 'date', 'popular_d'];
+    const selected = Math.max(0, vals.indexOf(this.sortOrder));
+    this.getUIContext().showTextPickerDialog({
+      range: labels,
+      selected: selected,
+      canLoop: false,
+      onAccept: (result: TextPickerResult) => {
+        const idx: number = labels.indexOf(result.value as string);
+        this.sortOrder = vals[idx];
+        this.onSearch();
+      },
+      onCancel: () => {}
+    });
+  }
+
+  private showModePicker() {
+    const labels: string[] = ['标签部分匹配', '标签完全匹配', '标题说明'];
+    const vals: string[] = ['s_tag', 's_tag_full', 's_tc'];
+    const selected = Math.max(0, vals.indexOf(this.searchMode));
+    this.getUIContext().showTextPickerDialog({
+      range: labels,
+      selected: selected,
+      canLoop: false,
+      onAccept: (result: TextPickerResult) => {
+        const idx: number = labels.indexOf(result.value as string);
+        this.searchMode = vals[idx];
+        this.onSearch();
+      },
+      onCancel: () => {}
+    });
+  }
+
+  private showTypePicker() {
+    const labels: string[] = ['全部', '插画', '动图', '漫画'];
+    const vals: string[] = ['illust_and_ugoira', 'illust', 'ugoira', 'manga'];
+    const selected = Math.max(0, vals.indexOf(this.contentType));
+    this.getUIContext().showTextPickerDialog({
+      range: labels,
+      selected: selected,
+      canLoop: false,
+      onAccept: (result: TextPickerResult) => {
+        this.contentType = vals[labels.indexOf(result.value as string)];
+        this.onSearch();
+      },
+      onCancel: () => {}
+    });
+  }
+
+  private showR18Picker() {
+    const labels: string[] = ['全部', '全年龄', 'R-18'];
+    const vals: string[] = ['all', 'safe', 'r18'];
+    const selected = Math.max(0, vals.indexOf(this.r18Mode));
+    this.getUIContext().showTextPickerDialog({
+      range: labels,
+      selected: selected,
+      canLoop: false,
+      onAccept: (result: TextPickerResult) => {
+        this.r18Mode = vals[labels.indexOf(result.value as string)];
+        this.onSearch();
+      },
+      onCancel: () => {}
+    });
+  }
+
+  @Builder
+  FilterBar() {
+    Scroll() {
+      Row({ space: 8 }) {
+        Button() {
+          Text(this.sortOrderLabel() + '  ▼')
+            .fontSize(13)
+            .fontColor($r('app.color.user_name'))
+        }
+        .height(30)
+        .constraintSize({ minWidth: 90 })
+        .borderRadius(15)
+        .backgroundColor($r('app.color.surface_secondary'))
+        .padding({ left: 12, right: 12 })
+        .onClick(() => { this.showSortPicker(); })
+
+        Button() {
+          Text(this.searchModeLabel() + '  ▼')
+            .fontSize(13)
+            .fontColor($r('app.color.user_name'))
+        }
+        .height(30)
+        .constraintSize({ minWidth: 90 })
+        .borderRadius(15)
+        .backgroundColor($r('app.color.surface_secondary'))
+        .padding({ left: 12, right: 12 })
+        .onClick(() => { this.showModePicker(); })
+
+        if (this.currentTab === 0) {
+          Button() {
+            Text(this.contentTypeLabel() + '  ▼')
+              .fontSize(13)
+              .fontColor($r('app.color.user_name'))
+          }
+          .height(30)
+          .constraintSize({ minWidth: 90 })
+          .borderRadius(15)
+          .backgroundColor($r('app.color.surface_secondary'))
+          .padding({ left: 12, right: 12 })
+          .onClick(() => { this.showTypePicker(); })
+        }
+
+        Button() {
+          Text('R18 ' + this.r18ModeLabel() + '  ▼')
+            .fontSize(13)
+            .fontColor($r('app.color.user_name'))
+        }
+        .height(30)
+        .constraintSize({ minWidth: 90 })
+        .borderRadius(15)
+        .backgroundColor($r('app.color.surface_secondary'))
+        .padding({ left: 12, right: 12 })
+        .onClick(() => { this.showR18Picker(); })
+      }
+      .padding({ left: 16, right: 16 })
+    }
+    .scrollable(ScrollDirection.Horizontal)
+    .scrollBar(BarState.Off)
+    .edgeEffect(EdgeEffect.Spring)
+    .width('100%')
+    .padding({ top: 4, bottom: 4 })
+    .transition(TransitionEffect.translate({ y: -32 })
+      .combine(TransitionEffect.OPACITY)
+      .animation({ curve: curves.springMotion(0.45, 0.7) }))
+  }
+
   handleHeaderScroll(yOffset: number) {
     const delta = yOffset - this.lastScrollY;
     this.lastScrollY = yOffset;
@@ -433,6 +606,10 @@ export struct SearchPage {
         .transition(TransitionEffect.translate({ y: -48 })
           .combine(TransitionEffect.OPACITY)
           .animation({ curve: curves.springMotion(0.45, 0.7) }))
+      }
+
+      if (this.isHeaderVisible && this.hasSearched) {
+        this.FilterBar()
       }
 
       Swiper(this.swiperController) {

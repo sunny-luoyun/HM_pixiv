@@ -387,15 +387,15 @@ export class PixivApiService {
     }
   }
 
-  static async searchIllusts(keyword: string, page: number = 1, sMode: string = 's_tag', type: string = 'illust_and_ugoira'): Promise<SearchIllustResponse> {
+  static async searchIllusts(keyword: string, page: number = 1, sMode: string = 's_tag', type: string = 'illust_and_ugoira', order: string = 'date_d', mode: string = 'all'): Promise<SearchIllustResponse> {
     const encoded = encodeURIComponent(keyword);
-    const path = `/ajax/search/illustrations/${encoded}?word=${encoded}&type=${type}&order=date_d&mode=all&s_mode=${sMode}&p=${page}`;
+    const path = `/ajax/search/illustrations/${encoded}?word=${encoded}&type=${type}&order=${order}&mode=${mode}&s_mode=${sMode}&p=${page}`;
     return PixivApiService.request<SearchIllustResponse>(path);
   }
 
-  static async searchNovels(keyword: string, page: number = 1, sMode: string = 's_tag'): Promise<SearchNovelResponse> {
+  static async searchNovels(keyword: string, page: number = 1, sMode: string = 's_tag', order: string = 'date_d', mode: string = 'all'): Promise<SearchNovelResponse> {
     const encoded = encodeURIComponent(keyword);
-    const path = `/ajax/search/novels/${encoded}?word=${encoded}&order=date_d&mode=all&s_mode=${sMode}&include_translated_tags=1&p=${page}&type=novel&lang=zh`;
+    const path = `/ajax/search/novels/${encoded}?word=${encoded}&order=${order}&mode=${mode}&s_mode=${sMode}&include_translated_tags=1&p=${page}&type=novel&lang=zh`;
     const resp = await PixivApiService.request<SearchNovelResponse>(path);
     if (!resp.error && resp.body?.novel?.data) {
       resp.body.novel.data = resp.body.novel.data.map(sanitizeNovelBookmark);
