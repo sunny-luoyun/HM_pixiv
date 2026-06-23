@@ -251,7 +251,7 @@ export class DeepSeekService {
   estimateTime(inputTokens: number): number {
     const estimatedOutput = Math.round(inputTokens * this.adaptiveRatio);
     const estimatedTotalTokens = inputTokens + estimatedOutput;
-    const speed = this.averageSpeed > 0 ? this.averageSpeed : 300;
+    const speed = this.averageSpeed > 0 ? this.averageSpeed : 800;
     return Math.round((estimatedTotalTokens / speed) * 1000);
   }
 
@@ -380,8 +380,8 @@ export class DeepSeekService {
         }
 
         const elapsedMs = Date.now() - startTime;
-        if (elapsedMs > 100) {
-          const totalTokens = actualInputTokens + actualOutputTokens;
+        const totalTokens = actualInputTokens + actualOutputTokens;
+        if (!isTitle && elapsedMs > 500 && totalTokens > 500) {
           const speed = totalTokens / (elapsedMs / 1000);
           const total = this.speedCount + 1;
           this.averageSpeed = (this.averageSpeed * this.speedCount + speed) / total;
@@ -526,17 +526,28 @@ export class DeepSeekService {
       const startTime = Date.now();
       const timerId = setInterval(() => {
         const elapsed = Date.now() - startTime;
-        const pct = Math.min(Math.floor((elapsed / estimatedMs) * 99), 99);
+        const pct = Math.min(Math.floor((elapsed / estimatedMs) * 88), 88);
         onProgress?.(pct, 100);
       }, 200);
 
       let result: TranslationResult = { success: false, error: '' };
+      let currentPct = 0;
       try {
         result = await this.translateText(text, false);
       } finally {
         clearInterval(timerId);
         if (result.success) {
-          onProgress?.(100, 100);
+          currentPct = Math.min(Math.floor((Date.now() - startTime) / estimatedMs * 88), 88);
+          const steps = 5;
+          const stepDelay = 80;
+          const increment = (100 - currentPct) / steps;
+          for (let i = 1; i <= steps; i++) {
+            const nextPct = Math.min(Math.floor(currentPct + increment * i), 100);
+            onProgress?.(nextPct, 100);
+            if (i < steps) {
+              await new Promise<void>(r => setTimeout(r, stepDelay));
+            }
+          }
         }
       }
       return result;
