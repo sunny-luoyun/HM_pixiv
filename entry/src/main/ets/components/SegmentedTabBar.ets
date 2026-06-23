@@ -3,40 +3,61 @@ import { curves } from '@kit.ArkUI';
 @Component
 export struct SegmentedTabBar {
   private tabs: string[] = [];
-  @Prop @Watch('onIndexChange') currentIndex: number = 0;
+  @Prop @Watch('syncIndex') currentIndex: number = 0;
+  @Prop swipeProgress: number = 0;
   onChange?: (index: number) => void;
 
   @State private animIndex: number = 0;
-  @State private pillWidth: number = 0;
+  private pillWidth: number = 0;
 
   aboutToAppear() {
     this.animIndex = this.currentIndex;
   }
 
-  onIndexChange() {
-    if (this.animIndex === this.currentIndex) {
-      return;
-    }
-    animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
-      this.animIndex = this.currentIndex;
-    });
+  syncIndex() {
+    this.animIndex = this.currentIndex;
   }
 
   handleClick(index: number) {
-    if (index === this.animIndex) return;
+    if (index === this.currentIndex) return;
     animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
       this.animIndex = index;
     });
     this.onChange?.(index);
   }
 
+  private getPillOffset(): number {
+    if (this.swipeProgress !== 0) {
+      const maxIndex = this.tabs.length - 1;
+      const raw = this.currentIndex + this.swipeProgress;
+      const clamped = Math.max(0, Math.min(raw, maxIndex));
+      return clamped * this.pillWidth;
+    }
+    return this.animIndex * this.pillWidth;
+  }
+
+  private getPillScale(): number {
+    if (this.swipeProgress === 0) return 1;
+    const abs = Math.abs(this.swipeProgress);
+    return 1 + abs * 0.12 * (1 - abs);
+  }
+
+  private getActiveTextIndex(): number {
+    if (this.swipeProgress !== 0) {
+      return Math.abs(this.swipeProgress) >= 0.5
+        ? this.currentIndex + Math.sign(this.swipeProgress)
+        : this.currentIndex;
+    }
+    return this.animIndex;
+  }
+
   build() {
     Stack() {
       Row() {
         Column()
-          .width(this.animIndex * this.pillWidth)
+          .width(this.getPillOffset())
         Column()
-          .width(this.pillWidth)
+          .width(this.pillWidth * this.getPillScale())
           .height('100%')
           .backgroundColor($r('app.color.pill_bg'))
           .border({ width: 1, color: $r('app.color.pill_stroke'), radius: 14 })
@@ -49,8 +70,8 @@ export struct SegmentedTabBar {
         ForEach(this.tabs, (tab: string, index: number) => {
           Text(tab)
             .fontSize(14)
-            .fontWeight(this.animIndex === index ? FontWeight.Medium : FontWeight.Normal)
-            .fontColor(this.animIndex === index
+            .fontWeight(this.getActiveTextIndex() === index ? FontWeight.Medium : FontWeight.Normal)
+            .fontColor(this.getActiveTextIndex() === index
               ? $r('app.color.tab_selected')
               : $r('app.color.text_secondary'))
             .textAlign(TextAlign.Center)

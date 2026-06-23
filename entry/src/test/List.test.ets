@@ -19,6 +19,7 @@ import emptyViewTest from './EmptyView.test';
 import indexPageTest from './IndexPage.test';
 import localUnitTest from './LocalUnit.test';
 import statusBarThemeTest from './StatusBarTheme.test';
+import segmentedTabBarTest from './SegmentedTabBar.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -42,4 +43,5 @@ export default function testsuite() {
   emptyViewTest();
   indexPageTest();
   statusBarThemeTest();
+  segmentedTabBarTest();
 }

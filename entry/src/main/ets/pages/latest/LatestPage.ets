@@ -28,7 +28,12 @@ export struct LatestPage {
   @State isLoadingMoreIllust: boolean = false;
 
   @State isHeaderVisible: boolean = true;
+  @State swipeProgress: number = 0;
+  @State isAnimationStarted: boolean = false;
   private lastScrollY: number = 0;
+  private swiperController: SwiperController = new SwiperController();
+  private swiperWidth: number = 0;
+  private animStartIndex: number = 0;
 
   // 小说分页
   @State novelPage: number = 1;
@@ -222,6 +227,7 @@ export struct LatestPage {
         SegmentedTabBar({
           tabs: ['插画', '小说'],
           currentIndex: this.currentTab,
+          swipeProgress: this.swipeProgress,
           onChange: (index: number) => {
             this.currentTab = index;
             this.lastScrollY = 0;
@@ -236,8 +242,8 @@ export struct LatestPage {
           .animation({ curve: curves.springMotion(0.45, 0.7) }))
       }
 
-      Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
-        TabContent() {
+      Swiper(this.swiperController) {
+        Column() {
           if (this.isLoadingIllust && this.illustSource.totalCount() === 0) {
             LoadingProgress().width(40).height(40).margin({ top: 100 })
           } else if (this.illustSource.totalCount() === 0 && this.illustError) {
@@ -294,9 +300,9 @@ export struct LatestPage {
             }
           }
         }
-        .tabBar('')
+        .width('100%')
 
-        TabContent() {
+        Column() {
           if (this.isLoadingNovel && this.novelSource.totalCount() === 0) {
             LoadingProgress().width(40).height(40).margin({ top: 100 })
           } else if (this.novelSource.totalCount() === 0 && this.novelError) {
@@ -350,20 +356,48 @@ export struct LatestPage {
             }
           }
         }
-        .tabBar('')
+        .width('100%')
       }
+      .index(this.currentTab)
+      .indicator(false)
+      .loop(false)
       .vertical(false)
-      .barWidth(0)
-      .barHeight(0)
-      .onChange((index: number) => {
-        animateTo({ curve: curves.springMotion(0.55, 0.65) }, () => {
-          this.currentTab = index;
-        });
+      .cachedCount(1)
+      .onGestureSwipe((index: number, extraInfo: SwiperAnimationEvent) => {
+        if ((index === 0 && extraInfo.currentOffset > 0) ||
+          (index === 1 && extraInfo.currentOffset < 0)) {
+          this.swipeProgress = 0;
+          return;
+        }
+        const w = this.swiperWidth > 0 ? this.swiperWidth : 1;
+        const ratio = Math.abs(extraInfo.currentOffset) / w;
+        this.swipeProgress = extraInfo.currentOffset < 0 ? ratio : -ratio;
+      })
+      .onAnimationStart((index: number, _targetIndex: number) => {
+        this.isAnimationStarted = true;
+        this.animStartIndex = index;
+      })
+      .onContentDidScroll((_selectedIndex: number, index: number, position: number, mainAxisLength: number) => {
+        this.swiperWidth = mainAxisLength;
+        if (!this.isAnimationStarted || index !== this.animStartIndex) return;
+        const targetIndex = position < 0 ? index + 1 : index - 1;
+        if (targetIndex < 0 || targetIndex >= 2) return;
+        const dir = targetIndex > index ? 1 : -1;
+        this.swipeProgress = dir * Math.abs(Math.min(Math.max(position, -1), 1));
+      })
+      .onAnimationEnd((index: number) => {
+        this.isAnimationStarted = false;
+        this.swipeProgress = 0;
+        this.currentTab = index;
+        this.lastScrollY = 0;
         if (index === 1 && this.novelSource.totalCount() === 0 && !this.isLoadingNovel) {
           this.loadNovels();
         }
       })
       .layoutWeight(1)
+      .onAreaChange((_old: Area, area: Area) => {
+        this.swiperWidth = area.width as number;
+      })
     }
     .width('100%')
   }

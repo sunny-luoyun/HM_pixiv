@@ -270,7 +270,23 @@
 
 ---
 
-> 最后更新：F24 状态栏深浅适配，基于 2026-06-22
+## F25 - SegmentedTabBar 跟手滑动动画
+
+- **描述**：页内分段 Tab 栏（插画/小说切换等）的 pill 指示器支持跟手滑动。滑动内容区域时，pill 实时跟随手指移动，不再等到切换完成才跳变。pill 在中途还会弹性伸缩，文字高亮在滑动过半时切换
+- **核心组件**：`entry/src/main/ets/components/SegmentedTabBar.ets` — 新增 `swipeProgress` 参数，pill 位置支持线性插值
+- **内容容器改造**：5 个页面的 `Tabs` 组件替换为 `Swiper`，通过 `onGestureSwipe` / `onContentDidScroll` / `onAnimationEnd` 回调驱动 `swipeProgress`
+- **涉及页面**：
+  - `entry/src/main/ets/pages/home/HomePage.ets`
+  - `entry/src/main/ets/pages/latest/LatestPage.ets`
+  - `entry/src/main/ets/pages/search/SearchPage.ets`
+  - `entry/src/main/ets/pages/favorites/FavoritesPage.ets`
+  - `entry/src/main/ets/pages/user/UserProfilePage.ets`
+- **测试**：`entry/src/test/SegmentedTabBar.test.ets`
+- **规则**：pill 偏移 = `clamp(currentIndex + swipeProgress, 0, maxIndex) * pillWidth`；活动 tab 判定在 `|swipeProgress| >= 0.5` 时切换
+
+---
+
+> 最后更新：F25 SegmentedTabBar 跟手滑动动画，基于 2026-06-23
 
 ---
 
