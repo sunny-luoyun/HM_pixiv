@@ -1,27 +1,35 @@
-import { CustomTransition } from './CustomTransitionUtils';
-import { BusinessError } from '@kit.BasicServicesKit';
+import { ComponentAttrUtils } from './ComponentAttrUtils';
 
 @Observed
 export class LongTakeAnimationProperties {
-  // UI bindable state
-  public containerWidth: number = 0;
-  public containerHeight: number = 0;
-  public positionX: number = 0;
-  public positionY: number = 0;
-  public snapOpacity: number = 1;
-  public contentOpacity: number = 0;
+  public scaleValue: number = 1;
+  public translateX: number = 0;
+  public translateY: number = 0;
+  public clipWidth: Dimension = '100%';
+  public clipHeight: Dimension = '100%';
   public radius: number = 12;
+  public snapOpacity: number = 0;
+  public contentOpacity: number = 1;
+  public snapShotPositionX: number = 0;
+  public snapShotPositionY: number = 0;
+  public snapShotWidth: number = 0;
+  public snapShotHeight: number = 0;
 
-  // Internal initial values (card position/size in vp)
-  private initW: number = 0;
-  private initH: number = 0;
-  private initX: number = 0;
-  private initY: number = 0;
-  private screenW: number = 0;
-  private screenH: number = 0;
+  private initScale: number = 1;
+  private initTranslateX: number = 0;
+  private initTranslateY: number = 0;
+  private initClipWidth: Dimension = '100%';
+  private initClipHeight: Dimension = '100%';
+  private initSnapX: number = 0;
+  private initSnapY: number = 0;
+  private initSnapW: number = 0;
+  private initSnapH: number = 0;
+
   private hasValidCard: boolean = false;
   private recoverPrePage: () => void = () => {};
   private animCount: number = 0;
+  private screenW: number = 0;
+  private screenH: number = 0;
 
   init(cardId: string, recoverFn: () => void, uiCtx: UIContext,
     screenWidthVp: number, screenHeightVp: number): void {
@@ -29,12 +37,24 @@ export class LongTakeAnimationProperties {
     this.screenW = screenWidthVp;
     this.screenH = screenHeightVp;
     try {
-      const info = uiCtx.getComponentUtils().getRectangleById(cardId);
-      if (info) {
-        this.initX = uiCtx.px2vp(info.screenOffset.x + info.translate.x);
-        this.initY = uiCtx.px2vp(info.screenOffset.y + info.translate.y);
-        this.initW = uiCtx.px2vp(info.size.width);
-        this.initH = uiCtx.px2vp(info.size.height);
+      const info = ComponentAttrUtils.getRectInfoById(uiCtx, cardId);
+      if (info && info.width > 0 && info.height > 0) {
+        const cardX = uiCtx.px2vp(info.left);
+        const cardY = uiCtx.px2vp(info.top);
+        const cardW = uiCtx.px2vp(info.width);
+        const cardH = uiCtx.px2vp(info.height);
+
+        this.initScale = cardW / screenWidthVp;
+        this.initTranslateX = cardX - (screenWidthVp - cardW) / 2;
+        this.initClipWidth = '100%';
+        this.initClipHeight = cardH / this.initScale;
+        this.initTranslateY = cardY - (uiCtx.px2vp(info.height / this.initScale) - cardH) / 2;
+
+        this.initSnapX = 0;
+        this.initSnapY = 0;
+        this.initSnapW = cardW / this.initScale;
+        this.initSnapH = uiCtx.px2vp(info.height / this.initScale);
+
         this.hasValidCard = true;
         return;
       }
@@ -46,17 +66,23 @@ export class LongTakeAnimationProperties {
 
   doEnterAnimation(transitionProxy: NavigationTransitionProxy): void {
     if (!this.hasValidCard) {
+      this.setFinalStatus();
       transitionProxy.finishTransition();
       return;
     }
 
-    this.containerWidth = this.initW;
-    this.containerHeight = this.initH;
-    this.positionX = this.initX;
-    this.positionY = this.initY;
+    this.scaleValue = this.initScale;
+    this.translateX = this.initTranslateX;
+    this.translateY = this.initTranslateY;
+    this.clipWidth = this.initClipWidth;
+    this.clipHeight = this.initClipHeight;
+    this.radius = 12;
     this.snapOpacity = 1;
     this.contentOpacity = 0;
-    this.radius = 12;
+    this.snapShotPositionX = this.initSnapX;
+    this.snapShotPositionY = this.initSnapY;
+    this.snapShotWidth = this.initSnapW;
+    this.snapShotHeight = this.initSnapH;
 
     const id = ++this.animCount;
     const uiCtx = AppStorage.get<UIContext>('uiContext');
@@ -68,28 +94,51 @@ export class LongTakeAnimationProperties {
 
     uiCtx.animateTo({
       duration: 350,
-      curve: Curve.Friction,
+      curve: Curve.EaseInOut,
       onFinish: () => {
-        this.setFinalStatus();
+        if (id === this.animCount) {
+          this.radius = 0;
+        }
         transitionProxy.finishTransition();
       }
     }, () => {
-      this.containerWidth = this.screenW;
-      this.containerHeight = this.screenH;
-      this.positionX = 0;
-      this.positionY = 0;
-      this.radius = 0;
+      this.scaleValue = 1;
+      this.translateX = 0;
+      this.translateY = 0;
+      this.clipWidth = '100%';
+      this.clipHeight = '100%';
+      this.radius = 34;
+    });
+
+    uiCtx.animateTo({
+      delay: 50,
+      duration: 100,
+      curve: Curve.Sharp
+    }, () => {
       this.snapOpacity = 0;
+    });
+
+    uiCtx.animateTo({
+      duration: 100,
+      curve: Curve.Sharp
+    }, () => {
       this.contentOpacity = 1;
     });
   }
 
   doBackAnimation(transitionProxy?: NavigationTransitionProxy): void {
     if (!this.hasValidCard) {
+      this.snapOpacity = 0;
+      this.contentOpacity = 1;
       this.recoverPrePage();
       transitionProxy?.finishTransition();
       return;
     }
+
+    this.snapShotPositionX = this.initSnapX;
+    this.snapShotPositionY = this.initSnapY;
+    this.snapShotWidth = this.initSnapW;
+    this.snapShotHeight = this.initSnapH;
 
     ++this.animCount;
     const uiCtx = AppStorage.get<UIContext>('uiContext');
@@ -100,28 +149,44 @@ export class LongTakeAnimationProperties {
     }
 
     uiCtx.animateTo({
-      duration: 300,
-      curve: Curve.Friction,
+      duration: 350,
+      curve: Curve.EaseInOut,
       onFinish: () => {
         this.recoverPrePage();
         transitionProxy?.finishTransition();
       }
     }, () => {
-      this.containerWidth = this.initW;
-      this.containerHeight = this.initH;
-      this.positionX = this.initX;
-      this.positionY = this.initY;
+      this.scaleValue = this.initScale;
+      this.translateX = this.initTranslateX;
+      this.translateY = this.initTranslateY;
+      this.clipWidth = this.initClipWidth;
+      this.clipHeight = this.initClipHeight;
       this.radius = 12;
+    });
+
+    uiCtx.animateTo({
+      duration: 50,
+      delay: 150,
+      curve: Curve.Friction
+    }, () => {
       this.snapOpacity = 1;
+    });
+
+    uiCtx.animateTo({
+      duration: 50,
+      delay: 200,
+      curve: Curve.Friction
+    }, () => {
       this.contentOpacity = 0;
     });
   }
 
   setFinalStatus(): void {
-    this.containerWidth = this.screenW;
-    this.containerHeight = this.screenH;
-    this.positionX = 0;
-    this.positionY = 0;
+    this.scaleValue = 1;
+    this.translateX = 0;
+    this.translateY = 0;
+    this.clipWidth = '100%';
+    this.clipHeight = '100%';
     this.radius = 0;
     this.snapOpacity = 0;
     this.contentOpacity = 1;

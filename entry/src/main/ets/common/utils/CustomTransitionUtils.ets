@@ -48,4 +48,52 @@ export class CustomTransition {
     }
     return {};
   }
+
+  updateProgress(progress: number): void {
+    if (!this.proxy?.updateTransition) {
+      return;
+    }
+    progress = this.operation === NavigationOperation.PUSH ? 1 - progress : progress;
+    this.proxy?.updateTransition(progress);
+  }
+
+  cancelTransition(): void {
+    if (this.proxy?.cancelTransition) {
+      this.proxy.cancelTransition();
+    }
+  }
+
+  recoverState(): void {
+    if (!this.proxy?.from.navDestinationId || !this.proxy?.to.navDestinationId) {
+      return;
+    }
+    const fromParam = customTransitionMap.get(this.proxy.from.navDestinationId);
+    if (fromParam?.onInteractiveFinish) {
+      fromParam.onInteractiveFinish();
+    }
+    const toParam = customTransitionMap.get(this.proxy.to.navDestinationId);
+    if (toParam?.onInteractiveFinish) {
+      toParam.onInteractiveFinish();
+    }
+  }
+
+  finishInteractiveAnimation(rate: number): void {
+    if (this.operation === NavigationOperation.PUSH) {
+      if (rate > 0.5) {
+        if (this.proxy?.cancelTransition) {
+          this.proxy.cancelTransition();
+        }
+      } else {
+        this.proxy?.finishTransition();
+      }
+    } else {
+      if (rate > 0.5) {
+        this.proxy?.finishTransition();
+      } else {
+        if (this.proxy?.cancelTransition) {
+          this.proxy.cancelTransition();
+        }
+      }
+    }
+  }
 }

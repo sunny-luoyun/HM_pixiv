@@ -11,21 +11,29 @@ export class PageContext {
 
   openPage(name: string, param?: Object, animated: boolean = true): void {
     this.pathStack.pushPath({ name, param } as NavPathInfo, animated);
+    this.syncStackSize();
   }
 
   popPage(animated: boolean = true): void {
     this.pathStack.pop(animated);
+    this.syncStackSize();
   }
 
   replacePage(name: string, param?: Object, animated: boolean = true): void {
     this.pathStack.replacePath({ name, param } as NavPathInfo, animated);
+    this.syncStackSize();
   }
 
   popToRoot(animated: boolean = true): void {
     this.pathStack.clear(animated);
+    this.syncStackSize();
   }
 
   getNavPathStack(): NavPathStack {
     return this.pathStack;
+  }
+
+  private syncStackSize(): void {
+    AppStorage.setOrCreate('navStackSize', this.pathStack.size());
   }
 }

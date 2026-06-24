@@ -78,6 +78,7 @@ struct IllustDetailPage {
       CustomTransition.getInstance().unRegisterNavParam(this.navDestId);
     }
     SnapShotImage.pixelMap = undefined;
+    this.recoverPrePage();
   }
 
   goBack() {
@@ -249,8 +250,8 @@ struct IllustDetailPage {
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
       } else if (this.thumbnailLocalUrl || (this.detail && this.localImageUrls.length > 0)) {
-        Stack() {
-          Stack() {
+        Stack({ alignContent: Alignment.TopStart }) {
+          Stack({ alignContent: Alignment.TopStart }) {
             if (this.backgroundImageUrl) {
               Image(this.backgroundImageUrl)
                 .width('100%')
@@ -302,15 +303,24 @@ struct IllustDetailPage {
                         .onActionUpdate((event: PinchGestureEvent) => {
                           this.scaleValue = Math.max(1, Math.min(5, this.baseScale * event.scale));
                           this.clampTranslate();
+                        })
+                        .onActionEnd(() => {
+                          animateTo({ curve: curves.springMotion() }, () => {
+                            this.clampTranslate();
+                          });
                         }),
                       TapGesture({ count: 2 })
                         .onAction(() => {
                           if (this.scaleValue > 1) {
-                            this.scaleValue = 1;
-                            this.translateX = 0;
-                            this.translateY = 0;
+                            animateTo({ curve: curves.springMotion() }, () => {
+                              this.scaleValue = 1;
+                              this.translateX = 0;
+                              this.translateY = 0;
+                            });
                           } else {
-                            this.scaleValue = 2.5;
+                            animateTo({ curve: curves.springMotion() }, () => {
+                              this.scaleValue = 2.5;
+                            });
                           }
                         })
                     )
@@ -520,18 +530,26 @@ struct IllustDetailPage {
 
           if (this.snapPixelMap && this.longTakeAnim.snapOpacity > 0) {
             Image(this.snapPixelMap)
-              .width('100%')
-              .height('100%')
-              .objectFit(ImageFit.Cover)
+              .position({
+                x: this.longTakeAnim.snapShotPositionX,
+                y: this.longTakeAnim.snapShotPositionY
+              })
+              .size({
+                width: this.longTakeAnim.snapShotWidth,
+                height: this.longTakeAnim.snapShotHeight
+              })
+              .objectFit(ImageFit.Auto)
+              .syncLoad(true)
               .opacity(this.longTakeAnim.snapOpacity)
           }
         }
-        .width(this.longTakeAnim.radius > 0 ? this.longTakeAnim.containerWidth as Length : '100%')
-        .height(this.longTakeAnim.radius > 0 ? this.longTakeAnim.containerHeight as Length : '100%')
-        .position({ x: this.longTakeAnim.radius > 0 ? this.longTakeAnim.positionX : 0, y: this.longTakeAnim.radius > 0 ? this.longTakeAnim.positionY : 0 })
+        .scale({ x: this.longTakeAnim.scaleValue, y: this.longTakeAnim.scaleValue })
+        .translate({ x: this.longTakeAnim.translateX, y: this.longTakeAnim.translateY })
+        .width(this.longTakeAnim.clipWidth)
+        .height(this.longTakeAnim.clipHeight)
         .borderRadius(this.longTakeAnim.radius)
         .backgroundColor(this.bgColor)
-        .clip(this.longTakeAnim.radius > 0)
+        .clip(true)
       } else if (this.isLoading) {
         LoadingProgress().width(40).height(40)
       }

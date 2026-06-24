@@ -95,14 +95,8 @@ struct Index {
     .enabled(this.isNavigationEnabled)
     .customNavContentTransition((from: NavContentInfo, to: NavContentInfo,
       operation: NavigationOperation) => {
-      if (operation === NavigationOperation.PUSH) {
-        if (!to || !to.navDestinationId) {
-          return undefined;
-        }
-      } else {
-        if (!to || to.navDestinationId) {
-          return undefined;
-        }
+      if ((!from || !to) || (!from.navDestinationId || !to.navDestinationId)) {
+        return undefined;
       }
       let fromParam: AnimateCallback = from?.navDestinationId
         ? CustomTransition.getInstance().getAnimateParam(from.navDestinationId)
