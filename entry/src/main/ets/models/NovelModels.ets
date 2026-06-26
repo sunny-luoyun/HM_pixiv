@@ -20,6 +20,7 @@ export interface PixivNovel {
   createDate: string;
   updateDate: string;
   series?: PixivSeries;
+  bookmarkData?: BookmarkData | null;
   bookmarkCount: number;
   viewCount: number;
   commentCount: number;
@@ -275,6 +276,7 @@ export function parsePixivNovelFromRaw(raw: RawPixivNovelItem): PixivNovel {
     createDate: raw.createDate,
     updateDate: raw.updateDate,
     series: series,
+    bookmarkData: raw.bookmarkData ?? undefined,
     bookmarkCount: raw.bookmarkCount ?? 0,
     viewCount: raw.viewCount ?? 0,
     commentCount: raw.commentCount ?? 0,

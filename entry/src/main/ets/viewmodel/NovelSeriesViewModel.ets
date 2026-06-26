@@ -140,7 +140,7 @@ export class NovelSeriesViewModel extends BaseVM<NovelSeriesState> {
       tags: novel.tags.map(t => t.name),
       userId: novel.authorId,
       userName: novel.author,
-      bookmarkData: { id: '', private: false, userId: novel.authorId },
+      bookmarkData: novel.bookmarkData ?? null,
       profileImageUrl: '',
       createDate: novel.createDate,
       updateDate: novel.updateDate,

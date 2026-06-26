@@ -46,6 +46,7 @@ export interface RawPixivNovelItem {
   seriesOrder?: number;
   seriesContentOrder?: number;
   series?: RawPixivSeries;
+  bookmarkData?: BookmarkData | null;
   bookmarkCount: number;
   viewCount: number;
   commentCount: number;
