@@ -578,11 +578,19 @@ export struct SearchPage {
     const delta = yOffset - this.lastScrollY;
     this.lastScrollY = yOffset;
 
-    if (delta > 8 && this.isHeaderVisible && yOffset > 30) {
+    if (delta > 0 && this.isHeaderVisible && yOffset > 5) {
       animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
         this.isHeaderVisible = false;
       });
-    } else if (delta < -8 && !this.isHeaderVisible && yOffset < 10) {
+    } else if (delta < -3 && !this.isHeaderVisible) {
+      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+        this.isHeaderVisible = true;
+      });
+    }
+  }
+
+  handleHeaderReachStart() {
+    if (!this.isHeaderVisible) {
       animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
         this.isHeaderVisible = true;
       });
@@ -715,6 +723,7 @@ export struct SearchPage {
       }
       .width('100%')
       .edgeEffect(EdgeEffect.Spring)
+      .onReachStart(() => { this.handleHeaderReachStart(); })
       .onReachEnd(() => {
         if (!this.isLoadingMoreIllust && this.illustPage < this.illustPages) {
           this.loadMoreIllusts();
@@ -769,6 +778,7 @@ export struct SearchPage {
       }
       .width('100%')
       .edgeEffect(EdgeEffect.Spring)
+      .onReachStart(() => { this.handleHeaderReachStart(); })
       .onReachEnd(() => {
         if (!this.isLoadingMoreNovel && this.novelPage < this.novelPages) {
           this.loadMoreNovels();
@@ -826,6 +836,7 @@ export struct SearchPage {
       }
       .width('100%')
       .edgeEffect(EdgeEffect.Spring)
+      .onReachStart(() => { this.handleHeaderReachStart(); })
       .onReachEnd(() => {
         if (!this.isLoadingMoreUser && this.userPage < this.userPages) {
           this.loadMoreUsers();

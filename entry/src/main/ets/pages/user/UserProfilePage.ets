@@ -530,11 +530,19 @@ struct UserProfilePage {
     const delta = yOffset - this.lastScrollY;
     this.lastScrollY = yOffset;
 
-    if (delta > 8 && this.isHeaderVisible && yOffset > 30) {
+    if (delta > 0 && this.isHeaderVisible && yOffset > 5) {
       animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
         this.isHeaderVisible = false;
       });
-    } else if (delta < -8 && !this.isHeaderVisible && yOffset < 10) {
+    } else if (delta < -3 && !this.isHeaderVisible) {
+      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+        this.isHeaderVisible = true;
+      });
+    }
+  }
+
+  handleHeaderReachStart() {
+    if (!this.isHeaderVisible) {
       animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
         this.isHeaderVisible = true;
       });
@@ -660,6 +668,7 @@ struct UserProfilePage {
       }
       .width('100%')
       .edgeEffect(EdgeEffect.Spring)
+      .onReachStart(() => { this.handleHeaderReachStart(); })
       .onReachEnd(() => {
         if (this.hasMoreIllust && !this.isLoadingMoreIllust) {
           this.loadMoreIllusts();
@@ -707,6 +716,7 @@ struct UserProfilePage {
       }
       .width('100%')
       .edgeEffect(EdgeEffect.Spring)
+      .onReachStart(() => { this.handleHeaderReachStart(); })
       .onReachEnd(() => {
         if (this.hasMoreNovel && !this.isLoadingMoreNovel) {
           this.loadMoreNovels();
@@ -759,6 +769,7 @@ struct UserProfilePage {
       }
       .width('100%')
       .edgeEffect(EdgeEffect.Spring)
+      .onReachStart(() => { this.handleHeaderReachStart(); })
       .onReachEnd(() => {
         if (this.hasMoreBookmarkIllust && !this.isLoadingMoreBookmarkIllust) {
           this.loadMoreBookmarkIllusts();
@@ -806,6 +817,7 @@ struct UserProfilePage {
       }
       .width('100%')
       .edgeEffect(EdgeEffect.Spring)
+      .onReachStart(() => { this.handleHeaderReachStart(); })
       .onReachEnd(() => {
         if (this.hasMoreBookmarkNovel && !this.isLoadingMoreBookmarkNovel) {
           this.loadMoreBookmarkNovels();
