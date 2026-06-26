@@ -1,4 +1,5 @@
 import common from '@ohos.app.ability.common';
+import { curves } from '@kit.ArkUI';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { PixivNovel, formatTextLength, formatPixivDate } from '../../models/PixivModels';
 import { PageContext } from '../../common/utils/PageContext';
@@ -12,6 +13,8 @@ export struct SeriesDetailPage {
   private seriesTitle: string = '';
   private authorName: string = '';
   @State novels: PixivNovel[] = [];
+  @State isHeaderVisible: boolean = true;
+  private lastScrollY: number = 0;
   @State isLoading: boolean = true;
 
   aboutToAppear() {
@@ -32,6 +35,29 @@ export struct SeriesDetailPage {
     this.isLoading = false;
   }
 
+  handleHeaderScroll(yOffset: number) {
+    const delta = yOffset - this.lastScrollY;
+    this.lastScrollY = yOffset;
+
+    if (delta > 0 && this.isHeaderVisible && yOffset > 5) {
+      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+        this.isHeaderVisible = false;
+      });
+    } else if (delta < -3 && !this.isHeaderVisible) {
+      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+        this.isHeaderVisible = true;
+      });
+    }
+  }
+
+  handleHeaderReachStart() {
+    if (!this.isHeaderVisible) {
+      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+        this.isHeaderVisible = true;
+      });
+    }
+  }
+
   openReader(novel: PixivNovel) {
     const pageCtx = AppStorage.get<PageContext>('rootPageContext');
     if (pageCtx) {
@@ -50,6 +76,7 @@ export struct SeriesDetailPage {
   build() {
     NavDestination() {
     Column() {
+      if (this.isHeaderVisible) {
       Row() {
         Text('‹')
           .fontSize(28)
@@ -63,28 +90,11 @@ export struct SeriesDetailPage {
       }
       .width('100%')
       .padding({ left: 16, right: 24, top: 16 })
+      .transition(TransitionEffect.translate({ y: -48 })
+        .combine(TransitionEffect.OPACITY)
+        .animation({ curve: curves.springMotion(0.45, 0.7) }))
 
-      if (this.isLoading) {
-        Column() {
-          LoadingProgress()
-            .width(40).height(40)
-            .color($r('app.color.tab_selected'))
-        }
-        .width('100%')
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-      } else if (this.novels.length === 0) {
-        Column() {
-          Text('暂无该系列的缓存小说')
-            .fontSize(16)
-            .fontColor($r('app.color.text_secondary'))
-            .margin({ top: 60 })
-        }
-        .width('100%')
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Center)
-      } else {
-        // Series info header
+      if (!this.isLoading && this.novels.length > 0) {
         Row() {
           Text('📚')
             .fontSize(28)
@@ -124,7 +134,32 @@ export struct SeriesDetailPage {
             pageCtx.openPage(PageEnum.NOVEL_SERIES, params as Object);
           }
         })
+        .transition(TransitionEffect.translate({ y: -48 })
+          .combine(TransitionEffect.OPACITY)
+          .animation({ curve: curves.springMotion(0.45, 0.7) }))
+      }
+      }
 
+      if (this.isLoading) {
+        Column() {
+          LoadingProgress()
+            .width(40).height(40)
+            .color($r('app.color.tab_selected'))
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+      } else if (this.novels.length === 0) {
+        Column() {
+          Text('暂无该系列的缓存小说')
+            .fontSize(16)
+            .fontColor($r('app.color.text_secondary'))
+            .margin({ top: 60 })
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Center)
+      } else {
         List({ space: 8 }) {
           ForEach(this.novels, (novel: PixivNovel) => {
             ListItem() {
@@ -135,6 +170,10 @@ export struct SeriesDetailPage {
         .width('100%')
         .layoutWeight(1)
         .edgeEffect(EdgeEffect.Spring)
+        .onReachStart(() => { this.handleHeaderReachStart(); })
+        .onScroll((_xOffset: number, yOffset: number) => {
+          this.handleHeaderScroll(yOffset);
+        })
         .padding({ left: 16, right: 16, top: 8, bottom: 120 })
       }
     }

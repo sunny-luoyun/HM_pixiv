@@ -1,5 +1,6 @@
 import promptAction from '@ohos.promptAction';
 import common from '@ohos.app.ability.common';
+import { curves } from '@kit.ArkUI';
 import {
   PixivNovel,
   CacheStatus,
@@ -74,6 +75,8 @@ struct NovelSeriesPage {
   @State isOfflineMode: boolean = false;
   @State offlineCachedCount: number = 0;
   @State isHeaderExpanded: boolean = true;
+  @State isHeaderVisible: boolean = true;
+  private lastScrollY: number = 0;
 
   private configChangeCallback: () => void = () => {};
   private configCallbackId: number = -1;
@@ -185,9 +188,33 @@ struct NovelSeriesPage {
     }
   }
 
+  handleHeaderScroll(yOffset: number) {
+    const delta = yOffset - this.lastScrollY;
+    this.lastScrollY = yOffset;
+
+    if (delta > 0 && this.isHeaderVisible && yOffset > 5) {
+      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+        this.isHeaderVisible = false;
+      });
+    } else if (delta < -3 && !this.isHeaderVisible) {
+      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+        this.isHeaderVisible = true;
+      });
+    }
+  }
+
+  handleHeaderReachStart() {
+    if (!this.isHeaderVisible) {
+      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+        this.isHeaderVisible = true;
+      });
+    }
+  }
+
   build() {
     NavDestination() {
     Column() {
+      if (this.isHeaderVisible) {
       Row() {
         Text('‹')
           .fontSize(28)
@@ -206,6 +233,9 @@ struct NovelSeriesPage {
       .height(48)
       .padding({ left: 16, right: 16 })
       .backgroundColor($r('app.color.loading_card'))
+      .transition(TransitionEffect.translate({ y: -48 })
+        .combine(TransitionEffect.OPACITY)
+        .animation({ curve: curves.springMotion(0.45, 0.7) }))
 
       if (this.isOfflineMode) {
         Row() {
@@ -228,6 +258,9 @@ struct NovelSeriesPage {
         .width('100%')
         .padding({ left: 16, right: 16, top: 8, bottom: 8 })
         .backgroundColor($r('app.color.warning_bg'))
+        .transition(TransitionEffect.translate({ y: -48 })
+          .combine(TransitionEffect.OPACITY)
+          .animation({ curve: curves.springMotion(0.45, 0.7) }))
       }
 
       Column() {
@@ -274,7 +307,10 @@ struct NovelSeriesPage {
       .borderRadius(12)
       .margin({ top: 12, bottom: 12 })
       .alignSelf(ItemAlign.Center)
-      .animation({ duration: 200, curve: Curve.EaseInOut })
+      .transition(TransitionEffect.translate({ y: -48 })
+        .combine(TransitionEffect.OPACITY)
+        .animation({ curve: curves.springMotion(0.45, 0.7) }))
+      }
 
       if (this.isLoading && this.bookmarks.length === 0) {
         Column() {
@@ -311,6 +347,10 @@ struct NovelSeriesPage {
         .width('100%')
         .layoutWeight(1)
         .edgeEffect(EdgeEffect.Spring)
+        .onReachStart(() => { this.handleHeaderReachStart(); })
+        .onScroll((_xOffset: number, yOffset: number) => {
+          this.handleHeaderScroll(yOffset);
+        })
         .onReachEnd(() => {
           if (this.hasMore && !this.isLoading) {
             this.loadMore();
