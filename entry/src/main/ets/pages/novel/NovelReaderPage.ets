@@ -540,7 +540,7 @@ struct NovelReaderPage {
       .layoutWeight(1)
       .onScroll((_x: number, _y: number) => {
         if (!this.isLoading && this.params?.novelId) {
-          this.debouncedSaveProgress(_y);
+          this.debouncedSaveProgress(this.scroller.currentOffset().yOffset);
         }
       })
       .onScrollStop(() => {
