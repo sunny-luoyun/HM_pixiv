@@ -104,7 +104,6 @@ struct Index {
       let toParam: AnimateCallback = to?.navDestinationId
         ? CustomTransition.getInstance().getAnimateParam(to.navDestinationId)
         : {} as AnimateCallback;
-      CustomTransition.getInstance().operation = operation;
       if (!fromParam.animation && !toParam.animation) {
         return undefined;
       }
@@ -116,9 +115,11 @@ struct Index {
         transition: (transitionProxy: NavigationTransitionProxy) => {
           this.isNavigationEnabled = false;
           if (fromParam.animation) {
+            CustomTransition.getInstance().operation = NavigationOperation.POP;
             fromParam.animation(transitionProxy);
           }
           if (toParam.animation) {
+            CustomTransition.getInstance().operation = NavigationOperation.PUSH;
             toParam.animation(transitionProxy);
           }
         }
