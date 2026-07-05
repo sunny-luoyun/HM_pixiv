@@ -58,6 +58,7 @@ export struct MainTabsPage {
   @State currentIndex: number = 0;
   @State materialLevel: hdsMaterial.MaterialLevel = hdsMaterial.MaterialLevel.EXQUISITE;
   @State bottomInsetVp: number = 0;
+  @StorageLink('notificationNavigateTab') @Watch('onNotificationNavigateTabChange') notificationNavigateTab: number = -1;
   private tabsController: HdsTabsController = new HdsTabsController();
   private backPressTime: number = 0;
   private readonly PRESS_INTERVAL: number = 1500;
@@ -68,6 +69,14 @@ export struct MainTabsPage {
     if (materialTypes.indexOf(hdsMaterial.MaterialType.IMMERSIVE) < 0) {
       this.materialLevel = hdsMaterial.MaterialLevel.SMOOTH;
       console.info('⚠️ 当前设备不支持 IMMERSIVE 材质，沉浸光感降级为 SMOOTH');
+    }
+  }
+
+  onNotificationNavigateTabChange(): void {
+    if (this.notificationNavigateTab >= 0 && this.notificationNavigateTab !== this.currentIndex) {
+      this.currentIndex = this.notificationNavigateTab;
+      this.tabsController.changeIndex(this.currentIndex);
+      AppStorage.setOrCreate('notificationNavigateTab', -1);
     }
   }
 

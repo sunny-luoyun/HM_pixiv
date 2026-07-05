@@ -62,6 +62,12 @@
             "resource": "$profile:backup_config"
           }
         ],
+      },
+      {
+        "name": "EntryWorkAbility",
+        "srcEntry": "./ets/entryworkability/EntryWorkAbility.ets",
+        "type": "workScheduler",
+        "exported": false,
       }
     ]
   }

@@ -1,5 +1,7 @@
 import { curves } from '@kit.ArkUI';
+import { notificationManager } from '@kit.NotificationKit';
 import { PixivService } from '../../services/PixivService';
+import { LatestCheckService } from '../../services/LatestCheckService';
 import { IllustBookmark, NovelBookmark } from '../../models/PixivModels';
 import { NovelCard } from '../../components/NovelCard';
 import { IllustCard } from '../../components/IllustCard';
@@ -36,17 +38,67 @@ export struct LatestPage {
   @State novelPages: number = 0;
   @State isLoadingMoreNovel: boolean = false;
 
+  @StorageLink('appForegroundTick') @Watch('onAppForeground') appForegroundTick: number = 0;
+
+  // 前台轮询
+  private pollTimer: number | undefined = undefined;
+  private readonly POLL_INTERVAL = 5 * 60 * 1000;
+
   async aboutToAppear() {
     if (!this.isLoggedIn) {
       this.isLoadingIllust = false;
       return;
     }
     await this.loadIllusts();
+    await this.onAppForeground();
+    this.startPolling();
+  }
+
+  aboutToDisappear(): void {
+    this.stopPolling();
   }
 
   onLoginStateChange() {
     if (this.isLoggedIn && this.illustSource.totalCount() === 0 && !this.isLoadingIllust) {
       this.loadIllusts();
+    }
+    if (this.isLoggedIn) {
+      this.startPolling();
+    } else {
+      this.stopPolling();
+    }
+  }
+
+  private startPolling(): void {
+    this.stopPolling();
+    if (!this.isLoggedIn) return;
+    this.pollTimer = setInterval(async () => {
+      try {
+        const ctx = getContext(this) as common.UIAbilityContext;
+        await LatestCheckService.checkForUpdates(ctx);
+      } catch (err) {
+        console.error('前台轮询检查更新失败:', err);
+      }
+    }, this.POLL_INTERVAL);
+  }
+
+  private stopPolling(): void {
+    if (this.pollTimer !== undefined) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = undefined;
+    }
+  }
+
+  async onAppForeground(): Promise<void> {
+    if (!this.isLoggedIn) return;
+    try {
+      const ctx = getContext(this) as common.UIAbilityContext;
+      await LatestCheckService.checkForUpdates(ctx);
+      await notificationManager.cancelAll();
+      await notificationManager.setBadgeNumber(0);
+      console.info('已清除通知和角标');
+    } catch (err) {
+      console.error('前台恢复检查失败:', err);
     }
   }
 

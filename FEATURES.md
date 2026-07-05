@@ -320,7 +320,29 @@
 
 ---
 
-> 最后更新：F26 卡片一镜到底转场动画，基于 2026-06-23
+---
+
+## F27 - 关注更新通知推送
+
+- **描述**：当关注画师发布新插画或小说时，通过系统通知推送提醒用户。支持前台轮询（5分钟间隔）和后台 WorkScheduler（30分钟间隔）两种检测方式
+- **通知渠道**：`illust_update`（插画更新）、`novel_update`（小说更新），类型为 SERVICE_INFORMATION
+- **通知内容**：每条作品独立通知，按插画/小说类型分组折叠；标题格式为「插画更新 - {作者名}」/「小说更新 - {作者名}」
+- **通知交互**：点击通知跳转至「最新」Tab
+- **首次启动**：首次打开 App 时弹窗请求通知权限；首次检查仅保存状态不推送
+- **新增文件**：
+  - `entry/src/main/ets/notification/NotificationHelper.ets` — 通知渠道创建、权限请求、通知发布封装
+  - `entry/src/main/ets/services/LatestCheckService.ets` — 核心检查逻辑（ID 对比、偏好存储、通知触发）
+  - `entry/src/main/ets/entryworkability/EntryWorkAbility.ets` — WorkScheduler 后台任务回调
+- **修改文件**：
+  - `entry/src/main/module.json5` — 注册 EntryWorkAbility extension
+  - `entry/src/main/ets/entryability/EntryAbility.ets` — 通知初始化、WorkScheduler 注册、onNewWant 导航处理
+  - `entry/src/main/ets/pages/TabsPage.ets` — 通知点击后自动切换到「最新」Tab
+  - `entry/src/main/ets/pages/latest/LatestPage.ets` — 前台 5 分钟轮询
+- **测试**：`entry/src/test/LatestCheck.test.ets`
+
+---
+
+> 最后更新：F27 关注更新通知推送，基于 2026-07-05
 
 ---
 

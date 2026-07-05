@@ -25,6 +25,7 @@ import loadingModelTest from './LoadingModel.test';
 import baseVMTest from './BaseVM.test';
 import constantsTest from './Constants.test';
 import customTransitionTest from './CustomTransitionUtils.test';
+import latestCheckTest from './LatestCheck.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -54,4 +55,5 @@ export default function testsuite() {
   baseVMTest();
   constantsTest();
   customTransitionTest();
+  latestCheckTest();
 }
