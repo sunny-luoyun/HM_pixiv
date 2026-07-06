@@ -178,4 +178,24 @@ export class LatestCheckService {
       console.error('清除 LatestCheck 状态失败:', err);
     }
   }
+
+  static async markWorkChecked(context: common.BaseContext, workId: string, type: 'illust' | 'novel'): Promise<void> {
+    try {
+      const pref = await preferences.getPreferences(context, PREFERENCES_NAME);
+      const key = type === 'illust' ? KEY_LAST_ILLUST_IDS : KEY_LAST_NOVEL_IDS;
+      const storedJson = await pref.get(key, '[]') as string;
+      const storedIds: string[] = JSON.parse(storedJson);
+      if (!storedIds.includes(workId)) {
+        storedIds.unshift(workId);
+        if (storedIds.length > 200) {
+          storedIds.length = 200;
+        }
+        await pref.put(key, JSON.stringify(storedIds));
+        await pref.flush();
+        console.info(`LatestCheck: 已标记作品 ${workId} 为已检查（来自 Push 推送）`);
+      }
+    } catch (err) {
+      console.error('LatestCheck 标记已检查失败:', err);
+    }
+  }
 }

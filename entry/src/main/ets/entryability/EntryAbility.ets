@@ -12,6 +12,7 @@ import { StorageKeys } from '../common/constants/StorageKeys';
 import { appState } from '../store/AppState';
 import { NotificationHelper } from '../notification/NotificationHelper';
 import { LatestCheckService, CheckResult } from '../services/LatestCheckService';
+import { PushManager } from '../push/PushManager';
 
 const WORK_ID_LATEST_CHECK = 1001;
 
@@ -26,6 +27,7 @@ export default class EntryAbility extends UIAbility {
     this.initNotifications();
     this.registerWorkScheduler();
     this.handleNotificationWant(want);
+    PushManager.init(this.context, this);
 
     setTimeout(() => {
       this.migrateImageCache();
