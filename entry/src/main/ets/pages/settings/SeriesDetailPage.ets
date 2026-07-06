@@ -1,5 +1,4 @@
 import common from '@ohos.app.ability.common';
-import { curves } from '@kit.ArkUI';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { PixivNovel, formatTextLength, formatPixivDate } from '../../models/PixivModels';
 import { PageContext } from '../../common/utils/PageContext';
@@ -13,8 +12,6 @@ export struct SeriesDetailPage {
   private seriesTitle: string = '';
   private authorName: string = '';
   @State novels: PixivNovel[] = [];
-  @State isHeaderVisible: boolean = true;
-  private lastScrollY: number = 0;
   @State isLoading: boolean = true;
 
   aboutToAppear() {
@@ -35,29 +32,6 @@ export struct SeriesDetailPage {
     this.isLoading = false;
   }
 
-  handleHeaderScroll(yOffset: number) {
-    const delta = yOffset - this.lastScrollY;
-    this.lastScrollY = yOffset;
-
-    if (delta > 0 && this.isHeaderVisible && yOffset > 5) {
-      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
-        this.isHeaderVisible = false;
-      });
-    } else if (delta < -3 && !this.isHeaderVisible) {
-      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
-        this.isHeaderVisible = true;
-      });
-    }
-  }
-
-  handleHeaderReachStart() {
-    if (!this.isHeaderVisible) {
-      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
-        this.isHeaderVisible = true;
-      });
-    }
-  }
-
   openReader(novel: PixivNovel) {
     const pageCtx = AppStorage.get<PageContext>('rootPageContext');
     if (pageCtx) {
@@ -76,70 +50,6 @@ export struct SeriesDetailPage {
   build() {
     NavDestination() {
     Column() {
-      if (this.isHeaderVisible) {
-      Row() {
-        Text('‹')
-          .fontSize(28)
-          .onClick(() => { const ctx = AppStorage.get<PageContext>('rootPageContext'); if (ctx) { ctx.popPage(); } })
-        Text(this.seriesTitle)
-          .fontSize(22)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('app.color.user_name'))
-          .margin({ left: 12 })
-        Blank()
-      }
-      .width('100%')
-      .padding({ left: 16, right: 24, top: 16 })
-      .transition(TransitionEffect.translate({ y: -48 })
-        .combine(TransitionEffect.OPACITY)
-        .animation({ curve: curves.springMotion(0.45, 0.7) }))
-
-      if (!this.isLoading && this.novels.length > 0) {
-        Row() {
-          Text('📚')
-            .fontSize(28)
-            .margin({ right: 12 })
-          Column() {
-            Text(this.seriesTitle)
-              .fontSize(17)
-              .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.user_name'))
-              .maxLines(2)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-            Text(`${this.authorName}  ·  共 ${this.novels.length} 话已缓存`)
-              .fontSize(13)
-              .fontColor($r('app.color.text_secondary'))
-              .margin({ top: 5 })
-          }
-          .alignItems(HorizontalAlign.Start)
-          .layoutWeight(1)
-
-          Text('›')
-            .fontSize(22)
-            .fontColor($r('app.color.text_secondary'))
-            .margin({ left: 8 })
-        }
-        .width('100%')
-        .padding(16)
-        .backgroundColor($r('app.color.loading_card'))
-        .borderRadius(12)
-        .margin({ left: 16, right: 16, top: 8 })
-        .onClick(() => {
-          const pageCtx = AppStorage.get<PageContext>('rootPageContext');
-          if (pageCtx) {
-            const params: NovSeriesParam = {
-              seriesId: this.seriesId,
-              seriesTitle: this.seriesTitle
-            };
-            pageCtx.openPage(PageEnum.NOVEL_SERIES, params as Object);
-          }
-        })
-        .transition(TransitionEffect.translate({ y: -48 })
-          .combine(TransitionEffect.OPACITY)
-          .animation({ curve: curves.springMotion(0.45, 0.7) }))
-      }
-      }
-
       if (this.isLoading) {
         Column() {
           LoadingProgress()
@@ -160,21 +70,74 @@ export struct SeriesDetailPage {
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Center)
       } else {
-        List({ space: 8 }) {
-          ForEach(this.novels, (novel: PixivNovel) => {
-            ListItem() {
-              this.SeriesNovelCard(novel)
+        Scroll() {
+          Column() {
+            Row() {
+              Text('‹')
+                .fontSize(28)
+                .onClick(() => { const ctx = AppStorage.get<PageContext>('rootPageContext'); if (ctx) { ctx.popPage(); } })
+              Text(this.seriesTitle)
+                .fontSize(22)
+                .fontWeight(FontWeight.Bold)
+                .fontColor($r('app.color.user_name'))
+                .margin({ left: 12 })
+              Blank()
             }
-          }, (novel: PixivNovel): string => novel.id)
+            .width('100%')
+            .padding({ left: 16, right: 24, top: 16 })
+
+            Row() {
+              Text('📚')
+                .fontSize(28)
+                .margin({ right: 12 })
+              Column() {
+                Text(this.seriesTitle)
+                  .fontSize(17)
+                  .fontWeight(FontWeight.Bold)
+                  .fontColor($r('app.color.user_name'))
+                  .maxLines(2)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                Text(`${this.authorName}  ·  共 ${this.novels.length} 话已缓存`)
+                  .fontSize(13)
+                  .fontColor($r('app.color.text_secondary'))
+                  .margin({ top: 5 })
+              }
+              .alignItems(HorizontalAlign.Start)
+              .layoutWeight(1)
+
+              Text('›')
+                .fontSize(22)
+                .fontColor($r('app.color.text_secondary'))
+                .margin({ left: 8 })
+            }
+            .width('100%')
+            .padding(16)
+            .backgroundColor($r('app.color.loading_card'))
+            .borderRadius(12)
+            .margin({ left: 16, right: 16, top: 8 })
+            .onClick(() => {
+              const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+              if (pageCtx) {
+                const params: NovSeriesParam = {
+                  seriesId: this.seriesId,
+                  seriesTitle: this.seriesTitle
+                };
+                pageCtx.openPage(PageEnum.NOVEL_SERIES, params as Object);
+              }
+            })
+
+            Column({ space: 8 }) {
+              ForEach(this.novels, (novel: PixivNovel) => {
+                this.SeriesNovelCard(novel)
+              }, (novel: PixivNovel): string => novel.id)
+            }
+            .width('100%')
+          }
+          .width('100%')
+          .padding({ left: 16, right: 16, top: 8, bottom: 120 })
         }
-        .width('100%')
-        .layoutWeight(1)
         .edgeEffect(EdgeEffect.Spring)
-        .onReachStart(() => { this.handleHeaderReachStart(); })
-        .onScroll((_xOffset: number, yOffset: number) => {
-          this.handleHeaderScroll(yOffset);
-        })
-        .padding({ left: 16, right: 16, top: 8, bottom: 120 })
+        .layoutWeight(1)
       }
     }
     .width('100%')
@@ -199,7 +162,6 @@ export struct SeriesDetailPage {
   @Builder
   SeriesNovelCard(novel: PixivNovel) {
     Row() {
-      // Order number badge
       Column() {
         Text(`${novel.series?.order ?? '?'}`)
           .fontSize(14)
