@@ -112,6 +112,8 @@ struct UserProfilePage {
   @State isLoadingIllust: boolean = true;
   @State isLoadingMoreIllust: boolean = false;
   @State illustError: string = '';
+  private allIllustIds: string[] = [];
+  private illustPage: number = 1;
 
   private novelSource: BasicDataSource<NovelBookmark> = new BasicDataSource();
   @State novelOffset: number = 0;
@@ -185,6 +187,8 @@ struct UserProfilePage {
     this.illustError = '';
     this.illustOffset = 0;
     this.hasMoreIllust = true;
+    this.illustPage = 1;
+    this.allIllustIds = [];
     try {
       const allRes = await PixivService.getUserProfileAll(this.userId);
       if (!this.isActive) return;
@@ -210,20 +214,22 @@ struct UserProfilePage {
         return;
       }
       allIds.sort((a, b) => Number(b) - Number(a));
-      const res = await PixivService.getUserProfileIllusts(this.userId, allIds);
+      this.allIllustIds = allIds;
+      const pageIds = allIds.slice(0, PAGE_SIZE);
+      const res = await PixivService.getUserProfileIllusts(this.userId, pageIds);
       if (!this.isActive) return;
       if (!res.error) {
         const workMap = res.body.works || {};
         const works: IllustBookmark[] = [];
-        for (let i = 0; i < allIds.length; i++) {
-          const work = workMap[allIds[i]];
+        for (let i = 0; i < pageIds.length; i++) {
+          const work = workMap[pageIds[i]];
           if (work) {
             works.push(mapProfileIllustToBookmark(work, this.userName));
           }
         }
         this.illustSource.reset(works);
         this.illustOffset = works.length;
-        this.hasMoreIllust = false;
+        this.hasMoreIllust = allIds.length > PAGE_SIZE;
       } else {
         this.illustError = '加载失败';
       }
@@ -236,7 +242,37 @@ struct UserProfilePage {
   }
 
   async loadMoreIllusts() {
-    this.hasMoreIllust = false;
+    if (this.isLoadingMoreIllust || !this.hasMoreIllust) return;
+    this.isLoadingMoreIllust = true;
+    try {
+      const start = this.illustPage * PAGE_SIZE;
+      const pageIds = this.allIllustIds.slice(start, start + PAGE_SIZE);
+      if (pageIds.length === 0) {
+        this.hasMoreIllust = false;
+        this.isLoadingMoreIllust = false;
+        return;
+      }
+      const res = await PixivService.getUserProfileIllusts(this.userId, pageIds);
+      if (!this.isActive) return;
+      if (!res.error) {
+        const workMap = res.body.works || {};
+        const works: IllustBookmark[] = [];
+        for (let i = 0; i < pageIds.length; i++) {
+          const work = workMap[pageIds[i]];
+          if (work) {
+            works.push(mapProfileIllustToBookmark(work, this.userName));
+          }
+        }
+        this.illustSource.push(...works);
+        this.illustOffset += works.length;
+        this.illustPage++;
+        this.hasMoreIllust = start + PAGE_SIZE < this.allIllustIds.length;
+      }
+    } catch (err) {
+      if (!this.isActive) return;
+      console.error('加载更多作者插画失败:', err);
+    }
+    this.isLoadingMoreIllust = false;
   }
 
   async loadNovels() {
