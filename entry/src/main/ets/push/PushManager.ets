@@ -26,12 +26,13 @@ export class PushManager {
   private static async getToken(): Promise<void> {
     try {
       const token = await pushService.getToken();
-      // 把这个 Token 复制到电脑的 Python 脚本 config.py 中
+      AppStorage.setOrCreate('pushToken', token);
       console.info('🎯 ========== PUSH TOKEN ==========');
       console.info('🎯 ' + token);
       console.info('🎯 ================================');
     } catch (err) {
       console.info('PushManager: 获取 Token 失败:', err);
+      AppStorage.setOrCreate('pushToken', '');
     }
   }
 
