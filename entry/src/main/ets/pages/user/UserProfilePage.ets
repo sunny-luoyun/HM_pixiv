@@ -101,6 +101,7 @@ struct UserProfilePage {
   @State swipeProgress: number = 0;
   @State isAnimationStarted: boolean = false;
   private lastScrollY: number = 0;
+  private lastLoadMoreTime: number = 0;
   private swiperController: SwiperController = new SwiperController();
   private swiperWidth: number = 0;
   private animStartIndex: number = 0;
@@ -290,6 +291,7 @@ struct UserProfilePage {
 
   async loadMoreNovels() {
     if (this.isLoadingMoreNovel || !this.hasMoreNovel) return;
+    this.lastLoadMoreTime = Date.now();
     this.isLoadingMoreNovel = true;
     try {
       const start = this.novelPage * PAGE_SIZE;
@@ -349,6 +351,7 @@ struct UserProfilePage {
 
   async loadMoreBookmarkIllusts() {
     if (this.isLoadingMoreBookmarkIllust || !this.hasMoreBookmarkIllust) return;
+    this.lastLoadMoreTime = Date.now();
     this.isLoadingMoreBookmarkIllust = true;
     try {
       const res = await PixivService.getIllustBookmarks(this.userId, this.bookmarkIllustOffset, PAGE_SIZE, '', 'show');
@@ -394,6 +397,7 @@ struct UserProfilePage {
 
   async loadMoreBookmarkNovels() {
     if (this.isLoadingMoreBookmarkNovel || !this.hasMoreBookmarkNovel) return;
+    this.lastLoadMoreTime = Date.now();
     this.isLoadingMoreBookmarkNovel = true;
     try {
       const res = await PixivService.getNovelBookmarks(this.userId, this.bookmarkNovelOffset, PAGE_SIZE, '', 'show');
@@ -433,7 +437,9 @@ struct UserProfilePage {
       if (this.profileError && !this.isLoadingProfile) {
         this.ErrorView(this.profileError)
       } else {
-        this.HeaderSection()
+        if (this.isHeaderVisible) {
+          this.HeaderSection()
+        }
         this.TabsSection()
       }
     }
@@ -471,13 +477,30 @@ struct UserProfilePage {
           const ctx = AppStorage.get<PageContext>('rootPageContext');
           if (ctx) { ctx.popPage(); }
         })
-      Text(this.userName || '作者主页')
-        .fontSize(18)
-        .fontWeight(FontWeight.Medium)
-        .margin({ left: 12 })
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-      Blank()
+      if (!this.isHeaderVisible) {
+        if (this.userAvatarUrl) {
+          Image(this.userAvatarUrl)
+            .width(24).height(24)
+            .objectFit(ImageFit.Cover)
+            .borderRadius(12)
+            .margin({ left: 12 })
+        }
+        Text(this.userName || '作者主页')
+          .fontSize(15)
+          .fontWeight(FontWeight.Medium)
+          .margin({ left: 6 })
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .layoutWeight(1)
+      } else {
+        Text(this.userName || '作者主页')
+          .fontSize(18)
+          .fontWeight(FontWeight.Medium)
+          .margin({ left: 12 })
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Blank()
+      }
     }
     .width('100%')
     .height(52)
@@ -524,6 +547,10 @@ struct UserProfilePage {
     }
     .width('100%')
     .alignItems(HorizontalAlign.Center)
+    .transition(TransitionEffect.translate({ y: -100 })
+      .combine(TransitionEffect.OPACITY)
+      .combine(TransitionEffect.scale({ x: 0.8, y: 0.8 }))
+      .animation({ curve: curves.springMotion(0.45, 0.7) }))
   }
 
   handleHeaderScroll(yOffset: number) {
@@ -534,7 +561,10 @@ struct UserProfilePage {
       animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
         this.isHeaderVisible = false;
       });
-    } else if (delta < -3 && !this.isHeaderVisible) {
+    } else if (delta < -3 && !this.isHeaderVisible && yOffset < 5 &&
+      Date.now() - this.lastLoadMoreTime > 500 &&
+      !this.isLoadingMoreIllust && !this.isLoadingMoreNovel &&
+      !this.isLoadingMoreBookmarkIllust && !this.isLoadingMoreBookmarkNovel) {
       animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
         this.isHeaderVisible = true;
       });
@@ -542,6 +572,11 @@ struct UserProfilePage {
   }
 
   handleHeaderReachStart() {
+    if (Date.now() - this.lastLoadMoreTime < 500 ||
+      this.isLoadingMoreIllust || this.isLoadingMoreNovel ||
+      this.isLoadingMoreBookmarkIllust || this.isLoadingMoreBookmarkNovel) {
+      return;
+    }
     if (!this.isHeaderVisible) {
       animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
         this.isHeaderVisible = true;
