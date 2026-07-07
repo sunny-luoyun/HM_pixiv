@@ -36,8 +36,8 @@ export struct ProxySettingsSection {
     this.proxySubscriptionUrl = AppStorage.get<string>('proxySubscriptionUrl') ?? '';
     this.nativeAvailable = ProxyService.isNativeAvailable();
     this.proxyAutoStart = AppStorage.get<boolean>('proxyAutoStart') ?? false;
-    this.checkNativeRunning();
     this.restoreProxyContent();
+    this.checkNativeRunning();
   }
 
   async restoreProxyContent(): Promise<void> {
@@ -48,9 +48,6 @@ export struct ProxySettingsSection {
       this.proxyFetchState = 'ok';
       this.proxyFetchMessage = '订阅已保存';
     }
-    const status = await ProxyService.getNativeStatus();
-    if (!this.pageActive) return;
-    this.nativeRunning = status.running ?? false;
   }
 
   async fetchSubscription(): Promise<void> {
@@ -65,6 +62,11 @@ export struct ProxySettingsSection {
       ProxyService.saveRawContent(result.rawContent ?? '');
       if (result.fileName) {
         console.info(`订阅已保存到: ${SubscriptionService.getSavedFilePath(result.fileName)}`);
+      }
+      if (this.nativeRunning) {
+        console.info('🔄 订阅已更新，重新启动内核');
+        await this.stopNativeKernel();
+        await this.startNativeKernel();
       }
     } else {
       this.proxyFetchState = 'fail';
@@ -175,8 +177,15 @@ export struct ProxySettingsSection {
       this.proxyMode = 'subscription';
       ProxyService.setMode('subscription');
     } else {
-      this.nativeRunning = false;
-      this.nativeStatusMessage = result.message ?? '启动失败';
+      if (result.message?.includes('already running')) {
+        this.nativeRunning = true;
+        this.nativeStatusMessage = '内核已在运行';
+        this.proxyMode = 'subscription';
+        ProxyService.setMode('subscription');
+      } else {
+        this.nativeRunning = false;
+        this.nativeStatusMessage = result.message ?? '启动失败';
+      }
     }
   }
 
