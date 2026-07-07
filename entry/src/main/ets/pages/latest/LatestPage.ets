@@ -9,11 +9,13 @@ import { PullToRefresh } from '../../components/PullToRefresh';
 import { SegmentedTabBar } from '../../components/SegmentedTabBar';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { BasicDataSource } from '../../common/utils/BasicDataSource';
+import { getColumnsTemplate, getNovelColumnsTemplate } from '../../common/utils/BreakpointManager';
 import common from '@ohos.app.ability.common';
 
 @Component
 export struct LatestPage {
   @StorageLink('isLoggedIn') @Watch('onLoginStateChange') isLoggedIn: boolean = false;
+  @StorageLink('currentBreakpoint') currentBp: string = 'sm';
   @State currentTab: number = 0;
   private illustSource: BasicDataSource<IllustBookmark> = new BasicDataSource();
   private novelSource: BasicDataSource<NovelBookmark> = new BasicDataSource();
@@ -322,7 +324,7 @@ export struct LatestPage {
                     }
                   }, (item: IllustBookmark) => item.id)
                 }
-                .columnsTemplate('1fr 1fr')
+                .columnsTemplate(getColumnsTemplate(this.currentBp))
                 .columnsGap(8)
                 .rowsGap(8)
                 .padding(12)
@@ -376,13 +378,16 @@ export struct LatestPage {
             PullToRefresh({ refreshing: this.isRefreshingNovel, onRefresh: (): Promise<void> => this.loadNovels() }) {
               Scroll() {
                 Column() {
-                  List() {
+                  Grid() {
                     LazyForEach(this.novelSource, (item: NovelBookmark, index: number) => {
-                    ListItem() {
+                    GridItem() {
                       NovelCard({ item: item, index: index })
                     }
                   }, (item: NovelBookmark) => item.id)
                 }
+                .columnsTemplate(getNovelColumnsTemplate(this.currentBp))
+                .columnsGap(8)
+                .rowsGap(8)
                 .padding(12)
                 .width('100%')
 
@@ -422,3 +427,4 @@ export struct LatestPage {
     .width('100%')
   }
 }
+

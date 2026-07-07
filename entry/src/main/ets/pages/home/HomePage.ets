@@ -7,6 +7,7 @@ import { PullToRefresh } from '../../components/PullToRefresh';
 import { SegmentedTabBar } from '../../components/SegmentedTabBar';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { BasicDataSource } from '../../common/utils/BasicDataSource';
+import { getColumnsTemplate, getNovelColumnsTemplate } from '../../common/utils/BreakpointManager';
 import common from '@ohos.app.ability.common';
 
 const PAGE_SIZE = 30;
@@ -17,6 +18,7 @@ const MAX_EMPTY_RETRIES = 3;
 @Component
 export struct HomePage {
   @StorageLink('isLoggedIn') @Watch('onLoginStateChange') isLoggedIn: boolean = false;
+  @StorageLink('currentBreakpoint') currentBp: string = 'sm';
   @State currentTab: number = 0;
   @State illustCount: number = 0;
   @State novelCount: number = 0;
@@ -340,7 +342,7 @@ export struct HomePage {
                     }
                   }, (item: IllustBookmark) => item.id)
                 }
-                .columnsTemplate('1fr 1fr')
+                .columnsTemplate(getColumnsTemplate(this.currentBp))
                 .columnsGap(8)
                 .rowsGap(8)
                 .padding(12)
@@ -389,13 +391,16 @@ export struct HomePage {
             PullToRefresh({ refreshing: this.isRefreshingNovel, onRefresh: (): Promise<void> => this.loadNovels() }) {
               Scroll() {
                 Column() {
-                  List() {
+                  Grid() {
                     LazyForEach(this.novelSource, (item: NovelBookmark, index: number) => {
-                    ListItem() {
+                    GridItem() {
                       NovelCard({ item: item, index: index })
                     }
                   }, (item: NovelBookmark) => item.id)
                 }
+                .columnsTemplate(getNovelColumnsTemplate(this.currentBp))
+                .columnsGap(8)
+                .rowsGap(8)
                 .padding(12)
                 .width('100%')
 

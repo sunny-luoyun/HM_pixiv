@@ -7,12 +7,14 @@ import { UserCard } from '../../components/UserCard';
 import { SegmentedTabBar } from '../../components/SegmentedTabBar';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { BasicDataSource } from '../../common/utils/BasicDataSource';
+import { getColumnsTemplate, getNovelColumnsTemplate } from '../../common/utils/BreakpointManager';
 import inputMethod from '@ohos.inputMethod';
 import preferences from '@ohos.data.preferences';
 import common from '@ohos.app.ability.common';
 
 @Component
 export struct SearchPage {
+  @StorageLink('currentBreakpoint') currentBp: string = 'sm';
   @State keyword: string = '';
   @State currentTab: number = 0;
   @State isHeaderVisible: boolean = true;
@@ -700,7 +702,7 @@ export struct SearchPage {
               }
             }, (item: IllustBookmark) => item.id)
           }
-          .columnsTemplate('1fr 1fr')
+          .columnsTemplate(getColumnsTemplate(this.currentBp))
           .columnsGap(8)
           .rowsGap(8)
           .padding(12)
@@ -751,13 +753,16 @@ export struct SearchPage {
     } else {
       Scroll() {
         Column() {
-          List() {
+          Grid() {
             LazyForEach(this.novelSource, (item: NovelBookmark, index: number) => {
-              ListItem() {
+              GridItem() {
                 NovelCard({ item: item, index: index })
               }
             }, (item: NovelBookmark) => item.id)
           }
+          .columnsTemplate(getNovelColumnsTemplate(this.currentBp))
+          .columnsGap(8)
+          .rowsGap(8)
           .padding(12)
           .width('100%')
 

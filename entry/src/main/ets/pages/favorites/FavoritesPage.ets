@@ -5,6 +5,7 @@ import { NovelCard } from '../../components/NovelCard';
 import { IllustCard } from '../../components/IllustCard';
 import { SegmentedTabBar } from '../../components/SegmentedTabBar';
 import { BasicDataSource } from '../../common/utils/BasicDataSource';
+import { getColumnsTemplate, getNovelColumnsTemplate } from '../../common/utils/BreakpointManager';
 import { appState } from '../../store/AppState';
 import { PageContext } from '../../common/utils/PageContext';
 
@@ -12,6 +13,7 @@ const PAGE_SIZE = 30;
 
 @Component
 struct FavoritesPage {
+  @StorageLink('currentBreakpoint') currentBp: string = 'sm';
   private isActive: boolean = true;
   @State currentTab: number = 0;
   @State isHeaderVisible: boolean = true;
@@ -274,7 +276,7 @@ struct FavoritesPage {
                     }
                   }, (item: IllustBookmark) => item.id)
                 }
-                .columnsTemplate('1fr 1fr')
+                .columnsTemplate(getColumnsTemplate(this.currentBp))
                 .columnsGap(8)
                 .rowsGap(8)
                 .padding(12)
@@ -325,13 +327,16 @@ struct FavoritesPage {
           } else {
             Scroll() {
               Column() {
-                List() {
+                Grid() {
                   LazyForEach(this.novelSource, (item: NovelBookmark, index: number) => {
-                    ListItem() {
+                    GridItem() {
                       NovelCard({ item: item, index: index })
                     }
                   }, (item: NovelBookmark) => item.id)
                 }
+                .columnsTemplate(getNovelColumnsTemplate(this.currentBp))
+                .columnsGap(8)
+                .rowsGap(8)
                 .padding(12)
                 .width('100%')
 

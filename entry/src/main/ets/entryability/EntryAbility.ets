@@ -1,5 +1,5 @@
 import { AbilityConstant, UIAbility, Want, Configuration } from '@kit.AbilityKit';
-import { window } from '@kit.ArkUI';
+import { window, display } from '@kit.ArkUI';
 import { ConfigurationConstant } from '@kit.AbilityKit';
 import workScheduler from '@ohos.resourceschedule.workScheduler';
 import { BusinessError } from '@kit.BasicServicesKit';
@@ -13,6 +13,7 @@ import { appState } from '../store/AppState';
 import { NotificationHelper } from '../notification/NotificationHelper';
 import { LatestCheckService, CheckResult } from '../services/LatestCheckService';
 import { PushManager } from '../push/PushManager';
+import { resolveBreakpoint, publishBreakpoint } from '../common/utils/BreakpointManager';
 
 const WORK_ID_LATEST_CHECK = 1001;
 
@@ -69,6 +70,12 @@ export default class EntryAbility extends UIAbility {
         navigationBarContentColor: contentColor,
       });
     });
+
+    const dd = display.getDefaultDisplaySync();
+    const widthVp = px2vp(dd.width);
+    const bp = resolveBreakpoint(widthVp);
+    publishBreakpoint(bp);
+    console.info(`📐 config更新: ${bp} (${widthVp}vp, ${dd.width}px)`);
   }
 
   onWindowStageCreate(windowStage: window.WindowStage): void {

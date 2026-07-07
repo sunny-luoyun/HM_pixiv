@@ -1,4 +1,4 @@
-import { SymbolGlyphModifier } from '@kit.ArkUI';
+import { SymbolGlyphModifier, display } from '@kit.ArkUI';
 import { window } from '@kit.ArkUI';
 import promptAction from '@ohos.promptAction';
 import { common } from '@kit.AbilityKit';
@@ -7,6 +7,7 @@ import { HomePage } from './home/HomePage';
 import { LatestPage } from './latest/LatestPage';
 import { SearchPage } from './search/SearchPage';
 import { SettingPage } from './setting/SettingPage';
+import { resolveBreakpoint, publishBreakpoint } from '../common/utils/BreakpointManager';
 
 interface TabConfig {
   iconNormal: SymbolGlyphModifier;
@@ -70,6 +71,15 @@ export struct MainTabsPage {
       this.materialLevel = hdsMaterial.MaterialLevel.SMOOTH;
       console.info('⚠️ 当前设备不支持 IMMERSIVE 材质，沉浸光感降级为 SMOOTH');
     }
+    this.initBreakpoint();
+  }
+
+  private initBreakpoint(): void {
+    const dd = display.getDefaultDisplaySync();
+    const widthVp = px2vp(dd.width);
+    const bp = resolveBreakpoint(widthVp);
+    publishBreakpoint(bp);
+    console.info(`📐 断点初始: ${bp} (${widthVp}vp, ${dd.width}px)`);
   }
 
   onNotificationNavigateTabChange(): void {

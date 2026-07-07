@@ -7,6 +7,7 @@ import { IllustCard } from '../../components/IllustCard';
 import { NovelCard } from '../../components/NovelCard';
 import { SegmentedTabBar } from '../../components/SegmentedTabBar';
 import { BasicDataSource } from '../../common/utils/BasicDataSource';
+import { getColumnsTemplate, getNovelColumnsTemplate } from '../../common/utils/BreakpointManager';
 import { PageContext } from '../../common/utils/PageContext';
 
 const PAGE_SIZE = 30;
@@ -88,6 +89,7 @@ function mapProfileNovelToBookmark(item: ProfileNovel, defaultName: string = '')
 
 @Component
 struct UserProfilePage {
+  @StorageLink('currentBreakpoint') currentBp: string = 'sm';
   @State navParams: Record<string, Object> = {};
   private userId: string = '';
   @State userName: string = '';
@@ -716,7 +718,7 @@ struct UserProfilePage {
               }
             }, (item: IllustBookmark) => item.id)
           }
-          .columnsTemplate('1fr 1fr')
+          .columnsTemplate(getColumnsTemplate(this.currentBp))
           .columnsGap(8)
           .rowsGap(8)
           .padding(12)
@@ -762,13 +764,17 @@ struct UserProfilePage {
     } else {
       Scroll() {
         Column() {
-          List() {
+          Grid() {
             LazyForEach(this.novelSource, (item: NovelBookmark, index: number) => {
-              ListItem() {
+              GridItem() {
                 NovelCard({ item: item, index: index })
               }
             }, (item: NovelBookmark) => item.id)
           }
+          .columnsTemplate(getNovelColumnsTemplate(this.currentBp))
+          .columnsGap(8)
+          .rowsGap(8)
+          .width('100%')
 
           if (this.isLoadingMoreNovel) {
             LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
@@ -817,7 +823,7 @@ struct UserProfilePage {
               }
             }, (item: IllustBookmark) => item.id)
           }
-          .columnsTemplate('1fr 1fr')
+          .columnsTemplate(getColumnsTemplate(this.currentBp))
           .columnsGap(8)
           .rowsGap(8)
           .padding(12)
@@ -863,13 +869,17 @@ struct UserProfilePage {
     } else {
       Scroll() {
         Column() {
-          List() {
+          Grid() {
             LazyForEach(this.bookmarkNovelSource, (item: NovelBookmark, index: number) => {
-              ListItem() {
+              GridItem() {
                 NovelCard({ item: item, index: index })
               }
             }, (item: NovelBookmark) => item.id)
           }
+          .columnsTemplate(getNovelColumnsTemplate(this.currentBp))
+          .columnsGap(8)
+          .rowsGap(8)
+          .width('100%')
 
           if (this.isLoadingMoreBookmarkNovel) {
             LoadingProgress().width(30).height(30).margin({ top: 8, bottom: 16 })
