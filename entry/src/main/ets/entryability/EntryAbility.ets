@@ -6,6 +6,7 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import fileIo from '@ohos.file.fs';
 import { CookieStorage } from '../common/utils/CookieStorage';
 import { TranslationStorage } from '../common/utils/TranslationStorage';
+import { PixivAuth } from '../services/PixivAuth';
 import { ProxyService } from '../services/ProxyService';
 import { pixivCacheDB } from '../database/PixivCacheDB';
 import { StorageKeys } from '../common/constants/StorageKeys';
@@ -21,9 +22,10 @@ export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     CookieStorage.init(this.context);
     TranslationStorage.init(this.context);
+    PixivAuth.init(this.context);
     ProxyService.init(this.context);
     ProxyService.tryAutoStart();
-    console.info('✅ CookieStorage + TranslationStorage + ProxyService 已初始化');
+    console.info('CookieStorage + TranslationStorage + PixivAuth + ProxyService 已初始化');
 
     this.initNotifications();
     this.registerWorkScheduler();

@@ -6,14 +6,17 @@
 
 ---
 
-## F01 - 登录/登出（OAuth）
+## F01 - 登录/登出（OAuth2）
 
-- **描述**：Pixiv OAuth 登录流程，Cookie 收集与持久化，登录态验证
+- **描述**：Pixiv OAuth2 PKCE 登录流程，Bearer Token 认证与管理，自动 Token 刷新；同时保留 PHPSESSID Cookie 供 Web Ajax 端点使用
 - **页面**：`entry/src/main/ets/pages/login/LoginPage.ets`
-- **逻辑**：`entry/src/main/ets/services/LoginService.ets`
+- **逻辑**：`entry/src/main/ets/pages/login/LoginPageViewModel.ets`、`entry/src/main/ets/services/LoginService.ets`
+- **认证核心**：`entry/src/main/ets/services/PixivAuth.ets` — OAuth2 Token 管理、登录、刷新、持久化（Preferences: app_auth）
 - **状态**：`entry/src/main/ets/store/AppState.ets`
-- **Cookie**：`entry/src/main/ets/services/CookieManager.ets`、`entry/src/main/ets/common/utils/CookieStorage.ets`
-- **入口**：`entry/src/main/ets/entryability/EntryAbility.ets`（初始化时验证登录态）
+- **Cookie**：`entry/src/main/ets/services/CookieManager.ets`、`entry/src/main/ets/common/utils/CookieStorage.ets`（Web Ajax 端点专用）
+- **入口**：`entry/src/main/ets/entryability/EntryAbility.ets`（初始化时加载 Token、验证登录态、自动刷新）
+- **App API 认证**：`entry/src/main/ets/services/AppApiService.ets`（使用 Bearer Token，自动 401 刷新）
+- **工具**：`entry/src/main/ets/common/utils/MD5.ets`、`entry/src/main/ets/common/utils/TimeUtils.ets`
 
 ---
 
@@ -51,11 +54,10 @@
 
 ## F05 - 插画详情与评论
 
-- **描述**：查看插画大图、标题、作者、标签；浏览/删除评论（发表评论暂不可用，待 OAuth2 接入后恢复）
+- **描述**：查看插画大图、标题、作者、标签；浏览/删除/发表评论（OAuth2 Bearer Token 认证已接入）
 - **页面**：`entry/src/main/ets/pages/illust/IllustDetailPage.ets`、`entry/src/main/ets/pages/illust/IllustCommentsPage.ets`
-- **API**：`entry/src/main/ets/services/PixivApiService.ets`（`getIllustDetail`、`getIllustComments`）、`entry/src/main/ets/services/AppApiService.ets`（`deleteIllustComment`，`postIllustComment` 保留代码待 OAuth 启用）
-- **组件**：`entry/src/main/ets/components/CommentsComponent.ets`
-- **已知限制**：发表评论需 Pixiv OAuth2 Bearer Token 认证，当前仅使用 PHPSESSID Cookie，评论接口返回 400 OAuth error。发表 UI 已临时移除，`AppApiService.ts` 中 `Content-Type` 头修复已保留
+- **API**：`entry/src/main/ets/services/PixivApiService.ets`（`getIllustDetail`、`getIllustComments`）、`entry/src/main/ets/services/AppApiService.ets`（`postIllustComment`、`deleteIllustComment`）
+- **组件**：`entry/src/main/ets/components/CommentsComponent.ets`（含发表输入框）
 
 ---
 
@@ -241,7 +243,7 @@
 | 3 | 最新作品加载 | 切换到「最新」Tab → 切换插画/小说 Tab 正常 | ☐ |
 | 4 | 搜索 | 切换到「搜索」Tab → 输入关键词 → 结果正常展示 | ☐ |
 | 5 | 插画详情 | 点击任意插画 → 大图/标题/标签/作者正常展示 | ☐ |
-| 6 | 插画评论 | 插画详情页 → 点击评论 → 评论列表正常（发表暂不可用） | ☐ |
+| 6 | 插画评论 | 插画详情页 → 点击评论 → 评论列表正常（发表可用） | ☐ |
 | 7 | 小说阅读器 | 点击任意小说 → 正文加载 → 自动阅读/书签保存 | ☐ |
 | 8 | 小说系列 | 小说详情页 → 点击系列 → 系列列表正常 | ☐ |
 | 9 | 小说评论 | 小说详情页 → 点击评论 → 评论列表正常（发表暂不可用） | ☐ |
@@ -263,6 +265,9 @@
 | 25 | 卡片一镜到底（返回） | 在详情页点击返回 → 详情内容淡出 → 截图平滑缩放回卡片位置 | ☐ |
 | 26 | 截图失败降级 | 截图失败时（如图片未加载）→ 直接进入详情无动画 | ☐ |
 | 27 | 多页作品 | 进入多页作品详情 → 滑动到非首页 → 返回时动画仍正常工作 | ☐ |
+| 28 | OAuth2 登录 | 退出登录 → 点击登录 → WebView 打开 Pixiv OAuth 页 → 登录成功 → Token 自动刷新 | ☐ |
+| 29 | 收藏/关注 | 在插画/小说详情 → 点击收藏 → 状态正确切换（走 Bearer Token API） | ☐ |
+| 30 | 评论发表 | 插画/小说评论页 → 输入评论 → 点击发送 → 评论成功发表 | ☐ |
 
 ---
 
@@ -342,7 +347,32 @@
 
 ---
 
-> 最后更新：F27 关注更新通知推送，基于 2026-07-05
+## F28 - OAuth2 Bearer Token 认证切换
+
+- **描述**：将登录方式从 Cookie (PHPSESSID) 全面切换为 OAuth2 PKCE + Bearer Token；App API 端点使用 Bearer Token（含自动 401 刷新），Web Ajax 端点保留 Cookie 认证；收藏/关注/评论等写操作统一走 AppApiService
+- **新增文件**：
+  - `entry/src/main/ets/services/PixivAuth.ets` — OAuth2 认证核心服务（PKCE 登录、Token 刷新、持久化）
+  - `entry/src/main/ets/common/utils/MD5.ets` — MD5 哈希工具（OAuth 签名用）
+  - `entry/src/main/ets/common/utils/TimeUtils.ets` — ISO8601 UTC 时间格式化
+  - `entry/src/test/PixivAuth.test.ets` — 认证逻辑单测
+- **修改文件**：
+  - `entry/src/main/ets/pages/login/LoginPage.ets` — WebView URL 改为 PKCE OAuth，回调拦截 pixiv:// 协议
+  - `entry/src/main/ets/pages/login/LoginPageViewModel.ets` — 登录流程改为 code 换 token
+  - `entry/src/main/ets/services/AppApiService.ets` — Cookie → Bearer Token，新增 401 自动刷新
+  - `entry/src/main/ets/services/PixivService.ets` — Bookmark 委托从 BookmarkService → AppApiService
+  - `entry/src/main/ets/store/AppState.ets` — 登录状态检查从 Cookie → Token + 启动自动刷新
+  - `entry/src/main/ets/entryability/EntryAbility.ets` — 初始化 PixivAuth
+  - `entry/src/main/ets/common/constants/ApiConfig.ets` — 新增 OAuth/App API 常量
+  - `entry/src/main/ets/components/CommentsComponent.ets` — 恢复评论发表 UI（TextInput + 发送按钮）
+  - `entry/src/main/ets/pages/illust/IllustCommentsPage.ets` / `entry/src/main/ets/pages/novel/NovelCommentsPage.ets` — 传入 postComment 回调
+  - `entry/src/test/List.test.ets` — 注册 PixivAuth 测试套件
+- **删除文件**：
+  - `entry/src/main/ets/services/BookmarkService.ets` — 已被 AppApiService 覆盖（Web Ajax + CSRF 方式废弃）
+- **架构**：App API (app-api.pixiv.net) 使用 `Authorization: Bearer <token>`；Web Ajax (www.pixiv.net) 使用 `Cookie: PHPSESSID=<value>`；两者并存，互不干扰
+
+---
+
+> 最后更新：F28 OAuth2 Bearer Token 认证切换，基于 2026-07-09
 
 ---
 

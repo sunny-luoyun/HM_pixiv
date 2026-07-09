@@ -1,4 +1,5 @@
 import { CookieManager } from '../services/CookieManager';
+import { PixivAuth } from '../services/PixivAuth';
 import { PixivService } from '../services/PixivService';
 import { UserInfoResponse } from '../models/PixivModels';
 import { ProxyService } from '../services/ProxyService';
@@ -26,17 +27,15 @@ export class AppState {
 
   async checkLoginStatus(skipVerify: boolean = false) {
     try {
-      const cookieStr = await CookieManager.getFullCookie();
-      this.isLoggedIn = cookieStr !== '';
+      const auth = PixivAuth.getInstance();
+      await auth.loadTokens();
+      this.isLoggedIn = auth.isLogin();
       AppStorage.setOrCreate('isLoggedIn', this.isLoggedIn);
 
       if (this.isLoggedIn) {
-        const savedUserId = await CookieManager.getUserId();
-        const savedUserName = await CookieManager.getUserName();
-        if (savedUserId && savedUserName) {
-          this.userId = savedUserId;
-          this.userName = savedUserName;
-        }
+        this.userId = auth.getUserId();
+        this.userName = auth.getUserName();
+
         const savedAvatarUrl = await CookieManager.getAvatarUrl();
         if (savedAvatarUrl) {
           this.avatarUrl = savedAvatarUrl;
@@ -44,14 +43,23 @@ export class AppState {
 
         if (!skipVerify) {
           try {
-            let isValid = await this.verifyCookieWithUserId();
+            const refreshed = await auth.refreshAccessToken();
+            if (refreshed) {
+              this.userId = auth.getUserId();
+              this.userName = auth.getUserName();
+            }
+          } catch (refreshErr) {
+            console.warn('Token 自动刷新失败:', refreshErr);
+          }
 
+          try {
+            let isValid = await this.verifyTokenValid();
             if (!isValid) {
-              console.warn('⚠️ 认证验证失败，自动登出');
+              console.warn('认证验证失败，自动登出');
               await this.logout();
             }
           } catch (networkErr) {
-            console.error('🌐 网络异常，认证验证跳过，保持登录状态:', networkErr);
+            console.error('网络异常，认证验证跳过，保持登录状态:', networkErr);
           }
         }
       } else {
@@ -74,58 +82,34 @@ export class AppState {
     }
   }
 
-  async verifyCookieWithUserId(): Promise<boolean> {
-    if (!this.userId) {
-      console.warn('用户ID为空，无法验证');
-      return false;
-    }
-    const url = `${ApiConfig.PIXIV_WEB}/users/${this.userId}`;
-    const cookieStr = await CookieManager.getFullCookie();
-    const httpRequest = http.createHttp();
+  async verifyTokenValid(): Promise<boolean> {
+    const auth = PixivAuth.getInstance();
+    if (!auth.isLogin()) return false;
     try {
+      const httpRequest = http.createHttp();
+      const url = `${ApiConfig.PIXIV_APP}/v2/user/detail?user_id=${this.userId}&filter=for_ios`;
       const header: Record<string, string> = {
-        'User-Agent': ApiConfig.USER_AGENT,
-        'Referer': ApiConfig.REFERER,
+        'User-Agent': ApiConfig.USER_AGENT_APP,
+        'Authorization': auth.getAuthHeader(),
       };
-      if (cookieStr) header['Cookie'] = cookieStr;
-
       const proxyConfig = await ProxyService.getRequestProxyConfig();
       const response = await httpRequest.request(url, {
         method: http.RequestMethod.GET,
         header,
-        connectTimeout: 3000,
-        readTimeout: 3000,
+        connectTimeout: 5000,
+        readTimeout: 5000,
         usingProxy: proxyConfig || false,
       });
-      const statusCode: number = response.responseCode;
-
-      if (statusCode === 200) {
-        const body: string = response.result.toString();
-        if (body.includes(`"userId":${this.userId}`) || body.includes(`/users/${this.userId}`)) {
-          console.info(`✅ 认证有效，用户 ${this.userName} (${this.userId})`);
-          return true;
-        }
-        console.warn(`⚠️ 页面内容异常，可能已登出`);
-        return false;
-      } else if (statusCode === 401 || statusCode === 403) {
-        console.warn(`❌ 认证失效，服务器返回 ${statusCode}`);
-        return false;
-      } else if (statusCode === 302) {
-        const location: string | undefined = (response.header as Record<string, string>)?.['Location'];
-        if (location?.includes('/login')) {
-          console.warn(`❌ 认证失效，重定向到登录页`);
-          return false;
-        }
-        return true;
-      } else {
-        console.warn(`⚠️ 非预期状态码 ${statusCode}`);
-        return false;
-      }
-    } catch (err) {
-      console.error(`🌐 网络异常: ${err}`);
-      throw new Error(`NETWORK_ERROR: ${err}`);
-    } finally {
       httpRequest.destroy();
+      if (response.responseCode === 200) {
+        console.info('Token 有效');
+        return true;
+      }
+      console.warn(`Token 验证失败 HTTP ${response.responseCode}`);
+      return false;
+    } catch (err) {
+      console.error('Token 验证网络异常:', err);
+      throw new Error(`NETWORK_ERROR: ${String(err)}`);
     }
   }
 
@@ -134,6 +118,8 @@ export class AppState {
   }
 
   async logout() {
+    const auth = PixivAuth.getInstance();
+    await auth.clearTokens();
     await CookieManager.clearAll();
     this.isLoggedIn = false;
     AppStorage.setOrCreate('isLoggedIn', false);

@@ -20,6 +20,9 @@ struct NovelCommentsPage {
         titleLabel: '小说评论',
         fetchComments: (id: string, offset: number) => PixivService.getNovelComments(id, offset),
         deleteComment: (id: number) => AppApiService.deleteNovelComment(id),
+        postComment: async (id: string, comment: string): Promise<void> => {
+          await AppApiService.postNovelComment(Number(id), comment);
+        },
       })
     }
     .width('100%')

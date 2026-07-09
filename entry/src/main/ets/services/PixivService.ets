@@ -1,6 +1,6 @@
 import { PixivApiService, sanitizeNovelBookmark } from './PixivApiService';
 import { ImageCacheService } from './ImageCacheService';
-import { BookmarkService } from './BookmarkService';
+import { AppApiService } from './AppApiService';
 import { Context } from '@kit.AbilityKit';
 import {
   UserInfoResponse, IllustBookmarkResponse, NovelBookmarkResponse,
@@ -163,19 +163,19 @@ export class PixivService {
   }
 
   static async addIllustBookmark(illustId: string, restrict: string = 'public', tags: string[] = []): Promise<void> {
-    return BookmarkService.addIllustBookmark(illustId, restrict, tags);
+    return AppApiService.addIllustBookmark(Number(illustId), restrict, tags);
   }
 
   static async deleteIllustBookmark(illustId: string): Promise<void> {
-    return BookmarkService.deleteIllustBookmark(illustId);
+    return AppApiService.removeIllustBookmark(Number(illustId));
   }
 
   static async addNovelBookmark(novelId: string, restrict: string = 'public'): Promise<void> {
-    return BookmarkService.addNovelBookmark(novelId, restrict);
+    return AppApiService.addNovelBookmark(Number(novelId), restrict);
   }
 
   static async deleteNovelBookmark(novelId: string): Promise<void> {
-    return BookmarkService.deleteNovelBookmark(novelId);
+    return AppApiService.removeNovelBookmark(Number(novelId));
   }
 
   static async extractDominantColor(filePath: string): Promise<string> {

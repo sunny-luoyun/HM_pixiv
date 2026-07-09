@@ -43,3 +43,5 @@ Thumbs.db
 
 # 签名配置文件（本地保留签名信息，不上传）
 build-profile.json5
+# AGC 推送配置（含密钥）
+**/agconnect-services.json

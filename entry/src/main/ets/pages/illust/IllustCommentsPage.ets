@@ -20,6 +20,9 @@ struct IllustCommentsPage {
         titleLabel: '评论',
         fetchComments: (id: string, offset: number) => PixivService.getIllustComments(id, offset),
         deleteComment: (id: number) => AppApiService.deleteIllustComment(id),
+        postComment: async (id: string, comment: string): Promise<void> => {
+          await AppApiService.postIllustComment(Number(id), comment);
+        },
       })
     }
     .width('100%')

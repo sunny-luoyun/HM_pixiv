@@ -26,6 +26,7 @@ import baseVMTest from './BaseVM.test';
 import constantsTest from './Constants.test';
 import customTransitionTest from './CustomTransitionUtils.test';
 import latestCheckTest from './LatestCheck.test';
+import pixivAuthTest from './PixivAuth.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -56,4 +57,5 @@ export default function testsuite() {
   constantsTest();
   customTransitionTest();
   latestCheckTest();
+  pixivAuthTest();
 }

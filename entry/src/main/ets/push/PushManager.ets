@@ -1,4 +1,5 @@
 import { pushService } from '@kit.PushKit';
+import { BusinessError } from '@kit.BasicServicesKit';
 import Ability from '@ohos.app.ability.Ability';
 import common from '@ohos.app.ability.common';
 import { NotificationHelper } from '../notification/NotificationHelper';
@@ -31,7 +32,8 @@ export class PushManager {
       console.info('🎯 ' + token);
       console.info('🎯 ================================');
     } catch (err) {
-      console.info('PushManager: 获取 Token 失败:', err);
+      const errObj = err as BusinessError;
+      console.info('PushManager: 获取 Token 失败 code=' + errObj.code + ' msg=' + errObj.message);
       AppStorage.setOrCreate('pushToken', '');
     }
   }

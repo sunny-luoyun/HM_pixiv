@@ -12,6 +12,7 @@ export struct CommentsComponent {
   private emptyHint: string = '还没有人评论';
   private fetchComments: (id: string, offset: number) => Promise<AjaxCommentsResponse> = () => Promise.reject(new Error('not set'));
   private deleteComment: (commentId: number) => Promise<void> = () => Promise.reject(new Error('not set'));
+  private postComment: (id: string, comment: string) => Promise<void> = () => Promise.reject(new Error('not set'));
 
   @State totalComments: number = 0;
   private commentSource: BasicDataSource<AjaxComment> = new BasicDataSource();
@@ -20,6 +21,8 @@ export struct CommentsComponent {
   @State errorMsg: string = '';
   @State hasMore: boolean = false;
   @State deletingCommentId: number = -1;
+  @State commentText: string = '';
+  @State isPosting: boolean = false;
   private nextOffset: number = 0;
   private appState: AppState = AppState.getInstance();
 
@@ -87,6 +90,25 @@ export struct CommentsComponent {
     this.deletingCommentId = -1;
   }
 
+  async handlePost() {
+    const text = this.commentText.trim();
+    if (!text) {
+      promptAction.showToast({ message: '请输入评论内容' });
+      return;
+    }
+    if (this.isPosting) return;
+    this.isPosting = true;
+    try {
+      await this.postComment(this.entityId, text);
+      this.commentText = '';
+      promptAction.showToast({ message: '评论发表成功' });
+      this.loadComments();
+    } catch (err) {
+      promptAction.showToast({ message: '评论发表失败: ' + String(err) });
+    }
+    this.isPosting = false;
+  }
+
   formatDate(isoDate: string): string {
     if (!isoDate) return '';
     try {
@@ -109,92 +131,131 @@ export struct CommentsComponent {
 
   build() {
     Column() {
-      Row() {
-        Button({ type: ButtonType.Circle }) {
-          Text('←').fontSize(20).fontColor(Color.White)
-        }
-        .width(36).height(36)
-        .backgroundColor($r('app.color.overlay_light'))
-        .onClick(() => {
-          const pageCtx = AppStorage.get<PageContext>('rootPageContext');
-          if (pageCtx) { pageCtx.popPage(); }
-        })
+      Column() {
+        Row() {
+          Button({ type: ButtonType.Circle }) {
+            Text('←').fontSize(20).fontColor(Color.White)
+          }
+          .width(36).height(36)
+          .backgroundColor($r('app.color.overlay_light'))
+          .onClick(() => {
+            const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+            if (pageCtx) { pageCtx.popPage(); }
+          })
 
-        Text(`${this.titleLabel} (${this.totalComments})`)
-          .fontSize(16)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(Color.White)
-          .margin({ left: 12 })
+          Text(`${this.titleLabel} (${this.totalComments})`)
+            .fontSize(16)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(Color.White)
+            .margin({ left: 12 })
 
-        Blank()
-      }
-      .width('100%')
-      .height(52)
-      .padding({ left: 16, right: 16 })
-      .alignItems(VerticalAlign.Center)
-
-      if (this.isLoading) {
-        Column() {
-          LoadingProgress().width(36).height(36).color($r('app.color.text_secondary'))
+          Blank()
         }
         .width('100%')
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-      } else if (this.errorMsg) {
-        Column() {
-          Text(this.errorMsg).fontSize(14).fontColor($r('app.color.text_secondary'))
-          Button('重试').margin({ top: 12 }).onClick(() => this.loadComments())
-        }
-        .width('100%')
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-      } else if (this.commentSource.totalCount() === 0) {
-        Column() {
-          Text('暂无评论').fontSize(14).fontColor($r('app.color.text_secondary'))
-          Text(this.emptyHint).fontSize(12).fontColor($r('app.color.text_secondary')).margin({ top: 4 })
-        }
-        .width('100%')
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-      } else {
-        List() {
-          ListItemGroup() {
-            LazyForEach(this.commentSource, (comment: AjaxComment) => {
+        .height(52)
+        .padding({ left: 16, right: 16 })
+        .alignItems(VerticalAlign.Center)
+
+        if (this.isLoading) {
+          Column() {
+            LoadingProgress().width(36).height(36).color($r('app.color.text_secondary'))
+          }
+          .width('100%')
+          .layoutWeight(1)
+          .justifyContent(FlexAlign.Center)
+        } else if (this.errorMsg) {
+          Column() {
+            Text(this.errorMsg).fontSize(14).fontColor($r('app.color.text_secondary'))
+            Button('重试').margin({ top: 12 }).onClick(() => this.loadComments())
+          }
+          .width('100%')
+          .layoutWeight(1)
+          .justifyContent(FlexAlign.Center)
+        } else if (this.commentSource.totalCount() === 0) {
+          Column() {
+            Text('暂无评论').fontSize(14).fontColor($r('app.color.text_secondary'))
+            Text(this.emptyHint).fontSize(12).fontColor($r('app.color.text_secondary')).margin({ top: 4 })
+          }
+          .width('100%')
+          .layoutWeight(1)
+          .justifyContent(FlexAlign.Center)
+        } else {
+          List() {
+            ListItemGroup() {
+              LazyForEach(this.commentSource, (comment: AjaxComment) => {
+                ListItem() {
+                  Column() {
+                    this.commentItem(comment)
+                  }
+                  .width('100%')
+                  .padding({ left: 16, right: 16, top: 12, bottom: 8 })
+                }
+              }, (comment: AjaxComment) => `comment_${comment.id}`)
+
               ListItem() {
-                Column() {
-                  this.commentItem(comment)
+                Row() {
+                  if (this.isLoadingMore) {
+                    LoadingProgress().width(20).height(20).color($r('app.color.text_secondary'))
+                  } else if (this.hasMore) {
+                    Text('加载更多')
+                      .fontSize(12)
+                      .fontColor($r('app.color.text_secondary'))
+                      .onClick(() => this.loadMore())
+                  } else {
+                    Text('— 没有更多了 —')
+                      .fontSize(12)
+                      .fontColor($r('app.color.text_secondary'))
+                  }
                 }
                 .width('100%')
-                .padding({ left: 16, right: 16, top: 12, bottom: 8 })
+                .justifyContent(FlexAlign.Center)
+                .padding({ top: 12, bottom: 20 })
               }
-            }, (comment: AjaxComment) => `comment_${comment.id}`)
-
-            ListItem() {
-              Row() {
-                if (this.isLoadingMore) {
-                  LoadingProgress().width(20).height(20).color($r('app.color.text_secondary'))
-                } else if (this.hasMore) {
-                  Text('加载更多')
-                    .fontSize(12)
-                    .fontColor($r('app.color.text_secondary'))
-                    .onClick(() => this.loadMore())
-                } else {
-                  Text('— 没有更多了 —')
-                    .fontSize(12)
-                    .fontColor($r('app.color.text_secondary'))
-                }
-              }
-              .width('100%')
-              .justifyContent(FlexAlign.Center)
-              .padding({ top: 12, bottom: 20 })
             }
           }
+          .width('100%')
+          .layoutWeight(1)
+          .scrollBar(BarState.Off)
+          .onReachEnd(() => this.loadMore())
         }
-        .width('100%')
-        .layoutWeight(1)
-        .scrollBar(BarState.Off)
-        .onReachEnd(() => this.loadMore())
       }
+      .width('100%')
+      .layoutWeight(1)
+      .backgroundColor('#0f0f14')
+
+      Divider()
+        .strokeWidth(0.5)
+        .color(Color.White).opacity(0.1)
+
+      Row() {
+        TextInput({ placeholder: '写评论...', text: this.commentText })
+          .placeholderColor($r('app.color.text_secondary'))
+          .placeholderFont({ size: 14 })
+          .fontSize(14)
+          .fontColor(Color.White)
+          .backgroundColor('#1a1a24')
+          .borderRadius(20)
+          .height(40)
+          .layoutWeight(1)
+          .onChange((value: string) => { this.commentText = value; })
+
+        if (this.isPosting) {
+          LoadingProgress().width(24).height(24).margin({ left: 10 })
+        } else {
+          Button('发送')
+            .fontSize(13)
+            .fontColor(Color.White)
+            .backgroundColor($r('app.color.brand_accent'))
+            .borderRadius(20)
+            .height(40)
+            .padding({ left: 16, right: 16 })
+            .margin({ left: 10 })
+            .onClick(() => this.handlePost())
+        }
+      }
+      .width('100%')
+      .padding({ left: 16, right: 16, top: 8, bottom: 16 })
+      .backgroundColor('#0f0f14')
     }
     .width('100%')
     .height('100%')

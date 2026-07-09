@@ -1,5 +1,5 @@
 import http from '@ohos.net.http';
-import { CookieManager } from './CookieManager';
+import { PixivAuth } from './PixivAuth';
 import { ProxyService } from './ProxyService';
 import { ApiConfig } from '../common/constants/ApiConfig';
 import {
@@ -139,21 +139,29 @@ export class AppApiService {
     method: http.RequestMethod,
     path: string,
     data?: object,
+    isRetry: boolean = false,
   ): Promise<T> {
-    const cookie = await CookieManager.getFullCookie();
+    const auth = PixivAuth.getInstance();
+    const authHeader = auth.getAuthHeader();
+
+    if (!authHeader && !isRetry) {
+      throw new Error('未登录');
+    }
 
     return AppApiService.enqueue<T>(async () => {
       const httpRequest = http.createHttp();
       try {
         const url = `${AppApiService.baseUrl}${path}`;
         const header: Record<string, string> = {
-          'User-Agent': ApiConfig.USER_AGENT,
-          'Referer': ApiConfig.REFERER,
+          'User-Agent': ApiConfig.USER_AGENT_APP,
           'Accept': 'application/json',
           'Accept-Language': 'zh-CN,zh;q=0.9',
+          'App-OS': 'android',
+          'App-OS-Version': '11.0',
+          'App-Version': '5.0.234',
         };
-        if (cookie) {
-          header['Cookie'] = cookie;
+        if (authHeader) {
+          header['Authorization'] = authHeader;
         }
 
         const proxyConfig = await ProxyService.getRequestProxyConfig();
@@ -161,8 +169,8 @@ export class AppApiService {
         const options: http.HttpRequestOptions = {
           method,
           header,
-          connectTimeout: 3000,
-          readTimeout: 3000,
+          connectTimeout: 6000,
+          readTimeout: 6000,
           usingProxy: proxyConfig || false,
         };
 
@@ -173,12 +181,22 @@ export class AppApiService {
             .join('&');
         }
 
-        console.info(`AppApi: ${method} ${url}`);
         const response = await httpRequest.request(url, options);
 
         if (response.responseCode === 200) {
           return JSON.parse(response.result as string) as T;
         }
+
+        if (response.responseCode === 401 && !isRetry) {
+          console.info('AppApi: 收到 401，尝试刷新 Token...');
+          const refreshed = await auth.refreshAccessToken();
+          if (refreshed) {
+            console.info('AppApi: Token 刷新成功，重试请求');
+            return AppApiService.request<T>(method, path, data, true);
+          }
+          throw new Error('认证已过期，请重新登录');
+        }
+
         console.error(`AppApi 请求失败 [${method} ${path}]: HTTP ${response.responseCode}, body: ${response.result}`);
         throw new Error(`HTTP ${response.responseCode}`);
       } finally {

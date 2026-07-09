@@ -88,9 +88,9 @@ export default function appStateTest() {
         expect(typeof state.checkLoginStatus).assertEqual('function');
       });
 
-      it('应定义 verifyCookieWithUserId 方法', 0, () => {
+      it('应定义 verifyTokenValid 方法', 0, () => {
         const state = AppState.getInstance();
-        expect(typeof state.verifyCookieWithUserId).assertEqual('function');
+        expect(typeof state.verifyTokenValid).assertEqual('function');
       });
 
       it('应定义 cacheAvatar 方法', 0, () => {
