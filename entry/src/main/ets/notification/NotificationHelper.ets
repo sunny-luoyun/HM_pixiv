@@ -30,8 +30,8 @@ export class NotificationHelper {
         content: {
           notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT,
           normal: {
-            title: `插画更新 - ${authorName}`,
-            text: `发布了新插画《${workTitle}》`,
+            title: '关注的作者更新',
+            text: `${authorName} 发布了新插画《${workTitle}》`,
           },
         },
         groupName: ILLUST_GROUP,
@@ -52,8 +52,8 @@ export class NotificationHelper {
         content: {
           notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT,
           normal: {
-            title: `小说更新 - ${authorName}`,
-            text: `发布了新小说《${workTitle}》`,
+            title: '关注的作者更新',
+            text: `${authorName} 发布了新小说《${workTitle}》`,
           },
         },
         groupName: NOVEL_GROUP,
