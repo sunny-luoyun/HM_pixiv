@@ -32,7 +32,7 @@ const TAB_CONFIG: TabConfig[] = [
     iconSelected: new SymbolGlyphModifier($r('sys.symbol.clock_fill'))
       .renderingStrategy(SymbolRenderingStrategy.MULTIPLE_COLOR)
       .fontColor([$r('app.color.tab_selected')]),
-    label: '最新'
+    label: '关注'
   },
   {
     iconNormal: new SymbolGlyphModifier($r('sys.symbol.magnifyingglass'))
