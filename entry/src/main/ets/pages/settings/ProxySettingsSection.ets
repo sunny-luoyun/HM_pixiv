@@ -37,7 +37,6 @@ export struct ProxySettingsSection {
     this.nativeAvailable = ProxyService.isNativeAvailable();
     this.proxyAutoStart = AppStorage.get<boolean>('proxyAutoStart') ?? false;
     this.restoreProxyContent();
-    this.checkNativeRunning();
   }
 
   async restoreProxyContent(): Promise<void> {
