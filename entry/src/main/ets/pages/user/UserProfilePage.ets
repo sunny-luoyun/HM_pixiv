@@ -1,5 +1,6 @@
 
 import { curves } from '@kit.ArkUI';
+import promptAction from '@ohos.promptAction';
 import { AppApiService } from '../../services/AppApiService';
 import { PixivService } from '../../services/PixivService';
 import { IllustBookmark, NovelBookmark, BookmarkData, ProfileIllust, ProfileNovel } from '../../models/PixivModels';
@@ -95,6 +96,7 @@ struct UserProfilePage {
   @State userName: string = '';
   @State userAvatarUrl: string = '';
   @State userComment: string = '';
+  @State isFollowed: boolean = false;
   @State isLoadingProfile: boolean = true;
   @State profileError: string = '';
 
@@ -164,6 +166,7 @@ struct UserProfilePage {
         const urls = user['profile_image_urls'] as Record<string, string> || {};
         avatarUrl = urls['medium'] || '';
         this.userComment = String(user['comment'] || '');
+        this.isFollowed = Boolean(user['is_followed'] ?? false);
       }
     } catch (err) {
       console.error('加载作者资料失败:', err);
@@ -182,6 +185,41 @@ struct UserProfilePage {
       if (!this.isActive) return;
     }
     this.isLoadingProfile = false;
+  }
+
+  async handleFollow() {
+    try {
+      await AppApiService.followUser(Number(this.userId), 'public');
+      this.isFollowed = true;
+      promptAction.showToast({ message: '已关注' });
+    } catch (err) {
+      promptAction.showToast({ message: '关注失败: ' + String(err) });
+    }
+  }
+
+  handleUnfollow() {
+    AlertDialog.show({
+      title: '取消关注',
+      message: `确定要取消关注「${this.userName}」吗？\n取消后你将不再接收其最新更新的推送通知。`,
+      autoCancel: true,
+      primaryButton: {
+        value: '取消',
+        action: () => {}
+      },
+      secondaryButton: {
+        value: '取消关注',
+        fontColor: '#FF4D4F',
+        action: async () => {
+          try {
+            await AppApiService.unfollowUser(Number(this.userId));
+            this.isFollowed = false;
+            promptAction.showToast({ message: '已取消关注' });
+          } catch (err) {
+            promptAction.showToast({ message: '取消失败: ' + String(err) });
+          }
+        }
+      }
+    });
   }
 
   async loadIllusts() {
@@ -539,10 +577,29 @@ struct UserProfilePage {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         Blank()
       }
+      if (this.userId) {
+        Button(this.isFollowed ? '取消关注' : '关注')
+          .type(ButtonType.Normal)
+          .fontSize(13)
+          .height(30)
+          .padding({ left: 14, right: 14 })
+          .borderRadius(15)
+          .backgroundColor(this.isFollowed ? '#F0F0F0' : '#0096fa')
+          .fontColor(this.isFollowed ? '#333333' : Color.White)
+          .flexShrink(0)
+          .margin({ left: 8 })
+          .onClick(() => {
+            if (this.isFollowed) {
+              this.handleUnfollow();
+            } else {
+              this.handleFollow();
+            }
+          })
+      }
     }
     .width('100%')
     .height(52)
-    .padding({ left: 16, right: 16 })
+    .padding({ left: 16, right: 8 })
     .backgroundColor($r('app.color.glass_bg'))
   }
 

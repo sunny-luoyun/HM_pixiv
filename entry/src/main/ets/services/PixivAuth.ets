@@ -35,11 +35,17 @@ export class PixivAuth {
   private static readonly KEY_REFRESH_TOKEN = 'refresh_token';
   private static readonly KEY_USER_ID = 'oauth_user_id';
   private static readonly KEY_USER_NAME = 'oauth_user_name';
+  private static readonly KEY_EXPIRES_IN = 'oauth_expires_in';
+  private static readonly KEY_ISSUED_AT = 'oauth_issued_at';
+  private static readonly MIN_REFRESH_INTERVAL = 30 * 60 * 1000;
 
   private accessToken: string = '';
   private refreshToken: string = '';
   private userId: string = '';
   private userName: string = '';
+  private expiresIn: number = 0;
+  private tokenIssuedAt: number = 0;
+  private lastRefreshTime: number = 0;
   private refreshingPromise: Promise<boolean> | null = null;
 
   static getInstance(): PixivAuth {
@@ -61,6 +67,8 @@ export class PixivAuth {
       this.refreshToken = await pref.get(PixivAuth.KEY_REFRESH_TOKEN, '') as string;
       this.userId = await pref.get(PixivAuth.KEY_USER_ID, '') as string;
       this.userName = await pref.get(PixivAuth.KEY_USER_NAME, '') as string;
+      this.expiresIn = await pref.get(PixivAuth.KEY_EXPIRES_IN, 0) as number;
+      this.tokenIssuedAt = await pref.get(PixivAuth.KEY_ISSUED_AT, 0) as number;
       console.info(`PixivAuth: 加载 Token 完成, userId=${this.userId}`);
     } catch (err) {
       console.warn('PixivAuth: 加载 Token 失败', err);
@@ -75,6 +83,8 @@ export class PixivAuth {
       await pref.put(PixivAuth.KEY_REFRESH_TOKEN, this.refreshToken);
       await pref.put(PixivAuth.KEY_USER_ID, this.userId);
       await pref.put(PixivAuth.KEY_USER_NAME, this.userName);
+      await pref.put(PixivAuth.KEY_EXPIRES_IN, this.expiresIn);
+      await pref.put(PixivAuth.KEY_ISSUED_AT, this.tokenIssuedAt);
       await pref.flush();
       console.info('PixivAuth: Token 已保存');
     } catch (err) {
@@ -87,6 +97,9 @@ export class PixivAuth {
     this.refreshToken = '';
     this.userId = '';
     this.userName = '';
+    this.expiresIn = 0;
+    this.tokenIssuedAt = 0;
+    this.lastRefreshTime = 0;
     if (!PixivAuth.context) return;
     try {
       const pref = await preferences.getPreferences(PixivAuth.context, PixivAuth.PREF_NAME);
@@ -123,6 +136,13 @@ export class PixivAuth {
   getAuthHeader(): string {
     if (!this.accessToken) return '';
     return `Bearer ${this.accessToken}`;
+  }
+
+  isTokenExpired(): boolean {
+    if (!this.accessToken) return true;
+    if (this.tokenIssuedAt <= 0 || this.expiresIn <= 0) return false;
+    const elapsed = Date.now() - this.tokenIssuedAt;
+    return elapsed >= this.expiresIn * 1000;
   }
 
   async loginWithAuthCode(code: string, codeVerifier: string): Promise<void> {
@@ -181,6 +201,13 @@ export class PixivAuth {
       console.info('PixivAuth: Token 刷新进行中，等待...');
       return this.refreshingPromise;
     }
+    if (!this.isTokenExpired()) {
+      const cooldownRemaining = PixivAuth.MIN_REFRESH_INTERVAL - (Date.now() - this.lastRefreshTime);
+      if (cooldownRemaining > 0) {
+        console.info(`PixivAuth: Token 仍有效，跳过刷新 (冷却剩余 ${Math.round(cooldownRemaining / 1000)}s)`);
+        return true;
+      }
+    }
     this.refreshingPromise = this.doRefresh();
     try {
       const result = await this.refreshingPromise;
@@ -236,6 +263,9 @@ interface OAuthTokenApiResponse {
   private async handleTokenResponse(resp: OAuthTokenResponse): Promise<void> {
     this.accessToken = resp.access_token;
     this.refreshToken = resp.refresh_token;
+    this.expiresIn = resp.expires_in || 3600;
+    this.tokenIssuedAt = Date.now();
+    this.lastRefreshTime = Date.now();
     if (resp.user) {
       this.userId = String(resp.user.id);
       this.userName = resp.user.name;

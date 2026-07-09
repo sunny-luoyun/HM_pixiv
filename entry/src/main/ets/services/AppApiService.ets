@@ -187,14 +187,20 @@ export class AppApiService {
           return JSON.parse(response.result as string) as T;
         }
 
-        if (response.responseCode === 401 && !isRetry) {
-          console.info('AppApi: 收到 401，尝试刷新 Token...');
-          const refreshed = await auth.refreshAccessToken();
-          if (refreshed) {
-            console.info('AppApi: Token 刷新成功，重试请求');
-            return AppApiService.request<T>(method, path, data, true);
+        if (!isRetry) {
+          const bodyStr = response.result as string || '';
+          const shouldRefresh = response.responseCode === 401 ||
+            (response.responseCode === 400 && bodyStr.includes('invalid_grant'));
+
+          if (shouldRefresh) {
+            console.info('AppApi: Token 可能已过期，尝试刷新...');
+            const refreshed = await auth.refreshAccessToken();
+            if (refreshed) {
+              console.info('AppApi: Token 刷新成功，重试请求');
+              return AppApiService.request<T>(method, path, data, true);
+            }
+            throw new Error('认证已过期，请重新登录');
           }
-          throw new Error('认证已过期，请重新登录');
         }
 
         console.error(`AppApi 请求失败 [${method} ${path}]: HTTP ${response.responseCode}, body: ${response.result}`);

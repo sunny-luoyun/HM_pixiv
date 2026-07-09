@@ -41,7 +41,7 @@ export class AppState {
           this.avatarUrl = savedAvatarUrl;
         }
 
-        if (!skipVerify) {
+        if (!skipVerify && auth.isTokenExpired()) {
           try {
             const refreshed = await auth.refreshAccessToken();
             if (refreshed) {
@@ -50,16 +50,6 @@ export class AppState {
             }
           } catch (refreshErr) {
             console.warn('Token 自动刷新失败:', refreshErr);
-          }
-
-          try {
-            let isValid = await this.verifyTokenValid();
-            if (!isValid) {
-              console.warn('认证验证失败，自动登出');
-              await this.logout();
-            }
-          } catch (networkErr) {
-            console.error('网络异常，认证验证跳过，保持登录状态:', networkErr);
           }
         }
       } else {
