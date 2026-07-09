@@ -9,11 +9,11 @@ export default function indexPageTest() {
         expect(tabCount).assertEqual(4);
       });
 
-      it('Tab 标签为发现/最新/搜索/我的', 0, () => {
-        const labels = ['发现', '最新', '搜索', '我的'];
+      it('Tab 标签为发现/关注/搜索/我的', 0, () => {
+        const labels = ['发现', '关注', '搜索', '我的'];
         expect(labels.length).assertEqual(4);
         expect(labels[0]).assertEqual('发现');
-        expect(labels[1]).assertEqual('最新');
+        expect(labels[1]).assertEqual('关注');
         expect(labels[2]).assertEqual('搜索');
         expect(labels[3]).assertEqual('我的');
       });
