@@ -12,6 +12,8 @@ import inputMethod from '@ohos.inputMethod';
 import preferences from '@ohos.data.preferences';
 import common from '@ohos.app.ability.common';
 
+const PRELOAD_THRESHOLD = 1500;
+
 @Component
 export struct SearchPage {
   @StorageLink('currentBreakpoint') currentBp: string = 'sm';
@@ -43,6 +45,11 @@ export struct SearchPage {
   @State isLoadingNovel: boolean = false;
   @State isLoadingMoreNovel: boolean = false;
   @State novelError: string = '';
+
+  // 预加载
+  private scrollContainerHeight: number = 0;
+  private scrollContentHeight: number = 0;
+  private lastPreloadY: number = -1;
 
   // user
   private userSource: BasicDataSource<UserSearchResult> = new BasicDataSource();
@@ -156,7 +163,7 @@ export struct SearchPage {
         if (reset) {
           this.illustSource.reset(works);
         } else {
-          this.illustSource.push(...works);
+          this.illustSource.batchPush(...works);
         }
         const total = res.body?.illust?.total ?? 0;
         this.illustPage = page;
@@ -194,7 +201,7 @@ export struct SearchPage {
         if (reset) {
           this.novelSource.reset(filtered);
         } else {
-          this.novelSource.push(...filtered);
+          this.novelSource.batchPush(...filtered);
         }
         const total = res.body?.novel?.total ?? 0;
         this.novelPage = page;
@@ -231,7 +238,7 @@ export struct SearchPage {
         if (reset) {
           this.userSource.reset(users);
         } else {
-          this.userSource.push(...users);
+          this.userSource.batchPush(...users);
         }
         const total = res.body?.page?.total ?? 0;
         this.userPage = page;
@@ -271,6 +278,12 @@ export struct SearchPage {
     this.isLoadingMoreIllust = true;
     this.lastLoadMoreTime = Date.now();
     await this.searchIllusts(this.illustPage + 1, false);
+    if (this.scrollContentHeight > 0 && this.illustPage < this.illustPages) {
+      const remaining = this.scrollContentHeight - this.scrollContainerHeight - Math.max(this.lastPreloadY, 0);
+      if (remaining < PRELOAD_THRESHOLD) {
+        this.loadMoreIllusts();
+      }
+    }
   }
 
   async loadMoreNovels() {
@@ -278,6 +291,12 @@ export struct SearchPage {
     this.isLoadingMoreNovel = true;
     this.lastLoadMoreTime = Date.now();
     await this.searchNovels(this.novelPage + 1, false);
+    if (this.scrollContentHeight > 0 && this.novelPage < this.novelPages) {
+      const remaining = this.scrollContentHeight - this.scrollContainerHeight - Math.max(this.lastPreloadY, 0);
+      if (remaining < PRELOAD_THRESHOLD) {
+        this.loadMoreNovels();
+      }
+    }
   }
 
   async loadMoreUsers() {
@@ -285,6 +304,12 @@ export struct SearchPage {
     this.isLoadingMoreUser = true;
     this.lastLoadMoreTime = Date.now();
     await this.searchUsers(this.userPage + 1, false);
+    if (this.scrollContentHeight > 0 && this.userPage < this.userPages) {
+      const remaining = this.scrollContentHeight - this.scrollContainerHeight - Math.max(this.lastPreloadY, 0);
+      if (remaining < PRELOAD_THRESHOLD) {
+        this.loadMoreUsers();
+      }
+    }
   }
 
   handleTabChange(index: number) {
@@ -731,6 +756,9 @@ export struct SearchPage {
         }
         .width('100%')
         .padding({ bottom: 120 })
+        .onAreaChange((_old: Area, area: Area) => {
+          this.scrollContentHeight = area.height as number;
+        })
       }
       .width('100%')
       .edgeEffect(EdgeEffect.Spring)
@@ -742,6 +770,16 @@ export struct SearchPage {
       })
       .onScroll((_xOffset: number, yOffset: number) => {
         this.handleHeaderScroll(yOffset);
+        if (this.scrollContentHeight > 0) {
+          const remaining = this.scrollContentHeight - this.scrollContainerHeight - yOffset;
+          if (yOffset > this.lastPreloadY && remaining < PRELOAD_THRESHOLD && this.illustPage < this.illustPages && !this.isLoadingMoreIllust) {
+            this.loadMoreIllusts();
+          }
+        }
+        this.lastPreloadY = yOffset;
+      })
+      .onAreaChange((_old: Area, area: Area) => {
+        this.scrollContainerHeight = area.height as number;
       })
     }
   }
@@ -789,6 +827,9 @@ export struct SearchPage {
         }
         .width('100%')
         .padding({ bottom: 120 })
+        .onAreaChange((_old: Area, area: Area) => {
+          this.scrollContentHeight = area.height as number;
+        })
       }
       .width('100%')
       .edgeEffect(EdgeEffect.Spring)
@@ -800,6 +841,16 @@ export struct SearchPage {
       })
       .onScroll((_xOffset: number, yOffset: number) => {
         this.handleHeaderScroll(yOffset);
+        if (this.scrollContentHeight > 0) {
+          const remaining = this.scrollContentHeight - this.scrollContainerHeight - yOffset;
+          if (yOffset > this.lastPreloadY && remaining < PRELOAD_THRESHOLD && this.novelPage < this.novelPages && !this.isLoadingMoreNovel) {
+            this.loadMoreNovels();
+          }
+        }
+        this.lastPreloadY = yOffset;
+      })
+      .onAreaChange((_old: Area, area: Area) => {
+        this.scrollContainerHeight = area.height as number;
       })
     }
   }
@@ -847,6 +898,9 @@ export struct SearchPage {
         }
         .width('100%')
         .padding({ bottom: 120 })
+        .onAreaChange((_old: Area, area: Area) => {
+          this.scrollContentHeight = area.height as number;
+        })
       }
       .width('100%')
       .edgeEffect(EdgeEffect.Spring)
@@ -858,6 +912,16 @@ export struct SearchPage {
       })
       .onScroll((_xOffset: number, yOffset: number) => {
         this.handleHeaderScroll(yOffset);
+        if (this.scrollContentHeight > 0) {
+          const remaining = this.scrollContentHeight - this.scrollContainerHeight - yOffset;
+          if (yOffset > this.lastPreloadY && remaining < PRELOAD_THRESHOLD && this.userPage < this.userPages && !this.isLoadingMoreUser) {
+            this.loadMoreUsers();
+          }
+        }
+        this.lastPreloadY = yOffset;
+      })
+      .onAreaChange((_old: Area, area: Area) => {
+        this.scrollContainerHeight = area.height as number;
       })
     }
   }

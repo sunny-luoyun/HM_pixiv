@@ -12,6 +12,8 @@ import { BasicDataSource } from '../../common/utils/BasicDataSource';
 import { getColumnsTemplate, getNovelColumnsTemplate } from '../../common/utils/BreakpointManager';
 import common from '@ohos.app.ability.common';
 
+const PRELOAD_THRESHOLD = 1500;
+
 @Component
 export struct LatestPage {
   @StorageLink('isLoggedIn') @Watch('onLoginStateChange') isLoggedIn: boolean = false;
@@ -41,6 +43,16 @@ export struct LatestPage {
   @State novelPages: number = 0;
   @State isLoadingMoreNovel: boolean = false;
 
+  // 预加载
+  private scrollContainerHeight: number = 0;
+  private scrollContentHeight: number = 0;
+  private lastPreloadY: number = -1;
+
+  // 屏蔽列表缓存
+  private blockedAuthorIds: Set<string> = new Set();
+  private blockedSeriesIds: Set<string> = new Set();
+  private blockedSeriesTitleSet: Set<string> = new Set();
+
   @StorageLink('appForegroundTick') @Watch('onAppForeground') appForegroundTick: number = 0;
 
   // 前台轮询
@@ -53,6 +65,7 @@ export struct LatestPage {
       return;
     }
     await this.loadIllusts();
+    await this.loadBlockedLists();
     await this.onAppForeground();
     this.startPolling();
   }
@@ -139,7 +152,14 @@ export struct LatestPage {
       const res = await PixivService.getFollowLatestIllusts(nextPage, 'all');
       if (!res.error) {
         const newWorks = res.body?.thumbnails?.illust ?? [];
-        this.illustSource.push(...newWorks);
+        // 后台预下载缩略图
+        for (const work of newWorks) {
+          const url = work.url;
+          if (url) {
+            PixivService.cacheImage(url, `illust_${work.id}.jpg`).catch(() => {});
+          }
+        }
+        this.illustSource.batchPush(...newWorks);
         this.illustPage = res.body?.page ?? nextPage;
         this.illustPages = res.body?.pages ?? this.illustPages;
       }
@@ -147,31 +167,33 @@ export struct LatestPage {
       console.error('加载更多插画失败:', err);
     }
     this.isLoadingMoreIllust = false;
+    if (this.scrollContentHeight > 0 && this.illustPage < this.illustPages) {
+      const remaining = this.scrollContentHeight - this.scrollContainerHeight - Math.max(this.lastPreloadY, 0);
+      if (remaining < PRELOAD_THRESHOLD) {
+        this.loadMoreIllusts();
+      }
+    }
   }
 
-  async filterBlockedNovels(works: NovelBookmark[]): Promise<NovelBookmark[]> {
+  async loadBlockedLists(): Promise<void> {
     try {
       const ctx = getContext(this) as common.UIAbilityContext;
       await pixivCacheDB.init(ctx);
-      const blockedIds = await Promise.all([
-        pixivCacheDB.getAllBlockedAuthorIds(),
-        pixivCacheDB.getAllBlockedSeriesIds(),
-        pixivCacheDB.getAllBlockedSeriesTitleSet()
-      ]);
-      const blockedAuthorIds = blockedIds[0];
-      const blockedSeriesIds = blockedIds[1];
-      const blockedSeriesTitleSet = blockedIds[2] as Set<string>;
-      return works.filter(n => {
-        if (blockedAuthorIds.has(n.userId)) return false;
-        const sid = n.series?.id ?? n.seriesId;
-        if (sid && blockedSeriesIds.has(String(sid))) return false;
-        const seriesTitle = n.seriesTitle || n.series?.title || '';
-        if (seriesTitle && blockedSeriesTitleSet.has(seriesTitle.toLowerCase())) return false;
-        return true;
-      });
-    } catch (_) {
-      return works;
-    }
+      this.blockedAuthorIds = await pixivCacheDB.getAllBlockedAuthorIds();
+      this.blockedSeriesIds = await pixivCacheDB.getAllBlockedSeriesIds();
+      this.blockedSeriesTitleSet = await pixivCacheDB.getAllBlockedSeriesTitleSet() as Set<string>;
+    } catch (_) {}
+  }
+
+  private filterBlockedNovelsCached(works: NovelBookmark[]): NovelBookmark[] {
+    return works.filter(n => {
+      if (this.blockedAuthorIds.has(n.userId)) return false;
+      const sid = n.series?.id ?? n.seriesId;
+      if (sid && this.blockedSeriesIds.has(String(sid))) return false;
+      const seriesTitle = n.seriesTitle || n.series?.title || '';
+      if (seriesTitle && this.blockedSeriesTitleSet.has(seriesTitle.toLowerCase())) return false;
+      return true;
+    });
   }
 
   async loadNovels() {
@@ -186,7 +208,7 @@ export struct LatestPage {
       const res = await PixivService.getFollowLatestNovels(1, 'all');
       if (!res.error) {
         const rawWorks = res.body?.thumbnails?.novel ?? [];
-        this.novelSource.reset(await this.filterBlockedNovels(rawWorks));
+        this.novelSource.reset(this.filterBlockedNovelsCached(rawWorks));
         this.novelPage = res.body?.page ?? 1;
         this.novelPages = res.body?.pages ?? 1;
       } else {
@@ -209,8 +231,8 @@ export struct LatestPage {
       const res = await PixivService.getFollowLatestNovels(nextPage, 'all');
       if (!res.error) {
         const rawNew = res.body?.thumbnails?.novel ?? [];
-        const filteredNew = await this.filterBlockedNovels(rawNew);
-        this.novelSource.push(...filteredNew);
+        const filteredNew = this.filterBlockedNovelsCached(rawNew);
+        this.novelSource.batchPush(...filteredNew);
         this.novelPage = res.body?.page ?? nextPage;
         this.novelPages = res.body?.pages ?? this.novelPages;
       }
@@ -218,6 +240,12 @@ export struct LatestPage {
       console.error('加载更多小说失败:', err);
     }
     this.isLoadingMoreNovel = false;
+    if (this.scrollContentHeight > 0 && this.novelPage < this.novelPages) {
+      const remaining = this.scrollContentHeight - this.scrollContainerHeight - Math.max(this.lastPreloadY, 0);
+      if (remaining < PRELOAD_THRESHOLD) {
+        this.loadMoreNovels();
+      }
+    }
   }
 
   handleHeaderScroll(yOffset: number) {
@@ -352,6 +380,9 @@ export struct LatestPage {
               }
               .width('100%')
               .padding({ bottom: 120 })
+              .onAreaChange((_old: Area, area: Area) => {
+                this.scrollContentHeight = area.height as number;
+              })
             }
             .width('100%')
             .edgeEffect(EdgeEffect.Spring)
@@ -363,6 +394,16 @@ export struct LatestPage {
             })
             .onScroll((_xOffset: number, yOffset: number) => {
               this.handleHeaderScroll(yOffset);
+              if (this.scrollContentHeight > 0) {
+                const remaining = this.scrollContentHeight - this.scrollContainerHeight - yOffset;
+                if (yOffset > this.lastPreloadY && remaining < PRELOAD_THRESHOLD && this.illustPage < this.illustPages && !this.isLoadingMoreIllust) {
+                  this.loadMoreIllusts();
+                }
+              }
+              this.lastPreloadY = yOffset;
+            })
+            .onAreaChange((_old: Area, area: Area) => {
+              this.scrollContainerHeight = area.height as number;
             })
             }
           }
@@ -413,6 +454,9 @@ export struct LatestPage {
               }
               .width('100%')
               .padding({ bottom: 120 })
+              .onAreaChange((_old: Area, area: Area) => {
+                this.scrollContentHeight = area.height as number;
+              })
             }
             .width('100%')
             .edgeEffect(EdgeEffect.Spring)
@@ -424,6 +468,16 @@ export struct LatestPage {
             })
             .onScroll((_xOffset: number, yOffset: number) => {
               this.handleHeaderScroll(yOffset);
+              if (this.scrollContentHeight > 0) {
+                const remaining = this.scrollContentHeight - this.scrollContainerHeight - yOffset;
+                if (yOffset > this.lastPreloadY && remaining < PRELOAD_THRESHOLD && this.novelPage < this.novelPages && !this.isLoadingMoreNovel) {
+                  this.loadMoreNovels();
+                }
+              }
+              this.lastPreloadY = yOffset;
+            })
+            .onAreaChange((_old: Area, area: Area) => {
+              this.scrollContainerHeight = area.height as number;
             })
             }
           }

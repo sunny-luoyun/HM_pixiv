@@ -12,6 +12,7 @@ import { getColumnsTemplate, getNovelColumnsTemplate } from '../../common/utils/
 import { PageContext } from '../../common/utils/PageContext';
 
 const PAGE_SIZE = 30;
+const PRELOAD_THRESHOLD = 1500;
 
 function mapProfileIllustToBookmark(item: ProfileIllust, defaultName: string = ''): IllustBookmark {
   return {
@@ -141,6 +142,11 @@ struct UserProfilePage {
   @State isLoadingBookmarkNovel: boolean = false;
   @State isLoadingMoreBookmarkNovel: boolean = false;
   @State bookmarkNovelError: string = '';
+
+  // 预加载
+  private scrollContainerHeight: number = 0;
+  private scrollContentHeight: number = 0;
+  private lastPreloadY: number = -1;
 
   private isActive: boolean = true;
 
@@ -303,7 +309,7 @@ struct UserProfilePage {
             works.push(mapProfileIllustToBookmark(work, this.userName));
           }
         }
-        this.illustSource.push(...works);
+        this.illustSource.batchPush(...works);
         this.illustOffset += works.length;
         this.illustPage++;
         this.hasMoreIllust = start + PAGE_SIZE < this.allIllustIds.length;
@@ -313,6 +319,12 @@ struct UserProfilePage {
       console.error('加载更多作者插画失败:', err);
     }
     this.isLoadingMoreIllust = false;
+    if (this.scrollContentHeight > 0 && this.hasMoreIllust) {
+      const remaining = this.scrollContentHeight - this.scrollContainerHeight - Math.max(this.lastPreloadY, 0);
+      if (remaining < PRELOAD_THRESHOLD) {
+        this.loadMoreIllusts();
+      }
+    }
   }
 
   async loadNovels() {
@@ -388,7 +400,7 @@ struct UserProfilePage {
             works.push(mapProfileNovelToBookmark(work, this.userName));
           }
         }
-        this.novelSource.push(...works);
+        this.novelSource.batchPush(...works);
         this.novelOffset += works.length;
         this.novelPage++;
         this.hasMoreNovel = start + PAGE_SIZE < this.allNovelIds.length;
@@ -398,6 +410,12 @@ struct UserProfilePage {
       console.error('加载更多作者小说失败:', err);
     }
     this.isLoadingMoreNovel = false;
+    if (this.scrollContentHeight > 0 && this.hasMoreNovel) {
+      const remaining = this.scrollContentHeight - this.scrollContainerHeight - Math.max(this.lastPreloadY, 0);
+      if (remaining < PRELOAD_THRESHOLD) {
+        this.loadMoreNovels();
+      }
+    }
   }
 
   async loadBookmarkIllusts() {
@@ -433,7 +451,7 @@ struct UserProfilePage {
       const res = await PixivService.getIllustBookmarks(this.userId, this.bookmarkIllustOffset, PAGE_SIZE, '', 'show');
       if (!this.isActive) return;
       if (!res.error) {
-        this.bookmarkIllustSource.push(...res.body.works);
+        this.bookmarkIllustSource.batchPush(...res.body.works);
         this.bookmarkIllustOffset += res.body.works.length;
         if (this.bookmarkIllustOffset >= res.body.total) {
           this.hasMoreBookmarkIllust = false;
@@ -444,6 +462,12 @@ struct UserProfilePage {
       console.error('加载更多作者收藏插画失败:', err);
     }
     this.isLoadingMoreBookmarkIllust = false;
+    if (this.scrollContentHeight > 0 && this.hasMoreBookmarkIllust) {
+      const remaining = this.scrollContentHeight - this.scrollContainerHeight - Math.max(this.lastPreloadY, 0);
+      if (remaining < PRELOAD_THRESHOLD) {
+        this.loadMoreBookmarkIllusts();
+      }
+    }
   }
 
   async loadBookmarkNovels() {
@@ -479,7 +503,7 @@ struct UserProfilePage {
       const res = await PixivService.getNovelBookmarks(this.userId, this.bookmarkNovelOffset, PAGE_SIZE, '', 'show');
       if (!this.isActive) return;
       if (!res.error) {
-        this.bookmarkNovelSource.push(...res.body.works);
+        this.bookmarkNovelSource.batchPush(...res.body.works);
         this.bookmarkNovelOffset += res.body.works.length;
         if (this.bookmarkNovelOffset >= res.body.total) {
           this.hasMoreBookmarkNovel = false;
@@ -490,6 +514,12 @@ struct UserProfilePage {
       console.error('加载更多作者收藏小说失败:', err);
     }
     this.isLoadingMoreBookmarkNovel = false;
+    if (this.scrollContentHeight > 0 && this.hasMoreBookmarkNovel) {
+      const remaining = this.scrollContentHeight - this.scrollContainerHeight - Math.max(this.lastPreloadY, 0);
+      if (remaining < PRELOAD_THRESHOLD) {
+        this.loadMoreBookmarkNovels();
+      }
+    }
   }
 
   handleTabChange(index: number) {
@@ -795,6 +825,9 @@ struct UserProfilePage {
         }
         .width('100%')
         .padding({ bottom: 120 })
+        .onAreaChange((_old: Area, area: Area) => {
+          this.scrollContentHeight = area.height as number;
+        })
       }
       .width('100%')
       .edgeEffect(EdgeEffect.Spring)
@@ -806,6 +839,16 @@ struct UserProfilePage {
       })
       .onScroll((_xOffset: number, yOffset: number) => {
         this.handleHeaderScroll(yOffset);
+        if (this.scrollContentHeight > 0) {
+          const remaining = this.scrollContentHeight - this.scrollContainerHeight - yOffset;
+          if (yOffset > this.lastPreloadY && remaining < PRELOAD_THRESHOLD && this.hasMoreIllust && !this.isLoadingMoreIllust) {
+            this.loadMoreIllusts();
+          }
+        }
+        this.lastPreloadY = yOffset;
+      })
+      .onAreaChange((_old: Area, area: Area) => {
+        this.scrollContainerHeight = area.height as number;
       })
     }
   }
@@ -847,6 +890,9 @@ struct UserProfilePage {
         }
         .width('100%')
         .padding({ left: 12, right: 12, top: 12, bottom: 120 })
+        .onAreaChange((_old: Area, area: Area) => {
+          this.scrollContentHeight = area.height as number;
+        })
       }
       .width('100%')
       .edgeEffect(EdgeEffect.Spring)
@@ -858,6 +904,16 @@ struct UserProfilePage {
       })
       .onScroll((_xOffset: number, yOffset: number) => {
         this.handleHeaderScroll(yOffset);
+        if (this.scrollContentHeight > 0) {
+          const remaining = this.scrollContentHeight - this.scrollContainerHeight - yOffset;
+          if (yOffset > this.lastPreloadY && remaining < PRELOAD_THRESHOLD && this.hasMoreNovel && !this.isLoadingMoreNovel) {
+            this.loadMoreNovels();
+          }
+        }
+        this.lastPreloadY = yOffset;
+      })
+      .onAreaChange((_old: Area, area: Area) => {
+        this.scrollContainerHeight = area.height as number;
       })
     }
   }
@@ -900,6 +956,9 @@ struct UserProfilePage {
         }
         .width('100%')
         .padding({ bottom: 120 })
+        .onAreaChange((_old: Area, area: Area) => {
+          this.scrollContentHeight = area.height as number;
+        })
       }
       .width('100%')
       .edgeEffect(EdgeEffect.Spring)
@@ -911,6 +970,16 @@ struct UserProfilePage {
       })
       .onScroll((_xOffset: number, yOffset: number) => {
         this.handleHeaderScroll(yOffset);
+        if (this.scrollContentHeight > 0) {
+          const remaining = this.scrollContentHeight - this.scrollContainerHeight - yOffset;
+          if (yOffset > this.lastPreloadY && remaining < PRELOAD_THRESHOLD && this.hasMoreBookmarkIllust && !this.isLoadingMoreBookmarkIllust) {
+            this.loadMoreBookmarkIllusts();
+          }
+        }
+        this.lastPreloadY = yOffset;
+      })
+      .onAreaChange((_old: Area, area: Area) => {
+        this.scrollContainerHeight = area.height as number;
       })
     }
   }
@@ -952,6 +1021,9 @@ struct UserProfilePage {
         }
         .width('100%')
         .padding({ left: 12, right: 12, top: 12, bottom: 120 })
+        .onAreaChange((_old: Area, area: Area) => {
+          this.scrollContentHeight = area.height as number;
+        })
       }
       .width('100%')
       .edgeEffect(EdgeEffect.Spring)
@@ -963,6 +1035,16 @@ struct UserProfilePage {
       })
       .onScroll((_xOffset: number, yOffset: number) => {
         this.handleHeaderScroll(yOffset);
+        if (this.scrollContentHeight > 0) {
+          const remaining = this.scrollContentHeight - this.scrollContainerHeight - yOffset;
+          if (yOffset > this.lastPreloadY && remaining < PRELOAD_THRESHOLD && this.hasMoreBookmarkNovel && !this.isLoadingMoreBookmarkNovel) {
+            this.loadMoreBookmarkNovels();
+          }
+        }
+        this.lastPreloadY = yOffset;
+      })
+      .onAreaChange((_old: Area, area: Area) => {
+        this.scrollContainerHeight = area.height as number;
       })
     }
   }

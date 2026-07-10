@@ -10,6 +10,7 @@ import { appState } from '../../store/AppState';
 import { PageContext } from '../../common/utils/PageContext';
 
 const PAGE_SIZE = 30;
+const PRELOAD_THRESHOLD = 1500;
 
 @Component
 struct FavoritesPage {
@@ -37,6 +38,11 @@ struct FavoritesPage {
   @State hasMoreNovel: boolean = true;
   @State illustOffset: number = 0;
   @State novelOffset: number = 0;
+
+  // 预加载
+  private scrollContainerHeight: number = 0;
+  private scrollContentHeight: number = 0;
+  private lastPreloadY: number = -1;
 
   aboutToDisappear() {
     this.isActive = false;
@@ -83,7 +89,7 @@ struct FavoritesPage {
       const res = await PixivService.getIllustBookmarks(appState.userId, this.illustOffset, PAGE_SIZE);
       if (!this.isActive) return;
       if (!res.error) {
-        this.illustSource.push(...res.body.works);
+        this.illustSource.batchPush(...res.body.works);
         this.illustOffset += res.body.works.length;
         if (this.illustOffset >= res.body.total) {
           this.hasMoreIllust = false;
@@ -94,6 +100,12 @@ struct FavoritesPage {
       console.error('加载更多收藏插画失败:', err);
     }
     this.isLoadingMoreIllust = false;
+    if (this.scrollContentHeight > 0 && this.hasMoreIllust) {
+      const remaining = this.scrollContentHeight - this.scrollContainerHeight - Math.max(this.lastPreloadY, 0);
+      if (remaining < PRELOAD_THRESHOLD) {
+        this.loadMoreIllusts();
+      }
+    }
   }
 
   async loadNovels() {
@@ -129,7 +141,7 @@ struct FavoritesPage {
       const res = await PixivService.getNovelBookmarks(appState.userId, this.novelOffset, PAGE_SIZE);
       if (!this.isActive) return;
       if (!res.error) {
-        this.novelSource.push(...res.body.works);
+        this.novelSource.batchPush(...res.body.works);
         this.novelOffset += res.body.works.length;
         if (this.novelOffset >= res.body.total) {
           this.hasMoreNovel = false;
@@ -140,6 +152,12 @@ struct FavoritesPage {
       console.error('加载更多收藏小说失败:', err);
     }
     this.isLoadingMoreNovel = false;
+    if (this.scrollContentHeight > 0 && this.hasMoreNovel) {
+      const remaining = this.scrollContentHeight - this.scrollContainerHeight - Math.max(this.lastPreloadY, 0);
+      if (remaining < PRELOAD_THRESHOLD) {
+        this.loadMoreNovels();
+      }
+    }
   }
 
   pageTransition() {
@@ -304,6 +322,9 @@ struct FavoritesPage {
               }
               .width('100%')
               .padding({ bottom: 120 })
+              .onAreaChange((_old: Area, area: Area) => {
+                this.scrollContentHeight = area.height as number;
+              })
             }
             .width('100%')
             .edgeEffect(EdgeEffect.Spring)
@@ -315,6 +336,16 @@ struct FavoritesPage {
             })
             .onScroll((_xOffset: number, yOffset: number) => {
               this.handleHeaderScroll(yOffset);
+              if (this.scrollContentHeight > 0) {
+                const remaining = this.scrollContentHeight - this.scrollContainerHeight - yOffset;
+                if (yOffset > this.lastPreloadY && remaining < PRELOAD_THRESHOLD && this.hasMoreIllust && !this.isLoadingMoreIllust) {
+                  this.loadMoreIllusts();
+                }
+              }
+              this.lastPreloadY = yOffset;
+            })
+            .onAreaChange((_old: Area, area: Area) => {
+              this.scrollContainerHeight = area.height as number;
             })
           }
         }
@@ -362,6 +393,9 @@ struct FavoritesPage {
               }
               .width('100%')
               .padding({ bottom: 120 })
+              .onAreaChange((_old: Area, area: Area) => {
+                this.scrollContentHeight = area.height as number;
+              })
             }
             .width('100%')
             .edgeEffect(EdgeEffect.Spring)
@@ -373,6 +407,16 @@ struct FavoritesPage {
             })
             .onScroll((_xOffset: number, yOffset: number) => {
               this.handleHeaderScroll(yOffset);
+              if (this.scrollContentHeight > 0) {
+                const remaining = this.scrollContentHeight - this.scrollContainerHeight - yOffset;
+                if (yOffset > this.lastPreloadY && remaining < PRELOAD_THRESHOLD && this.hasMoreNovel && !this.isLoadingMoreNovel) {
+                  this.loadMoreNovels();
+                }
+              }
+              this.lastPreloadY = yOffset;
+            })
+            .onAreaChange((_old: Area, area: Area) => {
+              this.scrollContainerHeight = area.height as number;
             })
           }
         }

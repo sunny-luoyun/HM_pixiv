@@ -12,6 +12,7 @@ import common from '@ohos.app.ability.common';
 
 const PAGE_SIZE = 30;
 const MAX_EMPTY_RETRIES = 3;
+const PRELOAD_THRESHOLD = 1500;
 
 
 
@@ -46,12 +47,23 @@ export struct HomePage {
   private illustRetryTimer: number | null = null;
   private illustRetryCount: number = 0;
 
+  // 预加载
+  private scrollContainerHeight: number = 0;
+  private scrollContentHeight: number = 0;
+  private lastPreloadY: number = -1;
+
+  // 屏蔽列表缓存
+  private blockedAuthorIds: Set<string> = new Set();
+  private blockedSeriesIds: Set<string> = new Set();
+  private blockedSeriesTitleSet: Set<string> = new Set();
+
   async aboutToAppear() {
     if (!this.isLoggedIn) {
       this.isLoadingIllust = false;
       return;
     }
     await this.loadIllusts(true);
+    await this.loadBlockedLists();
   }
 
   onLoginStateChange() {
@@ -117,6 +129,13 @@ export struct HomePage {
       const res = await PixivService.getDiscoveryIllusts('all', PAGE_SIZE);
       if (!res.error) {
         const newWorks = res.body?.thumbnails?.illust ?? [];
+        // 后台预下载缩略图
+        for (const work of newWorks) {
+          const url = work.url;
+          if (url) {
+            PixivService.cacheImage(url, `illust_${work.id}.jpg`).catch(() => {});
+          }
+        }
         const existingIds = new Set(this.illustSource.getDataArray().map(w => w.id));
         const uniqueNew = newWorks.filter(w => !existingIds.has(w.id));
 
@@ -127,38 +146,40 @@ export struct HomePage {
           }
         } else {
           this.illustEmptyRetries = 0;
-          this.illustSource.push(...uniqueNew);
+          this.illustSource.batchPush(...uniqueNew);
         }
       }
     } catch (err) {
       console.error('加载更多插画失败:', err);
     }
     this.isLoadingMoreIllust = false;
+    if (this.scrollContentHeight > 0 && this.hasMoreIllust) {
+      const remaining = this.scrollContentHeight - this.scrollContainerHeight - Math.max(this.lastPreloadY, 0);
+      if (remaining < PRELOAD_THRESHOLD) {
+        this.loadMoreIllusts();
+      }
+    }
   }
 
-  async filterBlockedNovels(works: NovelBookmark[]): Promise<NovelBookmark[]> {
+  async loadBlockedLists(): Promise<void> {
     try {
       const ctx = getContext(this) as common.UIAbilityContext;
       await pixivCacheDB.init(ctx);
-      const blockedIds = await Promise.all([
-        pixivCacheDB.getAllBlockedAuthorIds(),
-        pixivCacheDB.getAllBlockedSeriesIds(),
-        pixivCacheDB.getAllBlockedSeriesTitleSet()
-      ]);
-      const blockedAuthorIds = blockedIds[0];
-      const blockedSeriesIds = blockedIds[1];
-      const blockedSeriesTitleSet = blockedIds[2] as Set<string>;
-      return works.filter(n => {
-        if (blockedAuthorIds.has(n.userId)) return false;
-        const sid = n.series?.id ?? n.seriesId;
-        if (sid && blockedSeriesIds.has(String(sid))) return false;
-        const seriesTitle = n.seriesTitle || n.series?.title || '';
-        if (seriesTitle && blockedSeriesTitleSet.has(seriesTitle.toLowerCase())) return false;
-        return true;
-      });
-    } catch (_) {
-      return works;
-    }
+      this.blockedAuthorIds = await pixivCacheDB.getAllBlockedAuthorIds();
+      this.blockedSeriesIds = await pixivCacheDB.getAllBlockedSeriesIds();
+      this.blockedSeriesTitleSet = await pixivCacheDB.getAllBlockedSeriesTitleSet() as Set<string>;
+    } catch (_) {}
+  }
+
+  private filterBlockedNovelsCached(works: NovelBookmark[]): NovelBookmark[] {
+    return works.filter(n => {
+      if (this.blockedAuthorIds.has(n.userId)) return false;
+      const sid = n.series?.id ?? n.seriesId;
+      if (sid && this.blockedSeriesIds.has(String(sid))) return false;
+      const seriesTitle = n.seriesTitle || n.series?.title || '';
+      if (seriesTitle && this.blockedSeriesTitleSet.has(seriesTitle.toLowerCase())) return false;
+      return true;
+    });
   }
 
   async loadNovels() {
@@ -173,7 +194,7 @@ export struct HomePage {
       const res = await PixivService.getDiscoveryNovels('all', PAGE_SIZE);
       if (!res.error) {
         const rawWorks = res.body?.thumbnails?.novel ?? [];
-        this.novelSource.reset(await this.filterBlockedNovels(rawWorks));
+        this.novelSource.reset(this.filterBlockedNovelsCached(rawWorks));
       } else {
         this.novelError = '加载失败';
       }
@@ -193,7 +214,7 @@ export struct HomePage {
       const res = await PixivService.getDiscoveryNovels('all', PAGE_SIZE);
       if (!res.error) {
         const rawNew = res.body?.thumbnails?.novel ?? [];
-        const filteredNew = await this.filterBlockedNovels(rawNew);
+        const filteredNew = this.filterBlockedNovelsCached(rawNew);
         const existingIds = new Set(this.novelSource.getDataArray().map(w => w.id));
         const uniqueNew = filteredNew.filter(w => !existingIds.has(w.id));
 
@@ -204,13 +225,19 @@ export struct HomePage {
           }
         } else {
           this.novelEmptyRetries = 0;
-          this.novelSource.push(...uniqueNew);
+          this.novelSource.batchPush(...uniqueNew);
         }
       }
     } catch (err) {
       console.error('加载更多小说失败:', err);
     }
     this.isLoadingMoreNovel = false;
+    if (this.scrollContentHeight > 0 && this.hasMoreNovel) {
+      const remaining = this.scrollContentHeight - this.scrollContainerHeight - Math.max(this.lastPreloadY, 0);
+      if (remaining < PRELOAD_THRESHOLD) {
+        this.loadMoreNovels();
+      }
+    }
   }
 
   build() {
@@ -340,7 +367,7 @@ export struct HomePage {
           } else if (this.illustSource.totalCount() === 0) {
             Text('暂无推荐插画').fontSize(14).fontColor($r('app.color.text_secondary')).margin({ top: 100 })
           } else {
-            PullToRefresh({ refreshing: this.isRefreshingIllust, onRefresh: (): Promise<void> => this.loadIllusts() }) {
+              PullToRefresh({ refreshing: this.isRefreshingIllust, onRefresh: (): Promise<void> => this.loadIllusts() }) {
               Scroll() {
                 Column() {
                   Grid() {
@@ -365,6 +392,9 @@ export struct HomePage {
               }
               .width('100%')
               .padding({ bottom: 120 })
+              .onAreaChange((_old: Area, area: Area) => {
+                this.scrollContentHeight = area.height as number;
+              })
             }
             .width('100%')
             .edgeEffect(EdgeEffect.Spring)
@@ -376,6 +406,16 @@ export struct HomePage {
             })
             .onScroll((_xOffset: number, yOffset: number) => {
               this.handleHeaderScroll(yOffset);
+              if (this.scrollContentHeight > 0) {
+                const remaining = this.scrollContentHeight - this.scrollContainerHeight - yOffset;
+                if (yOffset > this.lastPreloadY && remaining < PRELOAD_THRESHOLD && this.hasMoreIllust && !this.isLoadingMoreIllust) {
+                  this.loadMoreIllusts();
+                }
+              }
+              this.lastPreloadY = yOffset;
+            })
+            .onAreaChange((_old: Area, area: Area) => {
+              this.scrollContainerHeight = area.height as number;
             })
             }
           }
@@ -421,6 +461,9 @@ export struct HomePage {
               }
               .width('100%')
               .padding({ bottom: 120 })
+              .onAreaChange((_old: Area, area: Area) => {
+                this.scrollContentHeight = area.height as number;
+              })
             }
             .width('100%')
             .edgeEffect(EdgeEffect.Spring)
@@ -432,6 +475,16 @@ export struct HomePage {
             })
             .onScroll((_xOffset: number, yOffset: number) => {
               this.handleHeaderScroll(yOffset);
+              if (this.scrollContentHeight > 0) {
+                const remaining = this.scrollContentHeight - this.scrollContainerHeight - yOffset;
+                if (yOffset > this.lastPreloadY && remaining < PRELOAD_THRESHOLD && this.hasMoreNovel && !this.isLoadingMoreNovel) {
+                  this.loadMoreNovels();
+                }
+              }
+              this.lastPreloadY = yOffset;
+            })
+            .onAreaChange((_old: Area, area: Area) => {
+              this.scrollContainerHeight = area.height as number;
             })
             }
           }

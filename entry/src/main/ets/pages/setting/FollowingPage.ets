@@ -6,6 +6,7 @@ import { appState } from '../../store/AppState';
 import { PageContext } from '../../common/utils/PageContext';
 
 const PAGE_LIMIT = 30;
+const PRELOAD_THRESHOLD = 1500;
 
 function toUserSearchResult(raw: FollowingUserRaw): UserSearchResult {
   return {
@@ -29,6 +30,11 @@ struct FollowingPage {
   @State hasMore: boolean = true;
   @State error: string = '';
   @State currentOffset: number = 0;
+
+  // 预加载
+  private scrollContainerHeight: number = 0;
+  private scrollContentHeight: number = 0;
+  private lastPreloadY: number = -1;
 
   aboutToDisappear() {
     this.isActive = false;
@@ -74,7 +80,7 @@ struct FollowingPage {
       const res = await PixivService.getFollowingList(appState.userId, this.currentOffset, PAGE_LIMIT);
       if (!this.isActive) return;
       if (!res.error) {
-        this.userSource.push(...res.body.users.map(toUserSearchResult));
+        this.userSource.batchPush(...res.body.users.map(toUserSearchResult));
         this.currentOffset += res.body.users.length;
         if (this.currentOffset >= res.body.total) {
           this.hasMore = false;
@@ -85,6 +91,12 @@ struct FollowingPage {
       console.error('加载更多关注失败:', err);
     }
     this.isLoadingMore = false;
+    if (this.scrollContentHeight > 0 && this.hasMore) {
+      const remaining = this.scrollContentHeight - this.scrollContainerHeight - Math.max(this.lastPreloadY, 0);
+      if (remaining < PRELOAD_THRESHOLD) {
+        this.loadMoreUsers();
+      }
+    }
   }
 
   pageTransition() {
@@ -140,6 +152,9 @@ struct FollowingPage {
             }
             .width('100%')
             .padding({ bottom: 120 })
+            .onAreaChange((_old: Area, area: Area) => {
+              this.scrollContentHeight = area.height as number;
+            })
           }
           .width('100%')
           .edgeEffect(EdgeEffect.Spring)
@@ -147,6 +162,18 @@ struct FollowingPage {
             if (this.hasMore && !this.isLoadingMore) {
               this.loadMoreUsers();
             }
+          })
+          .onScroll((_xOffset: number, yOffset: number) => {
+            if (this.scrollContentHeight > 0) {
+              const remaining = this.scrollContentHeight - this.scrollContainerHeight - yOffset;
+              if (yOffset > this.lastPreloadY && remaining < PRELOAD_THRESHOLD && this.hasMore && !this.isLoadingMore) {
+                this.loadMoreUsers();
+              }
+            }
+            this.lastPreloadY = yOffset;
+          })
+          .onAreaChange((_old: Area, area: Area) => {
+            this.scrollContainerHeight = area.height as number;
           })
         }
       }
