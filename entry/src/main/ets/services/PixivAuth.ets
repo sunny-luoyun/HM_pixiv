@@ -4,6 +4,7 @@ import http from '@ohos.net.http';
 import { md5String } from '../common/utils/MD5';
 import { Date2UTCTimeString } from '../common/utils/TimeUtils';
 import { ApiConfig } from '../common/constants/ApiConfig';
+import { ProxyService } from './ProxyService';
 
 interface OAuthTokenProfileImageUrls {
   px_50x50?: string;
@@ -224,6 +225,7 @@ export class PixivAuth {
 
   private async postAuthToken(body: string, localTime: string, clientHash: string): Promise<OAuthTokenResponse> {
     const httpRequest = http.createHttp();
+    const proxyConfig = await ProxyService.getRequestProxyConfig();
     try {
       const resp = await httpRequest.request(ApiConfig.OAUTH_TOKEN, {
         method: http.RequestMethod.POST,
@@ -240,6 +242,7 @@ export class PixivAuth {
         extraData: body,
         connectTimeout: 10000,
         readTimeout: 10000,
+        usingProxy: proxyConfig || false,
       });
 interface OAuthTokenApiResponse {
   response?: OAuthTokenResponse;
