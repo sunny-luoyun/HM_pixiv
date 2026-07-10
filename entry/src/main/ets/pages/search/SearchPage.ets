@@ -21,6 +21,7 @@ export struct SearchPage {
   @State swipeProgress: number = 0;
   @State isAnimationStarted: boolean = false;
   private lastScrollY: number = 0;
+  private lastLoadMoreTime: number = 0;
   private swiperController: SwiperController = new SwiperController();
   private swiperWidth: number = 0;
   private animStartIndex: number = 0;
@@ -268,18 +269,21 @@ export struct SearchPage {
   async loadMoreIllusts() {
     if (this.isLoadingMoreIllust || this.illustPage >= this.illustPages) return;
     this.isLoadingMoreIllust = true;
+    this.lastLoadMoreTime = Date.now();
     await this.searchIllusts(this.illustPage + 1, false);
   }
 
   async loadMoreNovels() {
     if (this.isLoadingMoreNovel || this.novelPage >= this.novelPages) return;
     this.isLoadingMoreNovel = true;
+    this.lastLoadMoreTime = Date.now();
     await this.searchNovels(this.novelPage + 1, false);
   }
 
   async loadMoreUsers() {
     if (this.isLoadingMoreUser || this.userPage >= this.userPages) return;
     this.isLoadingMoreUser = true;
+    this.lastLoadMoreTime = Date.now();
     await this.searchUsers(this.userPage + 1, false);
   }
 
@@ -584,7 +588,8 @@ export struct SearchPage {
       animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
         this.isHeaderVisible = false;
       });
-    } else if (delta < -3 && !this.isHeaderVisible) {
+    } else if (delta < -3 && !this.isHeaderVisible && Date.now() - this.lastLoadMoreTime > 500 &&
+      !this.isLoadingMoreIllust && !this.isLoadingMoreNovel && !this.isLoadingMoreUser) {
       animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
         this.isHeaderVisible = true;
       });
@@ -592,6 +597,10 @@ export struct SearchPage {
   }
 
   handleHeaderReachStart() {
+    if (Date.now() - this.lastLoadMoreTime < 500 ||
+      this.isLoadingMoreIllust || this.isLoadingMoreNovel || this.isLoadingMoreUser) {
+      return;
+    }
     if (!this.isHeaderVisible) {
       animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
         this.isHeaderVisible = true;

@@ -20,6 +20,7 @@ struct FavoritesPage {
   @State swipeProgress: number = 0;
   @State isAnimationStarted: boolean = false;
   private lastScrollY: number = 0;
+  private lastLoadMoreTime: number = 0;
   private swiperController: SwiperController = new SwiperController();
   private swiperWidth: number = 0;
   private animStartIndex: number = 0;
@@ -77,6 +78,7 @@ struct FavoritesPage {
   async loadMoreIllusts() {
     if (this.isLoadingMoreIllust || !this.hasMoreIllust) return;
     this.isLoadingMoreIllust = true;
+    this.lastLoadMoreTime = Date.now();
     try {
       const res = await PixivService.getIllustBookmarks(appState.userId, this.illustOffset, PAGE_SIZE);
       if (!this.isActive) return;
@@ -122,6 +124,7 @@ struct FavoritesPage {
   async loadMoreNovels() {
     if (this.isLoadingMoreNovel || !this.hasMoreNovel) return;
     this.isLoadingMoreNovel = true;
+    this.lastLoadMoreTime = Date.now();
     try {
       const res = await PixivService.getNovelBookmarks(appState.userId, this.novelOffset, PAGE_SIZE);
       if (!this.isActive) return;
@@ -216,7 +219,8 @@ struct FavoritesPage {
       animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
         this.isHeaderVisible = false;
       });
-    } else if (delta < -3 && !this.isHeaderVisible) {
+    } else if (delta < -3 && !this.isHeaderVisible && Date.now() - this.lastLoadMoreTime > 500 &&
+      !this.isLoadingMoreIllust && !this.isLoadingMoreNovel) {
       animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
         this.isHeaderVisible = true;
       });
@@ -224,6 +228,10 @@ struct FavoritesPage {
   }
 
   handleHeaderReachStart() {
+    if (Date.now() - this.lastLoadMoreTime < 500 ||
+      this.isLoadingMoreIllust || this.isLoadingMoreNovel) {
+      return;
+    }
     if (!this.isHeaderVisible) {
       animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
         this.isHeaderVisible = true;

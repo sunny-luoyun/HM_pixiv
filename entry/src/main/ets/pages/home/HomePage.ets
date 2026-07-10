@@ -39,6 +39,7 @@ export struct HomePage {
   @State isHeaderVisible: boolean = true;
   @State swipeProgress: number = 0;
   private lastScrollY: number = 0;
+  private lastLoadMoreTime: number = 0;
 
   private illustEmptyRetries: number = 0;
   private novelEmptyRetries: number = 0;
@@ -111,6 +112,7 @@ export struct HomePage {
   async loadMoreIllusts() {
     if (this.isLoadingMoreIllust || !this.hasMoreIllust) return;
     this.isLoadingMoreIllust = true;
+    this.lastLoadMoreTime = Date.now();
     try {
       const res = await PixivService.getDiscoveryIllusts('all', PAGE_SIZE);
       if (!res.error) {
@@ -186,6 +188,7 @@ export struct HomePage {
   async loadMoreNovels() {
     if (this.isLoadingMoreNovel || !this.hasMoreNovel) return;
     this.isLoadingMoreNovel = true;
+    this.lastLoadMoreTime = Date.now();
     try {
       const res = await PixivService.getDiscoveryNovels('all', PAGE_SIZE);
       if (!res.error) {
@@ -279,7 +282,8 @@ export struct HomePage {
       animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
         this.isHeaderVisible = false;
       });
-    } else if (delta < -3 && !this.isHeaderVisible) {
+    } else if (delta < -3 && !this.isHeaderVisible && Date.now() - this.lastLoadMoreTime > 500 &&
+      !this.isLoadingMoreIllust && !this.isLoadingMoreNovel) {
       animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
         this.isHeaderVisible = true;
       });
@@ -287,6 +291,10 @@ export struct HomePage {
   }
 
   handleHeaderReachStart() {
+    if (Date.now() - this.lastLoadMoreTime < 500 ||
+      this.isLoadingMoreIllust || this.isLoadingMoreNovel) {
+      return;
+    }
     if (!this.isHeaderVisible) {
       animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
         this.isHeaderVisible = true;

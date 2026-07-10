@@ -77,6 +77,7 @@ struct NovelSeriesPage {
   @State isHeaderExpanded: boolean = true;
   @State isHeaderVisible: boolean = true;
   private lastScrollY: number = 0;
+  private lastLoadMoreTime: number = 0;
 
   private configChangeCallback: () => void = () => {};
   private configCallbackId: number = -1;
@@ -170,6 +171,7 @@ struct NovelSeriesPage {
 
   private loadMore(): void {
     if (!this.hasMore || this.isLoading) return;
+    this.lastLoadMoreTime = Date.now();
     this.loadSeriesNovels(this.currentPage + 1);
   }
 
@@ -196,7 +198,8 @@ struct NovelSeriesPage {
       animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
         this.isHeaderVisible = false;
       });
-    } else if (delta < -3 && !this.isHeaderVisible) {
+    } else if (delta < -3 && !this.isHeaderVisible && Date.now() - this.lastLoadMoreTime > 500 &&
+      !this.isLoading) {
       animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
         this.isHeaderVisible = true;
       });
@@ -204,6 +207,9 @@ struct NovelSeriesPage {
   }
 
   handleHeaderReachStart() {
+    if (Date.now() - this.lastLoadMoreTime < 500 || this.isLoading) {
+      return;
+    }
     if (!this.isHeaderVisible) {
       animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
         this.isHeaderVisible = true;
