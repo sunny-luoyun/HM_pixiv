@@ -137,7 +137,7 @@ export class PixivApiService {
   private static apiQueue: Array<ApiQueueTask> = [];
   private static isProcessingApiQueue = false;
   private static lastApiRequestTime = 0;
-  private static readonly MIN_API_INTERVAL = 1200;
+  private static readonly MIN_API_INTERVAL = 800;
   private static readonly MAX_RETRIES = 2;
 
   private static csrfToken: string = '';

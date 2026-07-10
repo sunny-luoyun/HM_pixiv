@@ -72,6 +72,12 @@ export class BasicDataSource<T> implements IDataSource {
     }
   }
 
+  /** 批量追加数据到末尾（只触发一次通知，避免 Grid 反复重布局） */
+  batchPush(...items: T[]): void {
+    this.dataArray.push(...items);
+    this.notifyDataReload();
+  }
+
   /** 替换指定位置的数据 */
   set(index: number, item: T): void {
     this.dataArray[index] = item;

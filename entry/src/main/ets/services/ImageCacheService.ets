@@ -27,7 +27,7 @@ interface AllImageCacheInfo {
 }
 
 export class ImageCacheService {
-  private static maxConcurrentDownloads = 3;
+  private static maxConcurrentDownloads = 6;
   private static activeDownloads = 0;
   private static downloadQueue: Array<DownloadTask> = [];
 

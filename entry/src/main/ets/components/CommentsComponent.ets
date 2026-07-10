@@ -63,7 +63,7 @@ export struct CommentsComponent {
       const resp = await this.fetchComments(this.entityId, this.nextOffset);
       if (!resp.error && resp.body) {
         const newComments = resp.body.comments || [];
-        this.commentSource.push(...newComments);
+        this.commentSource.batchPush(...newComments);
         this.nextOffset += newComments.length;
         this.hasMore = this.nextOffset < this.totalComments;
       }
