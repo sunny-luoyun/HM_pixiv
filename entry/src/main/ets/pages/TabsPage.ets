@@ -28,10 +28,10 @@ const TAB_CONFIG: TabConfig[] = [
   },
   {
     iconNormal: new SymbolGlyphModifier($r('sys.symbol.clock'))
-      .renderingStrategy(SymbolRenderingStrategy.MULTIPLE_COLOR)
+      .renderingStrategy(SymbolRenderingStrategy.SINGLE)
       .fontColor([$r('app.color.text_secondary')]),
     iconSelected: new SymbolGlyphModifier($r('sys.symbol.clock_fill'))
-      .renderingStrategy(SymbolRenderingStrategy.MULTIPLE_COLOR)
+      .renderingStrategy(SymbolRenderingStrategy.SINGLE)
       .fontColor([$r('app.color.tab_selected')]),
     label: '关注'
   },
