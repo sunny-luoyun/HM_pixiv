@@ -5,14 +5,20 @@ import { BasicDataSource } from '../common/utils/BasicDataSource';
 import { AppState } from '../store/AppState';
 import { ImageComponent } from './ImageComponent';
 
+interface ReplyTarget {
+  id: string;
+  userName: string;
+}
+
 @Component
 export struct CommentsComponent {
   private entityId: string = '';
   private titleLabel: string = '评论';
   private emptyHint: string = '还没有人评论';
   private fetchComments: (id: string, offset: number) => Promise<AjaxCommentsResponse> = () => Promise.reject(new Error('not set'));
+  private fetchReplies?: (commentId: string, page: number) => Promise<AjaxCommentsResponse>;
   private deleteComment: (commentId: number) => Promise<void> = () => Promise.reject(new Error('not set'));
-  private postComment: (id: string, comment: string) => Promise<void> = () => Promise.reject(new Error('not set'));
+  private postComment: (id: string, comment: string, parentCommentId?: string) => Promise<void> = () => Promise.reject(new Error('not set'));
 
   @State totalComments: number = 0;
   private commentSource: BasicDataSource<AjaxComment> = new BasicDataSource();
@@ -25,6 +31,11 @@ export struct CommentsComponent {
   @State isPosting: boolean = false;
   private nextOffset: number = 0;
   private appState: AppState = AppState.getInstance();
+
+  @State expandedReplies: Map<string, boolean> = new Map();
+  @State repliesCache: Map<string, AjaxComment[]> = new Map();
+  @State loadingReplyId: string = '';
+  @State replyTarget: ReplyTarget | null = null;
 
   aboutToAppear() {
     if (this.entityId) {
@@ -90,7 +101,7 @@ export struct CommentsComponent {
     this.deletingCommentId = -1;
   }
 
-  async handlePost() {
+  async handlePost(parentCommentId?: string) {
     const text = this.commentText.trim();
     if (!text) {
       promptAction.showToast({ message: '请输入评论内容' });
@@ -99,14 +110,49 @@ export struct CommentsComponent {
     if (this.isPosting) return;
     this.isPosting = true;
     try {
-      await this.postComment(this.entityId, text);
+      await this.postComment(this.entityId, text, parentCommentId);
       this.commentText = '';
+      this.replyTarget = null;
       promptAction.showToast({ message: '评论发表成功' });
       this.loadComments();
     } catch (err) {
       promptAction.showToast({ message: '评论发表失败: ' + String(err) });
     }
     this.isPosting = false;
+  }
+
+  async toggleReplies(commentId: string) {
+    if (!this.fetchReplies) return;
+    if (this.expandedReplies.has(commentId) && this.expandedReplies.get(commentId) === true) {
+      this.expandedReplies.set(commentId, false);
+      return;
+    }
+    if (!this.repliesCache.has(commentId)) {
+      this.loadingReplyId = commentId;
+      try {
+        const resp = await this.fetchReplies(commentId, 1);
+        if (!resp.error && resp.body) {
+          this.repliesCache.set(commentId, resp.body.comments || []);
+        }
+      } catch (err) {
+        console.error('获取回复失败:', err);
+        promptAction.showToast({ message: '获取回复失败' });
+        this.loadingReplyId = '';
+        return;
+      }
+      this.loadingReplyId = '';
+    }
+    this.expandedReplies.set(commentId, true);
+  }
+
+  startReply(comment: AjaxComment) {
+    this.replyTarget = { id: comment.id, userName: comment.userName };
+    this.commentText = '';
+  }
+
+  cancelReply() {
+    this.replyTarget = null;
+    this.commentText = '';
   }
 
   formatDate(isoDate: string): string {
@@ -122,6 +168,17 @@ export struct CommentsComponent {
     } catch (_) {
       return '';
     }
+  }
+
+  getReplyText(commentId: string): string {
+    if (this.expandedReplies.has(commentId) && this.expandedReplies.get(commentId) === true) {
+      return ' · 收起回复';
+    }
+    if (this.repliesCache.has(commentId)) {
+      const loadedReplies: AjaxComment[] = this.repliesCache.get(commentId) as AjaxComment[];
+      return ` · ${loadedReplies.length} 条回复`;
+    }
+    return ' · 查看回复';
   }
 
   isOwnComment(userId: number): boolean {
@@ -227,34 +284,54 @@ export struct CommentsComponent {
         .strokeWidth(0.5)
         .color(Color.White).opacity(0.1)
 
-      Row() {
-        TextInput({ placeholder: '写评论...', text: this.commentText })
-          .placeholderColor($r('app.color.text_secondary'))
-          .placeholderFont({ size: 14 })
-          .fontSize(14)
-          .fontColor(Color.White)
-          .backgroundColor('#1a1a24')
-          .borderRadius(20)
-          .height(40)
-          .layoutWeight(1)
-          .onChange((value: string) => { this.commentText = value; })
+      Column() {
+        if (this.replyTarget !== null) {
+          Row() {
+            Text(`回复 @${(this.replyTarget as ReplyTarget).userName}`)
+              .fontSize(12)
+              .fontColor($r('app.color.brand_accent'))
+              .margin({ right: 8 })
 
-        if (this.isPosting) {
-          LoadingProgress().width(24).height(24).margin({ left: 10 })
-        } else {
-          Button('发送')
-            .fontSize(13)
+            Text('取消')
+              .fontSize(12)
+              .fontColor($r('app.color.text_secondary'))
+              .onClick(() => this.cancelReply())
+
+            Blank()
+          }
+          .width('100%')
+          .padding({ left: 16, right: 16, bottom: 4 })
+        }
+
+        Row() {
+          TextInput({ placeholder: this.replyTarget !== null ? `回复 ${(this.replyTarget as ReplyTarget).userName}...` : '写评论...', text: this.commentText })
+            .placeholderColor($r('app.color.text_secondary'))
+            .placeholderFont({ size: 14 })
+            .fontSize(14)
             .fontColor(Color.White)
-            .backgroundColor($r('app.color.brand_accent'))
+            .backgroundColor('#1a1a24')
             .borderRadius(20)
             .height(40)
-            .padding({ left: 16, right: 16 })
-            .margin({ left: 10 })
-            .onClick(() => this.handlePost())
+            .layoutWeight(1)
+            .onChange((value: string) => { this.commentText = value; })
+
+          if (this.isPosting) {
+            LoadingProgress().width(24).height(24).margin({ left: 10 })
+          } else {
+            Button('发送')
+              .fontSize(13)
+              .fontColor(Color.White)
+              .backgroundColor($r('app.color.brand_accent'))
+              .borderRadius(20)
+              .height(40)
+              .padding({ left: 16, right: 16 })
+              .margin({ left: 10 })
+              .onClick(() => this.handlePost(this.replyTarget !== null ? (this.replyTarget as ReplyTarget).id : undefined))
+          }
         }
+        .width('100%')
+        .padding({ left: 16, right: 16, top: this.replyTarget !== null ? 0 : 8, bottom: 16 })
       }
-      .width('100%')
-      .padding({ left: 16, right: 16, top: 8, bottom: 16 })
       .backgroundColor('#0f0f14')
     }
     .width('100%')
@@ -299,6 +376,17 @@ export struct CommentsComponent {
                   .onClick(() => this.handleDelete(parseInt(comment.id)))
               }
             }
+
+            if (this.fetchReplies) {
+              Text('回复')
+                .fontSize(11)
+                .fontColor($r('app.color.text_secondary'))
+                .margin({ left: 8 })
+                .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+                .backgroundColor('#33FFFFFF')
+                .borderRadius(4)
+                .onClick(() => this.startReply(comment))
+            }
           }
 
           Row() {
@@ -307,7 +395,19 @@ export struct CommentsComponent {
               .fontColor($r('app.color.text_secondary'))
               .margin({ top: 1 })
 
-            if (comment.hasReplies) {
+            if (comment.hasReplies && this.fetchReplies) {
+              if (this.loadingReplyId === comment.id) {
+                LoadingProgress().width(12).height(12)
+                  .color($r('app.color.brand_accent'))
+                  .margin({ top: 1, left: 4 })
+              } else {
+                Text(this.getReplyText(comment.id))
+                  .fontSize(11)
+                  .fontColor($r('app.color.brand_accent'))
+                  .margin({ top: 1, left: 4 })
+                  .onClick(() => this.toggleReplies(comment.id))
+              }
+            } else if (comment.hasReplies) {
               Text(' · 有回复')
                 .fontSize(11)
                 .fontColor($r('app.color.brand_accent'))
@@ -327,9 +427,59 @@ export struct CommentsComponent {
         .fontColor('#CCCCCC')
         .margin({ top: 6, left: 46 })
         .width('100%')
+
+      if (this.expandedReplies.has(comment.id) && this.expandedReplies.get(comment.id) === true && this.repliesCache.has(comment.id)) {
+        Column() {
+          ForEach(this.repliesCache.get(comment.id) as AjaxComment[], (reply: AjaxComment) => {
+            this.replyItem(reply)
+          }, (reply: AjaxComment) => `reply_${reply.id}`)
+        }
+        .margin({ left: 46, top: 8 })
+        .padding({ left: 8 })
+        .border({ width: { left: 2 }, color: { left: '#333333' } })
+      }
     }
     .width('100%')
   }
+
+  @Builder
+  replyItem(reply: AjaxComment) {
+    Row() {
+      if (reply.img) {
+        ImageComponent({ src: reply.img, imgBorderRadius: 12, objectFit: ImageFit.Cover })
+          .width(24).height(24)
+      } else {
+        Circle()
+          .width(24).height(24)
+          .fill($r('app.color.overlay_light'))
+      }
+
+      Column() {
+        Row() {
+          Text(reply.userName || '匿名用户')
+            .fontSize(12)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(Color.White)
+            .maxLines(1)
+
+          Text(this.formatDate(reply.date))
+            .fontSize(10)
+            .fontColor($r('app.color.text_secondary'))
+            .margin({ left: 6 })
+        }
+
+        Text(reply.comment)
+          .fontSize(13)
+          .fontColor('#CCCCCC')
+          .margin({ top: 2 })
+          .width('100%')
+      }
+      .margin({ left: 8 })
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+    }
+    .width('100%')
+    .margin({ bottom: 8 })
+    .alignItems(VerticalAlign.Top)
+  }
 }
-
-

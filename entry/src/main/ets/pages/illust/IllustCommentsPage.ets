@@ -19,9 +19,10 @@ struct IllustCommentsPage {
         entityId: this.illustId,
         titleLabel: '评论',
         fetchComments: (id: string, offset: number) => PixivService.getIllustComments(id, offset),
+        fetchReplies: (commentId: string, page: number) => PixivService.getIllustCommentReplies(commentId, page),
         deleteComment: (id: number) => AppApiService.deleteIllustComment(id),
-        postComment: async (id: string, comment: string): Promise<void> => {
-          await AppApiService.postIllustComment(Number(id), comment);
+        postComment: async (id: string, comment: string, parentCommentId?: string): Promise<void> => {
+          await AppApiService.postIllustComment(Number(id), comment, parentCommentId ? Number(parentCommentId) : undefined);
         },
       })
     }

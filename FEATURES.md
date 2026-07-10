@@ -54,18 +54,18 @@
 
 ## F05 - 插画详情与评论
 
-- **描述**：查看插画大图、标题、作者、标签；浏览/删除/发表评论（OAuth2 Bearer Token 认证已接入）
+- **描述**：查看插画大图、标题、作者、标签；浏览/删除/发表评论（OAuth2 Bearer Token 认证已接入）；支持展开查看评论回复（楼中楼）
 - **页面**：`entry/src/main/ets/pages/illust/IllustDetailPage.ets`、`entry/src/main/ets/pages/illust/IllustCommentsPage.ets`
-- **API**：`entry/src/main/ets/services/PixivApiService.ets`（`getIllustDetail`、`getIllustComments`）、`entry/src/main/ets/services/AppApiService.ets`（`postIllustComment`、`deleteIllustComment`）
-- **组件**：`entry/src/main/ets/components/CommentsComponent.ets`（含发表输入框）
+- **API**：`entry/src/main/ets/services/PixivApiService.ets`（`getIllustDetail`、`getIllustComments`、`getIllustCommentReplies`）、`entry/src/main/ets/services/AppApiService.ets`（`postIllustComment`、`deleteIllustComment`）
+- **组件**：`entry/src/main/ets/components/CommentsComponent.ets`（含发表输入框、回复展开/收起、回复发表）
 
 ---
 
 ## F06 - 小说阅读器与系列
 
-- **描述**：全功能小说阅读（书签、自动阅读）、小说系列导航、评论
+- **描述**：全功能小说阅读（书签、自动阅读）、小说系列导航、评论（含楼中楼回复）
 - **页面**：`entry/src/main/ets/pages/novel/NovelReaderPage.ets`、`entry/src/main/ets/pages/novel/NovelSeriesPage.ets`、`entry/src/main/ets/pages/novel/NovelCommentsPage.ets`
-- **API**：`entry/src/main/ets/services/PixivApiService.ets`（`fetchNovelDetail`、`fetchNovelText`、`fetchSeriesNovels`、`getNovelComments`）
+- **API**：`entry/src/main/ets/services/PixivApiService.ets`（`fetchNovelDetail`、`fetchNovelText`、`fetchSeriesNovels`、`getNovelComments`、`getNovelCommentReplies`）
 - **缓存**：`entry/src/main/ets/database/PixivCacheDB.ets`、`entry/src/main/ets/database/NovelCacheDao.ets`
 - **翻译**：`entry/src/main/ets/services/TranslationController.ets`
 - **回调**：`EntryAbility`（后台保存阅读进度）
@@ -268,6 +268,12 @@
 | 28 | OAuth2 登录 | 退出登录 → 点击登录 → WebView 打开 Pixiv OAuth 页 → 登录成功 → Token 自动刷新 | ☐ |
 | 29 | 收藏/关注 | 在插画/小说详情 → 点击收藏 → 状态正确切换（走 Bearer Token API） | ☐ |
 | 30 | 评论发表 | 插画/小说评论页 → 输入评论 → 点击发送 → 评论成功发表 | ☐ |
+| 31 | 评论回复展开 | 插画/小说评论页 → 点击「查看回复」→ 回复列表展开显示 | ☐ |
+| 32 | 评论回复收起 | 点击「收起回复」→ 回复列表收起 | ☐ |
+| 33 | 发表回复 | 点击评论旁的「回复」→ 输入框变为「回复 @用户名」模式 → 发送成功 → 评论列表刷新 | ☐ |
+| 34 | 排行榜浏览 | 切换到「排行」Tab → 默认显示每日排行 → 切换模式（每周/每月/新人等） → 列表正常加载 → 下拉刷新 → 翻页到末尾 | ☐ |
+| 35 | 排名角标 | 排行榜卡片左上角显示 `#1` `#2` 等排名数字 | ☐ |
+| 36 | 排行榜 R18 | 登录前 R18/R18周 模式按钮隐藏 → 登录后可见 | ☐ |
 
 ---
 
@@ -372,7 +378,38 @@
 
 ---
 
-> 最后更新：F28 OAuth2 Bearer Token 认证切换，基于 2026-07-09
+## F29 - Pixiv 排行榜浏览
+
+- **描述**：浏览 Pixiv 排行榜（每日/每周/每月/新人/原创/男性/女性/R18），支持模式切换、下拉刷新、分页加载
+- **页面**：`entry/src/main/ets/pages/ranking/RankingPage.ets`
+- **API**：`entry/src/main/ets/services/PixivApiService.ets`（`getRanking`）
+- **模型**：`entry/src/main/ets/models/RankingModels.ets`
+- **Tab 入口**：`entry/src/main/ets/pages/TabsPage.ets` — 第5个 Tab「排行」，图标 `sys.symbol.trophy`，位于「搜索」与「我的」之间
+- **数据源**：`BasicDataSource<IllustBookmark>` + `rankMap` 记录排名信息
+- **卡片**：复用 `IllustCard` 组件 + 排名角标（`#1`、`#2`...）
+- **模式选择**：水平滚动的 pill 式模式选择器
+- **R18 过滤**：R18 模式仅在登录后显示
+- **测试**：`entry/src/test/RankingService.test.ets`
+- **验证项**：切换到「排行」Tab → 默认显示每日排行 → 切换模式 → 排行榜列表正常加载 → 翻页正常 → R18 模式登录后可见
+
+---
+
+## F30 - 评论回复（楼中楼）
+
+- **描述**：支持展开/收起评论回复内容（楼中楼），点击「查看回复」加载回复列表；支持对指定评论发表回复，底部输入框显示「回复 @用户名」模式
+- **新增 API**：
+  - `entry/src/main/ets/services/PixivApiService.ets` — `getIllustCommentReplies(commentId, page)`、`getNovelCommentReplies(commentId, page)`
+  - `entry/src/main/ets/services/PixivService.ets` — 转发方法
+- **组件改造**：
+  - `entry/src/main/ets/components/CommentsComponent.ets` — 新增 `fetchReplies` 回调、`expandedReplies`(Map) / `repliesCache`(Map) / `replyTarget` 状态；「有回复」改为可点击展开/收起；每条评论增加「回复」按钮；底部输入框支持回复模式（传入 parentCommentId）
+- **页面适配**：
+  - `entry/src/main/ets/pages/illust/IllustCommentsPage.ets` — 传入 `fetchReplies` / 更新 `postComment` 签名支持 parentCommentId
+  - `entry/src/main/ets/pages/novel/NovelCommentsPage.ets` — 同上
+- **测试**：`entry/src/test/CommentsService.test.ets`
+
+---
+
+> 最后更新：F30 评论回复（楼中楼），基于 2026-07-10
 
 ---
 

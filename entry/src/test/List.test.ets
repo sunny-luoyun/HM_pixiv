@@ -27,6 +27,8 @@ import constantsTest from './Constants.test';
 import customTransitionTest from './CustomTransitionUtils.test';
 import latestCheckTest from './LatestCheck.test';
 import pixivAuthTest from './PixivAuth.test';
+import rankingServiceTest from './RankingService.test';
+import commentsServiceTest from './CommentsService.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -58,4 +60,6 @@ export default function testsuite() {
   customTransitionTest();
   latestCheckTest();
   pixivAuthTest();
+  rankingServiceTest();
+  commentsServiceTest();
 }

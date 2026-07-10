@@ -19,9 +19,10 @@ struct NovelCommentsPage {
         entityId: this.novelId,
         titleLabel: '小说评论',
         fetchComments: (id: string, offset: number) => PixivService.getNovelComments(id, offset),
+        fetchReplies: (commentId: string, page: number) => PixivService.getNovelCommentReplies(commentId, page),
         deleteComment: (id: number) => AppApiService.deleteNovelComment(id),
-        postComment: async (id: string, comment: string): Promise<void> => {
-          await AppApiService.postNovelComment(Number(id), comment);
+        postComment: async (id: string, comment: string, parentCommentId?: string): Promise<void> => {
+          await AppApiService.postNovelComment(Number(id), comment, parentCommentId ? Number(parentCommentId) : undefined);
         },
       })
     }

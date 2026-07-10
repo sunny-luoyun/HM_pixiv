@@ -18,6 +18,7 @@ import {
   ProfileIllust, ProfileIllustsBody, ProfileIllustsResponse,
   ProfileNovel, ProfileNovelsBody, ProfileNovelsResponse,
   ProfileAllBody, ProfileAllResponse,
+  RankingResponse,
 } from '../models/PixivModels';
 import { ApiConfig } from '../common/constants/ApiConfig';
 import { ProxyService } from './ProxyService';
@@ -523,6 +524,21 @@ export class PixivApiService {
   static async getNovelComments(novelId: string, offset: number = 0): Promise<AjaxCommentsResponse> {
     const path = `/ajax/novels/comments/roots?novel_id=${novelId}&offset=${offset}&limit=20`;
     return PixivApiService.request<AjaxCommentsResponse>(path);
+  }
+
+  static async getIllustCommentReplies(commentId: string, page: number = 1): Promise<AjaxCommentsResponse> {
+    const path = `/ajax/illusts/comments/replies?comment_id=${commentId}&page=${page}`;
+    return PixivApiService.request<AjaxCommentsResponse>(path);
+  }
+
+  static async getNovelCommentReplies(commentId: string, page: number = 1): Promise<AjaxCommentsResponse> {
+    const path = `/ajax/novels/comments/replies?comment_id=${commentId}&page=${page}`;
+    return PixivApiService.request<AjaxCommentsResponse>(path);
+  }
+
+  static async getRanking(mode: string = 'daily', page: number = 1, content: string = 'illust'): Promise<RankingResponse> {
+    const path = `/ajax/ranking/${mode}?p=${page}&format=json&content=${content}`;
+    return PixivApiService.request<RankingResponse>(path);
   }
 
   static generatePageUrls(baseUrl: string, pageCount: number): string[] {
