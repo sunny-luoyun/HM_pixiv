@@ -48,7 +48,7 @@ export struct IllustCard {
       }, 0);
     }
     this.isCaching = false;
-    this.isBookmarked = !!this.item.bookmarkData;
+    this.isBookmarked = !!this.item.bookmarkData && !!this.item.bookmarkData.id;
 
     setTimeout(() => {
       animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {

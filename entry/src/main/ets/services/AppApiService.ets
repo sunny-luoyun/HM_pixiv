@@ -3,7 +3,7 @@ import { PixivAuth } from './PixivAuth';
 import { ProxyService } from './ProxyService';
 import { ApiConfig } from '../common/constants/ApiConfig';
 import {
-  IllustCommentsResponse, AppUserIllustsResponse, AppUserNovelsResponse
+  IllustCommentsResponse, AppUserIllustsResponse, AppUserNovelsResponse,
 } from '../models/PixivModels';
 
 interface ApiResult<T> {
@@ -344,4 +344,5 @@ export class AppApiService {
       `/v1/user/novels?user_id=${userId}&offset=${offset}`
     );
   }
+
 }

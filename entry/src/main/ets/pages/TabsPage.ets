@@ -6,6 +6,7 @@ import { HdsTabs, HdsTabsController, hdsMaterial } from '@kit.UIDesignKit';
 import { HomePage } from './home/HomePage';
 import { LatestPage } from './latest/LatestPage';
 import { SearchPage } from './search/SearchPage';
+import { RankingPage } from './ranking/RankingPage';
 import { SettingPage } from './setting/SettingPage';
 import { resolveBreakpoint, publishBreakpoint } from '../common/utils/BreakpointManager';
 
@@ -42,6 +43,15 @@ const TAB_CONFIG: TabConfig[] = [
       .renderingStrategy(SymbolRenderingStrategy.MULTIPLE_COLOR)
       .fontColor([$r('app.color.tab_selected')]),
     label: '搜索'
+  },
+  {
+    iconNormal: new SymbolGlyphModifier($r('sys.symbol.star'))
+      .renderingStrategy(SymbolRenderingStrategy.MULTIPLE_COLOR)
+      .fontColor([$r('app.color.text_secondary')]),
+    iconSelected: new SymbolGlyphModifier($r('sys.symbol.star_fill'))
+      .renderingStrategy(SymbolRenderingStrategy.MULTIPLE_COLOR)
+      .fontColor([$r('app.color.tab_selected')]),
+    label: '排行'
   },
   {
     iconNormal: new SymbolGlyphModifier($r('sys.symbol.person'))
@@ -142,12 +152,21 @@ export struct MainTabsPage {
         .labelStyle({ selectedColor: $r('app.color.tab_selected') }))
 
         TabContent() {
-          SettingPage()
+          RankingPage()
         }
         .tabBar(new BottomTabBarStyle({
           normal: TAB_CONFIG[3].iconNormal,
           selected: TAB_CONFIG[3].iconSelected
         }, TAB_CONFIG[3].label)
+        .labelStyle({ selectedColor: $r('app.color.tab_selected') }))
+
+        TabContent() {
+          SettingPage()
+        }
+        .tabBar(new BottomTabBarStyle({
+          normal: TAB_CONFIG[4].iconNormal,
+          selected: TAB_CONFIG[4].iconSelected
+        }, TAB_CONFIG[4].label)
         .labelStyle({ selectedColor: $r('app.color.tab_selected') }))
       }
       .barMode(BarMode.Fixed)

@@ -18,7 +18,7 @@ import {
   ProfileIllust, ProfileIllustsBody, ProfileIllustsResponse,
   ProfileNovel, ProfileNovelsBody, ProfileNovelsResponse,
   ProfileAllBody, ProfileAllResponse,
-  RankingResponse,
+  RankingResponse, NovelRankingResponse,
 } from '../models/PixivModels';
 import { ApiConfig } from '../common/constants/ApiConfig';
 import { ProxyService } from './ProxyService';
@@ -536,9 +536,14 @@ export class PixivApiService {
     return PixivApiService.request<AjaxCommentsResponse>(path);
   }
 
-  static async getRanking(mode: string = 'daily', page: number = 1, content: string = 'illust'): Promise<RankingResponse> {
-    const path = `/ajax/ranking/${mode}?p=${page}&format=json&content=${content}`;
+  static async getRanking(mode: string = 'daily', page: number = 1, content: string = 'all'): Promise<RankingResponse> {
+    const path = `/ranking.php?mode=${mode}&content=${content}&p=${page}&format=json`;
     return PixivApiService.request<RankingResponse>(path);
+  }
+
+  static async getNovelRanking(mode: string = 'daily', page: number = 1): Promise<NovelRankingResponse> {
+    const path = `/ajax/ranking/novel?mode=${mode}&p=${page}`;
+    return PixivApiService.request<NovelRankingResponse>(path);
   }
 
   static generatePageUrls(baseUrl: string, pageCount: number): string[] {

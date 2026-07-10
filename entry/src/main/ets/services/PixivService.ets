@@ -12,7 +12,7 @@ import {
   PixivNovel, PixivSeriesResult,
   IllustDetailResponse, AjaxCommentsResponse,
   NovelBookmark,
-  RankingResponse,
+  RankingResponse, NovelRankingResponse,
 } from '../models/PixivModels';
 
 export { sanitizeNovelBookmark };
@@ -127,8 +127,12 @@ export class PixivService {
     return PixivApiService.getNovelCommentReplies(commentId, page);
   }
 
-  static async getRanking(mode: string = 'daily', page: number = 1, content: string = 'illust'): Promise<RankingResponse> {
+  static async getRanking(mode: string = 'daily', page: number = 1, content: string = 'all'): Promise<RankingResponse> {
     return PixivApiService.getRanking(mode, page, content);
+  }
+
+  static async getNovelRanking(mode: string = 'daily', page: number = 1): Promise<NovelRankingResponse> {
+    return PixivApiService.getNovelRanking(mode, page);
   }
 
   static generatePageUrls(baseUrl: string, pageCount: number): string[] {
