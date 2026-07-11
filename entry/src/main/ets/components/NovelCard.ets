@@ -380,11 +380,16 @@ export struct NovelCard {
         .color($r('app.color.danger'))
         .margin({ right: 12 })
     } else {
-      Text(this.isBookmarked ? '❤' : '♡')
-        .fontSize(18)
-        .fontColor(this.isBookmarked ? $r('app.color.danger') : $r('app.color.text_secondary'))
-        .margin({ right: 12 })
-        .onClick(() => this.toggleBookmark())
+      Row() {
+        Text(this.isBookmarked ? '❤' : '♡')
+          .fontSize(18)
+          .fontColor(this.isBookmarked ? $r('app.color.danger') : $r('app.color.text_secondary'))
+        Text(` ${this.item.bookmarkCount ?? 0}`)
+          .fontSize(12)
+          .fontColor($r('app.color.text_secondary'))
+      }
+      .margin({ right: 12 })
+      .onClick(() => this.toggleBookmark())
     }
   }
 
