@@ -28,7 +28,7 @@ struct Index {
   private rootPageContext: PageContext = new PageContext(this.rootStack);
 
   async aboutToAppear() {
-    await appState.checkLoginStatus(true);
+    await appState.checkLoginStatus(false);
     console.info(`🔄 检查登录状态: ${appState.isLoggedIn ? '已登录' : '未登录'}`);
     console.info(`👤 用户: ${appState.userName || '未知用户'} (${appState.userId || '无ID'})`);
     AppStorage.setOrCreate('rootPageContext', this.rootPageContext);

@@ -142,73 +142,83 @@ export class AppApiService {
     isRetry: boolean = false,
   ): Promise<T> {
     const auth = PixivAuth.getInstance();
-    const authHeader = auth.getAuthHeader();
 
-    if (!authHeader && !isRetry) {
+    if (!auth.getAuthHeader() && !isRetry) {
       throw new Error('未登录');
     }
 
     return AppApiService.enqueue<T>(async () => {
-      const httpRequest = http.createHttp();
-      try {
-        const url = `${AppApiService.baseUrl}${path}`;
-        const header: Record<string, string> = {
-          'User-Agent': ApiConfig.USER_AGENT_APP,
-          'Accept': 'application/json',
-          'Accept-Language': 'zh-CN,zh;q=0.9',
-          'App-OS': 'android',
-          'App-OS-Version': '11.0',
-          'App-Version': '5.0.234',
-        };
-        if (authHeader) {
-          header['Authorization'] = authHeader;
-        }
-
-        const proxyConfig = await ProxyService.getRequestProxyConfig();
-
-        const options: http.HttpRequestOptions = {
-          method,
-          header,
-          connectTimeout: 6000,
-          readTimeout: 6000,
-          usingProxy: proxyConfig || false,
-        };
-
-        if (data && method === http.RequestMethod.POST) {
-          header['Content-Type'] = 'application/x-www-form-urlencoded';
-          options.extraData = Object.entries(data as Record<string, string | number | boolean | string[]>)
-            .map((entry: [string, string | number | boolean | string[]]) => `${encodeURIComponent(entry[0])}=${encodeURIComponent(String(entry[1]))}`)
-            .join('&');
-        }
-
-        const response = await httpRequest.request(url, options);
-
-        if (response.responseCode === 200) {
-          return JSON.parse(response.result as string) as T;
-        }
-
-        if (!isRetry) {
-          const bodyStr = response.result as string || '';
-          const shouldRefresh = response.responseCode === 401 ||
-            (response.responseCode === 400 && bodyStr.includes('invalid_grant'));
-
-          if (shouldRefresh) {
-            console.info('AppApi: Token 可能已过期，尝试刷新...');
-            const refreshed = await auth.refreshAccessToken();
-            if (refreshed) {
-              console.info('AppApi: Token 刷新成功，重试请求');
-              return AppApiService.request<T>(method, path, data, true);
-            }
-            throw new Error('认证已过期，请重新登录');
-          }
-        }
-
-        console.error(`AppApi 请求失败 [${method} ${path}]: HTTP ${response.responseCode}, body: ${response.result}`);
-        throw new Error(`HTTP ${response.responseCode}`);
-      } finally {
-        httpRequest.destroy();
-      }
+      return AppApiService.executeRequest<T>(method, path, data, auth, false);
     });
+  }
+
+  private static async executeRequest<T>(
+    method: http.RequestMethod,
+    path: string,
+    data: object | undefined,
+    auth: PixivAuth,
+    isRetry: boolean,
+  ): Promise<T> {
+    const httpRequest = http.createHttp();
+    try {
+      const url = `${AppApiService.baseUrl}${path}`;
+      const authHeader = auth.getAuthHeader();
+      const header: Record<string, string> = {
+        'User-Agent': ApiConfig.USER_AGENT_APP,
+        'Accept': 'application/json',
+        'Accept-Language': 'zh-CN,zh;q=0.9',
+        'App-OS': 'android',
+        'App-OS-Version': '11.0',
+        'App-Version': '5.0.234',
+      };
+      if (authHeader) {
+        header['Authorization'] = authHeader;
+      }
+
+      const proxyConfig = await ProxyService.getRequestProxyConfig();
+
+      const options: http.HttpRequestOptions = {
+        method,
+        header,
+        connectTimeout: 6000,
+        readTimeout: 6000,
+        usingProxy: proxyConfig || false,
+      };
+
+      if (data && method === http.RequestMethod.POST) {
+        header['Content-Type'] = 'application/x-www-form-urlencoded';
+        options.extraData = Object.entries(data as Record<string, string | number | boolean | string[]>)
+          .map((entry: [string, string | number | boolean | string[]]) => `${encodeURIComponent(entry[0])}=${encodeURIComponent(String(entry[1]))}`)
+          .join('&');
+      }
+
+      const response = await httpRequest.request(url, options);
+
+      if (response.responseCode === 200) {
+        return JSON.parse(response.result as string) as T;
+      }
+
+      if (!isRetry) {
+        const bodyStr = response.result as string || '';
+        const shouldRefresh = response.responseCode === 401 ||
+          (response.responseCode === 400 && bodyStr.includes('invalid_grant'));
+
+        if (shouldRefresh) {
+          console.info('AppApi: Token 可能已过期，尝试刷新...');
+          const refreshed = await auth.refreshAccessToken();
+          if (refreshed) {
+            console.info('AppApi: Token 刷新成功，重试请求');
+            return AppApiService.executeRequest<T>(method, path, data, auth, true);
+          }
+          throw new Error('认证已过期，请重新登录');
+        }
+      }
+
+      console.error(`AppApi 请求失败 [${method} ${path}]: HTTP ${response.responseCode}, body: ${response.result}`);
+      throw new Error(`HTTP ${response.responseCode}`);
+    } finally {
+      httpRequest.destroy();
+    }
   }
 
   static async addIllustBookmark(illustId: number, restrict: string = 'public', tags?: string[]): Promise<void> {
