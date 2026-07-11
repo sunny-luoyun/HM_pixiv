@@ -45,3 +45,6 @@ Thumbs.db
 build-profile.json5
 # AGC 推送配置（含密钥）
 **/agconnect-services.json
+# 构建产物
+.cache/
+.deveco/
