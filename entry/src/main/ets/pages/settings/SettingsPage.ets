@@ -4,8 +4,6 @@ import { PageContext } from '../../common/utils/PageContext';
 import { ProxySettingsSection } from './ProxySettingsSection';
 import { TranslationSettingsSection } from './TranslationSettingsSection';
 import { CacheSettingsSection } from './CacheSettingsSection';
-import promptAction from '@ohos.promptAction';
-import pasteboard from '@ohos.pasteboard';
 
 @Component
 export struct SettingsPage {
@@ -35,7 +33,6 @@ export struct SettingsPage {
           Column() {
             TranslationSettingsSection()
             ReadingSettingsCard({ resetOnReachEnd: this.resetOnReachEnd })
-            PushStatusCard()
             ProxySettingsSection()
             Column() {
               Text('缓存管理')
@@ -104,61 +101,6 @@ struct ReadingSettingsCard {
           })
       }
       .width('100%')
-    }
-    .width('100%')
-    .padding(16)
-    .backgroundColor($r('app.color.card_bg'))
-    .borderRadius(14)
-    .shadow({ radius: 4, color: $r('app.color.card_shadow'), offsetY: 1 })
-    .margin({ bottom: 12 })
-  }
-}
-
-@Component
-struct PushStatusCard {
-  @StorageLink('pushToken') pushToken: string = '';
-
-  build() {
-    Column() {
-      Row() {
-        Column() {
-          Text('实时推送')
-            .fontSize(15)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.user_name'))
-          Text(this.pushToken ? '已连接' : '未连接')
-            .fontSize(12)
-            .fontColor(this.pushToken ? $r('app.color.success') : $r('app.color.text_secondary'))
-            .margin({ top: 2 })
-        }
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Start)
-
-        if (this.pushToken) {
-          Button('复制 Token')
-            .fontSize(12)
-            .height(32)
-            .fontColor($r('app.color.tab_selected'))
-            .backgroundColor($r('app.color.page_background'))
-            .border({ width: 1, color: $r('app.color.tab_selected'), radius: 8 })
-            .padding({ left: 12, right: 12 })
-            .onClick(() => {
-              const data = pasteboard.createData({ 'text/plain': this.pushToken });
-              pasteboard.getSystemPasteboard().setData(data);
-              promptAction.showToast({ message: 'Token 已复制到剪贴板' });
-            })
-        }
-      }
-      .width('100%')
-
-      if (this.pushToken) {
-        Text(this.pushToken)
-          .fontSize(11)
-          .fontColor($r('app.color.text_secondary'))
-          .margin({ top: 8 })
-          .lineHeight(16)
-          .wordBreak(WordBreak.BREAK_ALL)
-      }
     }
     .width('100%')
     .padding(16)
