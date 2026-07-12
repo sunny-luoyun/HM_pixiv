@@ -25,12 +25,16 @@ export struct IllustCard {
   @State hasAppeared: boolean = false;
   @State imageHeight: number = 150;
   @State cardVisibility: Visibility = Visibility.Visible;
+  private entryAnimTimer: number = -1;
+  private localUrlTimer: number = -1;
+  private imageFadeTimer: number = -1;
 
   async aboutToAppear() {
     if (this.hasAppeared) return;
     this.hasAppeared = true;
 
-    setTimeout(() => {
+    this.entryAnimTimer = setTimeout(() => {
+      this.entryAnimTimer = -1;
       animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
         this.cardOpacity = 1;
         this.cardTranslateY = 0;
@@ -43,18 +47,54 @@ export struct IllustCard {
     }
     const path = await PixivService.cacheImage(this.item.url, `illust_${this.item.id}.jpg`);
     if (path) {
-      setTimeout(() => {
+      this.localUrlTimer = setTimeout(() => {
+        this.localUrlTimer = -1;
         this.localUrl = path;
       }, 0);
     }
     this.isCaching = false;
     this.isBookmarked = !!this.item.bookmarkData && !!this.item.bookmarkData.id;
 
-    setTimeout(() => {
+    this.imageFadeTimer = setTimeout(() => {
+      this.imageFadeTimer = -1;
       animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
         this.imageOpacity = 1;
       });
     }, this.index * 60 + 200);
+  }
+
+  aboutToReuse(): void {
+    this.clearTimers();
+    this.cardOpacity = 0;
+    this.cardTranslateY = 20;
+    this.localUrl = '';
+    this.isCaching = true;
+    this.isBookmarked = false;
+    this.isBookmarkLoading = false;
+    this.bookmarkScale = 1;
+    this.imageOpacity = 0;
+    this.hasAppeared = false;
+    this.imageHeight = 150;
+    this.cardVisibility = Visibility.Visible;
+  }
+
+  aboutToDisappear(): void {
+    this.clearTimers();
+  }
+
+  private clearTimers(): void {
+    if (this.entryAnimTimer !== -1) {
+      clearTimeout(this.entryAnimTimer);
+      this.entryAnimTimer = -1;
+    }
+    if (this.localUrlTimer !== -1) {
+      clearTimeout(this.localUrlTimer);
+      this.localUrlTimer = -1;
+    }
+    if (this.imageFadeTimer !== -1) {
+      clearTimeout(this.imageFadeTimer);
+      this.imageFadeTimer = -1;
+    }
   }
 
   async toggleBookmark() {

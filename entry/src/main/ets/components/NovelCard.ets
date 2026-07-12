@@ -34,8 +34,12 @@ export struct NovelCard {
   @State isBookmarked: boolean = false;
   @State isBookmarkLoading: boolean = false;
 
+  private entryAnimTimer: number = -1;
+  private coverFadeTimer: number = -1;
+
   async aboutToAppear() {
-    setTimeout(() => {
+    this.entryAnimTimer = setTimeout(() => {
+      this.entryAnimTimer = -1;
       animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
         this.cardOpacity = 1;
         this.cardTranslateY = 0;
@@ -47,7 +51,8 @@ export struct NovelCard {
     if (path) {
       this.coverImageOpacity = 0;
       this.localCoverPath = path;
-      setTimeout(() => {
+      this.coverFadeTimer = setTimeout(() => {
+        this.coverFadeTimer = -1;
         animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
           this.coverImageOpacity = 1;
         });
@@ -62,6 +67,37 @@ export struct NovelCard {
     }
 
     await this.checkCacheStatus();
+  }
+
+  aboutToReuse(): void {
+    this.clearTimers();
+    this.cardOpacity = 0;
+    this.cardTranslateY = 20;
+    this.coverImageOpacity = 0;
+    this.localCoverPath = '';
+    this.cacheStatus = CacheStatus.NOT_CACHED;
+    this.cacheLabel = '缓存';
+    this.translatingTitle = false;
+    this.translatedTitle = '';
+    this.hasTitleTranslation = false;
+    this.showOriginalTitle = true;
+    this.isBookmarked = false;
+    this.isBookmarkLoading = false;
+  }
+
+  aboutToDisappear(): void {
+    this.clearTimers();
+  }
+
+  private clearTimers(): void {
+    if (this.entryAnimTimer !== -1) {
+      clearTimeout(this.entryAnimTimer);
+      this.entryAnimTimer = -1;
+    }
+    if (this.coverFadeTimer !== -1) {
+      clearTimeout(this.coverFadeTimer);
+      this.coverFadeTimer = -1;
+    }
   }
 
   async checkCacheStatus() {

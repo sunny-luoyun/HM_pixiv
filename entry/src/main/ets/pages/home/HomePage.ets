@@ -67,6 +67,13 @@ export struct HomePage {
     await this.loadBlockedLists();
   }
 
+  aboutToDisappear(): void {
+    if (this.illustRetryTimer !== null) {
+      clearTimeout(this.illustRetryTimer);
+      this.illustRetryTimer = null;
+    }
+  }
+
   onLoginStateChange() {
     if (this.isLoggedIn && this.illustSource.totalCount() === 0 && !this.isLoadingIllust) {
       this.loadIllusts();
@@ -123,14 +130,15 @@ export struct HomePage {
   }
 
   async loadMoreIllusts() {
+    const now = Date.now();
     if (this.isLoadingMoreIllust || !this.hasMoreIllust) return;
+    if (now - this.lastLoadMoreTime < 1500) return;
     this.isLoadingMoreIllust = true;
-    this.lastLoadMoreTime = Date.now();
+    this.lastLoadMoreTime = now;
     try {
       const res = await PixivService.getDiscoveryIllusts('all', PAGE_SIZE);
       if (!res.error) {
         const newWorks = res.body?.thumbnails?.illust ?? [];
-        // 后台预下载缩略图
         for (const work of newWorks) {
           const url = work.url;
           if (url) {
@@ -153,13 +161,15 @@ export struct HomePage {
     } catch (err) {
       console.error('加载更多插画失败:', err);
     }
-    this.isLoadingMoreIllust = false;
     if (this.scrollContentHeight > 0 && this.hasMoreIllust) {
       const remaining = this.scrollContentHeight - this.scrollContainerHeight - Math.max(this.lastPreloadY, 0);
       if (remaining < PRELOAD_THRESHOLD) {
+        this.isLoadingMoreIllust = false;
         this.loadMoreIllusts();
+        return;
       }
     }
+    this.isLoadingMoreIllust = false;
   }
 
   async loadBlockedLists(): Promise<void> {
@@ -208,9 +218,11 @@ export struct HomePage {
   }
 
   async loadMoreNovels() {
+    const now = Date.now();
     if (this.isLoadingMoreNovel || !this.hasMoreNovel) return;
+    if (now - this.lastLoadMoreTime < 1500) return;
     this.isLoadingMoreNovel = true;
-    this.lastLoadMoreTime = Date.now();
+    this.lastLoadMoreTime = now;
     try {
       const res = await PixivService.getDiscoveryNovels('all', PAGE_SIZE);
       if (!res.error) {
@@ -232,13 +244,15 @@ export struct HomePage {
     } catch (err) {
       console.error('加载更多小说失败:', err);
     }
-    this.isLoadingMoreNovel = false;
     if (this.scrollContentHeight > 0 && this.hasMoreNovel) {
       const remaining = this.scrollContentHeight - this.scrollContainerHeight - Math.max(this.lastPreloadY, 0);
       if (remaining < PRELOAD_THRESHOLD) {
+        this.isLoadingMoreNovel = false;
         this.loadMoreNovels();
+        return;
       }
     }
+    this.isLoadingMoreNovel = false;
   }
 
   build() {
@@ -406,12 +420,6 @@ export struct HomePage {
             })
             .onScroll((_xOffset: number, yOffset: number) => {
               this.handleHeaderScroll(yOffset);
-              if (this.scrollContentHeight > 0) {
-                const remaining = this.scrollContentHeight - this.scrollContainerHeight - yOffset;
-                if (yOffset > this.lastPreloadY && remaining < PRELOAD_THRESHOLD && this.hasMoreIllust && !this.isLoadingMoreIllust) {
-                  this.loadMoreIllusts();
-                }
-              }
               this.lastPreloadY = yOffset;
             })
             .onAreaChange((_old: Area, area: Area) => {
@@ -475,12 +483,6 @@ export struct HomePage {
             })
             .onScroll((_xOffset: number, yOffset: number) => {
               this.handleHeaderScroll(yOffset);
-              if (this.scrollContentHeight > 0) {
-                const remaining = this.scrollContentHeight - this.scrollContainerHeight - yOffset;
-                if (yOffset > this.lastPreloadY && remaining < PRELOAD_THRESHOLD && this.hasMoreNovel && !this.isLoadingMoreNovel) {
-                  this.loadMoreNovels();
-                }
-              }
               this.lastPreloadY = yOffset;
             })
             .onAreaChange((_old: Area, area: Area) => {

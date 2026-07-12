@@ -58,7 +58,10 @@ struct IllustDetailPage {
   private baseTranslateY: number = 0;
   private lastTouchX: number = -1;
   private lastTouchY: number = -1;
+  private lastPanTime: number = 0;
   private swiperController: SwiperController = new SwiperController();
+  private bookmarkAnimTimer: number = -1;
+  private bgTransitionTimer: number = -1;
 
   get pageCount(): number {
     return this.detail?.pageCount ?? 1;
@@ -79,6 +82,14 @@ struct IllustDetailPage {
     }
     SnapShotImage.pixelMap = undefined;
     this.recoverPrePage();
+    if (this.bookmarkAnimTimer !== -1) {
+      clearTimeout(this.bookmarkAnimTimer);
+      this.bookmarkAnimTimer = -1;
+    }
+    if (this.bgTransitionTimer !== -1) {
+      clearTimeout(this.bgTransitionTimer);
+      this.bgTransitionTimer = -1;
+    }
   }
 
   goBack() {
@@ -208,7 +219,8 @@ struct IllustDetailPage {
     animateTo({ curve: Curve.FastOutSlowIn, duration: 250 }, () => {
       this.bookmarkScale = 1.35;
     });
-    setTimeout(() => {
+    this.bookmarkAnimTimer = setTimeout(() => {
+      this.bookmarkAnimTimer = -1;
       animateTo({ curve: curves.springMotion(0.55, 0.65) }, () => {
         this.bookmarkScale = 1;
       });
@@ -327,6 +339,9 @@ struct IllustDetailPage {
                   )
                   .onTouch((event: TouchEvent) => {
                     if (this.scaleValue <= 1) return;
+                    const now = Date.now();
+                    if (now - this.lastPanTime < 16) return;
+                    this.lastPanTime = now;
                     if (event.type === TouchType.Down && event.touches.length === 1) {
                       this.baseTranslateX = this.translateX;
                       this.baseTranslateY = this.translateY;
@@ -399,7 +414,8 @@ struct IllustDetailPage {
                 animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
                   this.backgroundOpacity = 0;
                 });
-                setTimeout(() => {
+                this.bgTransitionTimer = setTimeout(() => {
+                  this.bgTransitionTimer = -1;
                   this.backgroundImageUrl = bgUrl;
                   animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
                     this.backgroundOpacity = 0.5;

@@ -96,7 +96,9 @@ export struct MainTabsPage {
     if (this.notificationNavigateTab >= 0 && this.notificationNavigateTab !== this.currentIndex) {
       this.currentIndex = this.notificationNavigateTab;
       this.tabsController.changeIndex(this.currentIndex);
-      AppStorage.setOrCreate('notificationNavigateTab', -1);
+      setTimeout(() => {
+        AppStorage.setOrCreate('notificationNavigateTab', -1);
+      }, 0);
     }
   }
 

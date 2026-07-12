@@ -119,7 +119,9 @@ export class LoginViewModel extends BaseVM<LoginState> {
       `);
 
       let parsed: LoginUserData | string = result;
-      while (typeof parsed === 'string') {
+      let parseGuard: number = 0;
+      while (typeof parsed === 'string' && parseGuard < 10) {
+        parseGuard++;
         try {
           parsed = JSON.parse(parsed);
         } catch (e) {

@@ -15,9 +15,12 @@ export struct UserCard {
   @State avatarOpacity: number = 0;
   @State localAvatar: string = '';
   @State isCaching: boolean = true;
+  private entryAnimTimer: number = -1;
+  private avatarFadeTimer: number = -1;
 
   async aboutToAppear() {
-    setTimeout(() => {
+    this.entryAnimTimer = setTimeout(() => {
+      this.entryAnimTimer = -1;
       animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
         this.cardOpacity = 1;
         this.cardTranslateY = 0;
@@ -33,13 +36,38 @@ export struct UserCard {
     if (path) {
       this.avatarOpacity = 0;
       this.localAvatar = path;
-      setTimeout(() => {
+      this.avatarFadeTimer = setTimeout(() => {
+        this.avatarFadeTimer = -1;
         animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
           this.avatarOpacity = 1;
         });
       }, this.index * 60 + 200);
     }
     this.isCaching = false;
+  }
+
+  aboutToReuse(): void {
+    this.clearTimers();
+    this.cardOpacity = 0;
+    this.cardTranslateY = 20;
+    this.avatarOpacity = 0;
+    this.localAvatar = '';
+    this.isCaching = true;
+  }
+
+  aboutToDisappear(): void {
+    this.clearTimers();
+  }
+
+  private clearTimers(): void {
+    if (this.entryAnimTimer !== -1) {
+      clearTimeout(this.entryAnimTimer);
+      this.entryAnimTimer = -1;
+    }
+    if (this.avatarFadeTimer !== -1) {
+      clearTimeout(this.avatarFadeTimer);
+      this.avatarFadeTimer = -1;
+    }
   }
 
   build() {
