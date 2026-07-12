@@ -10,6 +10,7 @@ interface TableNames {
   BLOCKED_SERIES: string;
   BLOCKED_SERIES_TITLES: string;
   PROGRESS: string;
+  BROWSE_HISTORY: string;
 }
 
 const TABLES: TableNames = {
@@ -18,8 +19,9 @@ const TABLES: TableNames = {
   BLOCKED_SERIES: 'blocked_series',
   BLOCKED_SERIES_TITLES: 'blocked_series_titles',
   PROGRESS: 'reading_progress',
+  BROWSE_HISTORY: 'browse_history',
 };
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 const SQL_CREATE_NOVELS_TABLE = `
   CREATE TABLE IF NOT EXISTS ${TABLES.NOVELS} (
@@ -118,6 +120,27 @@ const SQL_CREATE_PROGRESS_TABLE = `
   )
 `;
 
+const SQL_CREATE_BROWSE_HISTORY_TABLE = `
+  CREATE TABLE IF NOT EXISTS ${TABLES.BROWSE_HISTORY} (
+    id            TEXT    PRIMARY KEY,
+    content_type  TEXT    NOT NULL,
+    content_id    TEXT    NOT NULL,
+    title         TEXT    NOT NULL,
+    cover_url     TEXT    DEFAULT '',
+    user_id       TEXT    DEFAULT '',
+    user_name     TEXT    DEFAULT '',
+    page_count    INTEGER DEFAULT 0,
+    tags          TEXT    DEFAULT '[]',
+    bookmark_count INTEGER DEFAULT 0,
+    word_count    INTEGER DEFAULT 0,
+    series_id     TEXT    DEFAULT '',
+    series_title  TEXT    DEFAULT '',
+    create_date   TEXT    DEFAULT '',
+    update_date   TEXT    DEFAULT '',
+    viewed_at     TEXT    NOT NULL
+  )
+`;
+
 export class DatabaseCore {
   private static rdbStore: relationalStore.RdbStore | null = null;
   private static initialized: boolean = false;
@@ -138,6 +161,7 @@ export class DatabaseCore {
         await DatabaseCore.rdbStore.executeSql(SQL_CREATE_NOVELS_TABLE);
         await DatabaseCore.rdbStore.executeSql(SQL_CREATE_BLOCKED_AUTHORS_TABLE);
         await DatabaseCore.rdbStore.executeSql(SQL_CREATE_BLOCKED_SERIES_TABLE);
+        await DatabaseCore.rdbStore.executeSql(SQL_CREATE_BROWSE_HISTORY_TABLE);
         DatabaseCore.rdbStore.version = DB_VERSION;
       } else if (version < DB_VERSION) {
         await DatabaseCore.upgradeDatabase(version, DB_VERSION);
@@ -145,6 +169,7 @@ export class DatabaseCore {
 
       await DatabaseCore.initBlocklistTables();
       await DatabaseCore.initProgressTable();
+      await DatabaseCore.initBrowseHistoryTable();
       DatabaseCore.initialized = true;
     } catch (err) {
       console.error(`[DatabaseCore] 初始化失败: ${JSON.stringify(err)}`);
@@ -185,6 +210,10 @@ export class DatabaseCore {
 
   static get TableProgress(): string {
     return TABLES.PROGRESS;
+  }
+
+  static get TableBrowseHistory(): string {
+    return TABLES.BROWSE_HISTORY;
   }
 
   static resultSetToNovels(result: relationalStore.ResultSet): PixivNovel[] {
@@ -290,6 +319,13 @@ export class DatabaseCore {
         console.warn(`[DatabaseCore] 系列名称屏蔽表创建跳过: ${JSON.stringify(e)}`);
       }
     }
+    if (oldVersion < 5) {
+      try {
+        await DatabaseCore.rdbStore!.executeSql(SQL_CREATE_BROWSE_HISTORY_TABLE);
+      } catch (e) {
+        console.warn(`[DatabaseCore] 浏览历史表创建跳过: ${JSON.stringify(e)}`);
+      }
+    }
     DatabaseCore.rdbStore!.version = newVersion;
   }
 
@@ -341,6 +377,15 @@ export class DatabaseCore {
       await DatabaseCore.rdbStore!.executeSql(`ALTER TABLE reading_progress_new RENAME TO reading_progress;`);
     } catch (e) {
       console.error('[DatabaseCore] 进度表迁移失败:', JSON.stringify(e));
+    }
+  }
+
+  private static async initBrowseHistoryTable(): Promise<void> {
+    if (!DatabaseCore.rdbStore) return;
+    try {
+      await DatabaseCore.rdbStore.executeSql(SQL_CREATE_BROWSE_HISTORY_TABLE);
+    } catch (err) {
+      console.error('[DatabaseCore] 浏览历史表初始化失败:', JSON.stringify(err));
     }
   }
 }

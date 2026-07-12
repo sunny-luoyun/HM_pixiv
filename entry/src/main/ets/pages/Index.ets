@@ -16,6 +16,7 @@ import { AuthorDetailBuilder } from './settings/AuthorDetailPage';
 import { CachedNovelsBuilder } from './settings/CachedNovelsPage';
 import { CachedNovelsSimpleBuilder } from './settings/CachedNovelsSimplePage';
 import { SeriesDetailBuilder } from './settings/SeriesDetailPage';
+import { BrowseHistoryBuilder } from './settings/BrowseHistoryPage';
 import { MainTabsBuilder } from './TabsPage';
 import { AnimateCallback, CustomTransition } from '../common/utils/CustomTransitionUtils';
 
@@ -73,6 +74,8 @@ struct Index {
       CachedNovelsSimpleBuilder()
     } else if (name === PageEnum.SERIES_DETAIL) {
       SeriesDetailBuilder()
+    } else if (name === PageEnum.BROWSE_HISTORY) {
+      BrowseHistoryBuilder()
     }
   }
 

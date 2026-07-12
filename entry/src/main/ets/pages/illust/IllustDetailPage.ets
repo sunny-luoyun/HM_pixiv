@@ -4,7 +4,8 @@ import { common } from '@kit.AbilityKit';
 import { curves, display } from '@kit.ArkUI';
 import { image } from '@kit.ImageKit';
 import { PixivService } from '../../services/PixivService';
-import { IllustDetailBody } from '../../models/PixivModels';
+import { IllustDetailBody, BrowseHistoryRecord } from '../../models/PixivModels';
+import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { PageContext } from '../../common/utils/PageContext';
 import { PageEnum } from '../../common/constants/PageEnum';
 import { IllustCommentsParam } from '../../common/constants/PageParamTypes';
@@ -149,6 +150,7 @@ struct IllustDetailPage {
             })
             .catch(() => {});
         });
+        this.saveIllustHistory(res.body);
       } else {
         this.errorMsg = res.message || '获取详情失败';
         this.isLoading = false;
@@ -158,6 +160,37 @@ struct IllustDetailPage {
       console.error('获取插画详情失败:', err);
       this.errorMsg = '加载失败，请检查网络';
       this.isLoading = false;
+    }
+  }
+
+  private async saveIllustHistory(detail: IllustDetailBody): Promise<void> {
+    try {
+      const ctx = getContext(this) as common.UIAbilityContext;
+      const tagNames: string[] = [];
+      for (let i = 0; i < detail.tags.tags.length; i++) {
+        tagNames.push(detail.tags.tags[i].tag);
+      }
+      const record: BrowseHistoryRecord = {
+        id: 'illust_' + detail.illustId,
+        contentType: 'illust',
+        contentId: detail.illustId,
+        title: detail.illustTitle,
+        coverUrl: detail.urls.regular,
+        userId: detail.userId,
+        userName: detail.userName,
+        pageCount: detail.pageCount,
+        tags: tagNames,
+        bookmarkCount: detail.bookmarkCount,
+        wordCount: 0,
+        seriesId: '',
+        seriesTitle: '',
+        createDate: detail.createDate,
+        updateDate: '',
+        viewedAt: new Date().toISOString()
+      };
+      await pixivCacheDB.saveBrowseHistory(record, ctx);
+    } catch (err) {
+      console.error('保存插画浏览历史失败:', err);
     }
   }
 

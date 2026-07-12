@@ -13,9 +13,9 @@ export default function pixivCacheDBTest() {
         expect(dbName).assertEqual('pixiv_cache.db');
       });
 
-      it('DB_VERSION 应为 4', 0, () => {
-        const version = 4;
-        expect(version).assertEqual(4);
+      it('DB_VERSION 应为 5', 0, () => {
+        const version = 5;
+        expect(version).assertEqual(5);
       });
     });
 
@@ -34,6 +34,10 @@ export default function pixivCacheDBTest() {
 
       it('TABLE_BLOCKED_SERIES_TITLES 应为 blocked_series_titles', 0, () => {
         expect('blocked_series_titles').assertEqual('blocked_series_titles');
+      });
+
+      it('TABLE_BROWSE_HISTORY 应为 browse_history', 0, () => {
+        expect('browse_history').assertEqual('browse_history');
       });
     });
 

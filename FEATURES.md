@@ -276,6 +276,14 @@
 | 36 | 排行榜 R18 | 登录前 R18/R18周 模式按钮隐藏 → 登录后可见 | ☐ |
 | 37 | 评论表情显示 | 评论内容中 `(heart)` 正确显示为 ❤️，`(laugh)` 为 😄，未知关键词保持原样 | ☐ |
 | 38 | Stamp 贴图 | 含有 Stamp 的评论显示对应的贴图图片（48×48） | ☐ |
+| 39 | 浏览历史入口 | 「我的」页面菜单栏显示「🕐 浏览历史」项并点击可进入 | ☐ |
+| 40 | 插画历史记录 | 打开插画详情页返回后 → 浏览历史「插画」Tab 显示该插画卡片 | ☐ |
+| 41 | 小说历史记录 | 打开已缓存小说阅读后返回 → 浏览历史「小说」Tab 显示该小说卡片 | ☐ |
+| 42 | 历史页卡片可点击 | 浏览历史页中点击插画/小说卡片 → 正常跳转至详情/阅读页 | ☐ |
+| 43 | 双 Tab 切换 | 浏览历史页切换插画/小说 Tab → 列表正常切换 | ☐ |
+| 44 | 重复浏览更新 | 多次浏览同一作品 → 仅保留一条记录 | ☐ |
+| 45 | 浏览历史日期显示 | 历史页每张卡片上方显示浏览时间（如「7月12日 14:30」） | ☐ |
+| 46 | 浏览历史翻页加载 | 列表滚到底部自动加载更多，底部有 loading 和「已显示全部记录」提示 | ☐ |
 
 ---
 
@@ -428,7 +436,27 @@
 
 ---
 
-> 最后更新：F31 评论表情转换与 Stamp 贴图渲染，基于 2026-07-12
+> 最后更新：F32 浏览历史，基于 2026-07-12
+
+---
+
+## F32 - 浏览历史
+
+- **描述**：自动记录用户查看过的插画和小说，在「我的」页面新增「浏览历史」入口，按插画/小说 Tab 分类展示
+- **新增文件**：
+  - `entry/src/main/ets/database/BrowseHistoryDao.ets` — 浏览历史数据访问层（INSERT/UPDATE/QUERY）
+  - `entry/src/main/ets/pages/settings/BrowseHistoryPage.ets` — 浏览历史页面（SegmentedTabBar + IllustCard/NovelCard + BasicDataSource）
+- **修改文件**：
+  - `entry/src/main/ets/database/DatabaseCore.ets` — 新增 `browse_history` 表（DB_VERSION 4→5）
+  - `entry/src/main/ets/database/PixivCacheDB.ets` — 新增 `saveBrowseHistory` / `getAllIllustBrowseHistory` / `getAllNovelBrowseHistory`
+  - `entry/src/main/ets/models/CommonModels.ets` — 新增 `BrowseHistoryRecord` 接口
+  - `entry/src/main/ets/common/constants/PageEnum.ets` — 新增 `BROWSE_HISTORY` 路由名
+  - `entry/src/main/ets/pages/Index.ets` — 注册 `BrowseHistoryBuilder`
+  - `entry/src/main/ets/pages/setting/SettingPage.ets` — 添加「🕐 浏览历史」菜单项
+  - `entry/src/main/ets/pages/illust/IllustDetailPage.ets` — 浏览插画详情时写入历史
+  - `entry/src/main/ets/pages/novel/NovelReaderPage.ets` — 阅读小说时写入历史
+- **数据存储**：本地 SQLite `browse_history` 表（id/content_type/content_id/title/cover_url/user_id/user_name/page_count/tags/bookmark_count/word_count/series_id/series_title/create_date/update_date/viewed_at）
+- **历史记录规则**：同一作品重复浏览仅更新时间戳（UPSERT 语义）；纯本地，不依赖 Pixiv 服务端
 
 ---
 

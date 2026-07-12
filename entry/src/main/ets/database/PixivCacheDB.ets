@@ -3,8 +3,9 @@ import { DatabaseCore } from './DatabaseCore';
 import { NovelCacheDao } from './NovelCacheDao';
 import { BlockListDao } from './BlockListDao';
 import { TranslationCacheDao } from './TranslationCacheDao';
+import { BrowseHistoryDao } from './BrowseHistoryDao';
 import {
-  PixivNovel, BlockedAuthor, BlockedSeries, BlockedSeriesTitle
+  PixivNovel, BlockedAuthor, BlockedSeries, BlockedSeriesTitle, BrowseHistoryRecord
 } from '../models/PixivModels';
 
 export class PixivCacheDB {
@@ -138,6 +139,26 @@ export class PixivCacheDB {
 
   async updateTranslationProgress(novelId: string, progress: number, status: string): Promise<void> {
     return TranslationCacheDao.updateTranslationProgress(novelId, progress, status);
+  }
+
+  async saveBrowseHistory(record: BrowseHistoryRecord, ctx: common.UIAbilityContext): Promise<void> {
+    await DatabaseCore.init(ctx);
+    return BrowseHistoryDao.saveHistory(record);
+  }
+
+  async getAllIllustBrowseHistory(ctx: common.UIAbilityContext, limit?: number, offset?: number): Promise<BrowseHistoryRecord[]> {
+    await DatabaseCore.init(ctx);
+    return BrowseHistoryDao.getAllIllustHistory(limit, offset);
+  }
+
+  async getAllNovelBrowseHistory(ctx: common.UIAbilityContext, limit?: number, offset?: number): Promise<BrowseHistoryRecord[]> {
+    await DatabaseCore.init(ctx);
+    return BrowseHistoryDao.getAllNovelHistory(limit, offset);
+  }
+
+  async getBrowseHistoryCount(ctx: common.UIAbilityContext, contentType: string): Promise<number> {
+    await DatabaseCore.init(ctx);
+    return BrowseHistoryDao.getCountByType(contentType);
   }
 }
 

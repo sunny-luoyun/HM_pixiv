@@ -76,6 +76,25 @@ export interface BlockedSeriesTitle {
   blockedAt: string;
 }
 
+export interface BrowseHistoryRecord {
+  id: string;
+  contentType: string;
+  contentId: string;
+  title: string;
+  coverUrl: string;
+  userId: string;
+  userName: string;
+  pageCount: number;
+  tags: string[];
+  bookmarkCount: number;
+  wordCount: number;
+  seriesId: string;
+  seriesTitle: string;
+  createDate: string;
+  updateDate: string;
+  viewedAt: string;
+}
+
 export function getCacheStatusDisplay(status: CacheStatus): CacheStatusDisplay {
   switch (status) {
     case CacheStatus.CACHED:

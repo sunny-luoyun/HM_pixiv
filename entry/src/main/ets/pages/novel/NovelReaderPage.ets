@@ -2,6 +2,7 @@ import promptAction from '@ohos.promptAction';
 import common from '@ohos.app.ability.common';
 import { curves } from '@kit.ArkUI';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
+import { BrowseHistoryRecord } from '../../models/PixivModels';
 import { PixivService } from '../../services/PixivService';
 import { getDeepSeekService } from '../../services/DeepSeekService';
 import { TranslationController, PrepareFullTranslationError, PrepareFullTranslationSuccess } from '../../services/TranslationController';
@@ -136,6 +137,7 @@ struct NovelReaderPage {
           this.pendingScrollY = savedY;
         }
       }
+      await this.saveNovelBrowseHistory(novelId);
     } catch (e) {
       console.error(`加载离线内容失败: ${JSON.stringify(e)}`);
       promptAction.showToast({ message: '加载失败，请重试' });
@@ -147,6 +149,39 @@ struct NovelReaderPage {
           this.pendingScrollY = 0;
         }, 50);
       }
+    }
+  }
+
+  private async saveNovelBrowseHistory(novelId: string): Promise<void> {
+    try {
+      const novel = await pixivCacheDB.getNovelById(novelId);
+      if (!novel) return;
+      const tagNames: string[] = [];
+      for (let i = 0; i < novel.tags.length; i++) {
+        tagNames.push(novel.tags[i].name);
+      }
+      const record: BrowseHistoryRecord = {
+        id: 'novel_' + novelId,
+        contentType: 'novel',
+        contentId: novelId,
+        title: novel.title,
+        coverUrl: novel.coverUrl,
+        userId: novel.authorId,
+        userName: novel.author,
+        pageCount: novel.pageCount,
+        tags: tagNames,
+        bookmarkCount: novel.bookmarkCount,
+        wordCount: novel.textLength,
+        seriesId: novel.series?.id ?? '',
+        seriesTitle: novel.series?.title ?? '',
+        createDate: novel.createDate,
+        updateDate: novel.updateDate,
+        viewedAt: new Date().toISOString()
+      };
+      const ctx = getContext(this) as common.UIAbilityContext;
+      await pixivCacheDB.saveBrowseHistory(record, ctx);
+    } catch (err) {
+      console.error('保存小说浏览历史失败:', err);
     }
   }
 

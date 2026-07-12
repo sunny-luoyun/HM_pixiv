@@ -52,6 +52,10 @@ export struct SettingPage {
         const pageCtx = AppStorage.get<PageContext>('rootPageContext');
         if (pageCtx) { pageCtx.openPage(PageEnum.FAVORITES); }
       })
+      this.MenuItem('🕐', '浏览历史', () => {
+        const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+        if (pageCtx) { pageCtx.openPage(PageEnum.BROWSE_HISTORY); }
+      })
       this.MenuItem('🚫', '屏蔽内容', () => {
         const pageCtx = AppStorage.get<PageContext>('rootPageContext');
         if (pageCtx) { pageCtx.openPage(PageEnum.BLOCKED_CONTENT); }
