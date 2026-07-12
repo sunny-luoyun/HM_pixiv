@@ -11,6 +11,7 @@ import { NovelBookmark, NovelSeries } from '../../models/PixivModels';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { NovelCard } from '../../components/NovelCard';
 import { PageContext } from '../../common/utils/PageContext';
+import { ScrollHeaderManager, ScrollHeaderAction } from '../../common/utils/ScrollHeaderManager';
 import { PageEnum } from '../../common/constants/PageEnum';
 import { UserProfileParam } from '../../common/constants/PageParamTypes';
 
@@ -76,7 +77,7 @@ struct NovelSeriesPage {
   @State offlineCachedCount: number = 0;
   @State isHeaderExpanded: boolean = true;
   @State isHeaderVisible: boolean = true;
-  private lastScrollY: number = 0;
+  private scrollManager: ScrollHeaderManager = new ScrollHeaderManager();
   private lastLoadMoreTime: number = 0;
 
   private configChangeCallback: () => void = () => {};
@@ -191,30 +192,29 @@ struct NovelSeriesPage {
   }
 
   handleHeaderScroll(yOffset: number) {
-    const delta = yOffset - this.lastScrollY;
-    this.lastScrollY = yOffset;
-
-    if (delta > 0 && this.isHeaderVisible && yOffset > 5) {
-      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
-        this.isHeaderVisible = false;
-      });
-    } else if (delta < -3 && !this.isHeaderVisible && Date.now() - this.lastLoadMoreTime > 500 &&
-      !this.isLoading) {
-      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
-        this.isHeaderVisible = true;
-      });
+    const action = this.scrollManager.onScroll(0, yOffset, this.isHeaderVisible);
+    if (action === ScrollHeaderAction.NONE) {
+      return;
     }
+    if (action === ScrollHeaderAction.SHOW && this.isLoading) {
+      return;
+    }
+    animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+      this.isHeaderVisible = action === ScrollHeaderAction.SHOW;
+    });
   }
 
   handleHeaderReachStart() {
-    if (Date.now() - this.lastLoadMoreTime < 500 || this.isLoading) {
+    const action = this.scrollManager.onReachStart(this.isHeaderVisible);
+    if (action === ScrollHeaderAction.NONE) {
       return;
     }
-    if (!this.isHeaderVisible) {
-      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
-        this.isHeaderVisible = true;
-      });
+    if (this.isLoading) {
+      return;
     }
+    animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+      this.isHeaderVisible = true;
+    });
   }
 
   build() {

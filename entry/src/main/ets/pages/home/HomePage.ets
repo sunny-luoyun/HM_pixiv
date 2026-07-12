@@ -8,6 +8,7 @@ import { SegmentedTabBar } from '../../components/SegmentedTabBar';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { BasicDataSource } from '../../common/utils/BasicDataSource';
 import { getColumnsTemplate, getNovelColumnsTemplate } from '../../common/utils/BreakpointManager';
+import { ScrollHeaderManager, ScrollHeaderAction } from '../../common/utils/ScrollHeaderManager';
 import common from '@ohos.app.ability.common';
 
 const PAGE_SIZE = 30;
@@ -39,7 +40,7 @@ export struct HomePage {
 
   @State isHeaderVisible: boolean = true;
   @State swipeProgress: number = 0;
-  private lastScrollY: number = 0;
+  private scrollManager: ScrollHeaderManager = new ScrollHeaderManager();
   private lastLoadMoreTime: number = 0;
 
   private illustEmptyRetries: number = 0;
@@ -302,36 +303,35 @@ export struct HomePage {
   }
 
   handleHeaderScroll(yOffset: number) {
-    const delta = yOffset - this.lastScrollY;
-    this.lastScrollY = yOffset;
-
-    if (delta > 0 && this.isHeaderVisible && yOffset > 5) {
-      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
-        this.isHeaderVisible = false;
-      });
-    } else if (delta < -3 && !this.isHeaderVisible && Date.now() - this.lastLoadMoreTime > 500 &&
-      !this.isLoadingMoreIllust && !this.isLoadingMoreNovel) {
-      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
-        this.isHeaderVisible = true;
-      });
+    const action = this.scrollManager.onScroll(this.currentTab, yOffset, this.isHeaderVisible);
+    if (action === ScrollHeaderAction.NONE) {
+      return;
     }
+    if (action === ScrollHeaderAction.SHOW &&
+      (this.isLoadingMoreIllust || this.isLoadingMoreNovel)) {
+      return;
+    }
+    animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+      this.isHeaderVisible = action === ScrollHeaderAction.SHOW;
+    });
   }
 
   handleHeaderReachStart() {
-    if (Date.now() - this.lastLoadMoreTime < 500 ||
-      this.isLoadingMoreIllust || this.isLoadingMoreNovel) {
+    const action = this.scrollManager.onReachStart(this.isHeaderVisible);
+    if (action === ScrollHeaderAction.NONE) {
       return;
     }
-    if (!this.isHeaderVisible) {
-      animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
-        this.isHeaderVisible = true;
-      });
+    if (this.isLoadingMoreIllust || this.isLoadingMoreNovel) {
+      return;
     }
+    animateTo({ curve: curves.springMotion(0.45, 0.7) }, () => {
+      this.isHeaderVisible = true;
+    });
   }
 
   handleTabChange(index: number) {
     this.currentTab = index;
-    this.lastScrollY = 0;
+    this.scrollManager.onTabChange(index);
     if (index === 1 && this.novelSource.totalCount() === 0 && !this.isLoadingNovel) {
       this.loadNovels();
     }
