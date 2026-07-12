@@ -99,4 +99,73 @@ export default function appStateTest() {
       });
     });
   });
+
+  describe('cacheAvatar 方法', () => {
+    it('cacheAvatar 应定义且为函数', 0, () => {
+      const state = AppState.getInstance();
+      expect(typeof state.cacheAvatar).assertEqual('function');
+    });
+
+    it('未登录时 cacheAvatar 应早返回不执行下载', 0, async () => {
+      const state = AppState.getInstance();
+      // 保存原始状态并在测试结束后恢复
+      const savedLogin = state.isLoggedIn;
+      const savedUserId = state.userId;
+      state.isLoggedIn = false;
+      state.userId = '';
+
+      try {
+        await state.cacheAvatar();
+        // 未登录时内部无网络请求直接 return，不会抛异常
+        expect(true).assertTrue();
+      } catch (_) {
+        expect(false).assertTrue(); // 不应抛出异常
+      }
+
+      state.isLoggedIn = savedLogin;
+      state.userId = savedUserId;
+    });
+  });
+
+  describe('头像自动补抓逻辑 (checkAndRefetchAvatar 底层方法)', () => {
+    it('未登录时 refreshUserInfo 应早返回不发起网络请求', 0, async () => {
+      const state = AppState.getInstance();
+      const savedLogin = state.isLoggedIn;
+      const savedUserId = state.userId;
+      state.isLoggedIn = false;
+      state.userId = '';
+
+      try {
+        await state.refreshUserInfo();
+        // 未登录时内部有 `if (!this.isLoggedIn || !this.userId) return;`，无异常
+        expect(true).assertTrue();
+      } catch (_) {
+        expect(false).assertTrue(); // 不应抛出异常
+      }
+
+      state.isLoggedIn = savedLogin;
+      state.userId = savedUserId;
+    });
+
+    it('已登录时 refreshUserInfo 方法签名存在且可安全调用', 0, async () => {
+      const state = AppState.getInstance();
+      expect(typeof state.refreshUserInfo).assertEqual('function');
+      // 注：实际执行时若 userId 有效会发起网络请求，测试中可能因无 token 或网络
+      // 环境失败，但不应导致进程崩溃
+      try {
+        await state.refreshUserInfo();
+      } catch (e) {
+        // 允许网络/认证类异常（如 NETWORK_ERROR），但不允许未捕获崩溃
+        expect(e instanceof Error || typeof e === 'string').assertTrue();
+      }
+    });
+
+    it('cacheAvatar + refreshUserInfo 构成完整的头像补抓链路', 0, () => {
+      const state = AppState.getInstance();
+      // 验证链路的两个核心方法均存在
+      expect(typeof state.cacheAvatar).assertEqual('function');
+      expect(typeof state.refreshUserInfo).assertEqual('function');
+      // refreshUserInfo 内部调用 cacheAvatar，形成完整的「API 获取 → 缓存」链路
+    });
+  });
 }

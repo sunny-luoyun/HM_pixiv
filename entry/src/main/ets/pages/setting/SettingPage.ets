@@ -9,6 +9,17 @@ export struct SettingPage {
   @StorageLink('appState') appState: AppState = appState;
 
   aboutToAppear() {
+    this.checkAndRefetchAvatar();
+  }
+
+  private async checkAndRefetchAvatar(): Promise<void> {
+    if (!this.appState.isLoggedIn || !this.appState.userId) return;
+    if (this.getAvatarUrl()) return; // 已有本地缓存
+    try {
+      await this.appState.refreshUserInfo();
+    } catch (_) {
+      // 静默失败，下次进入页面自动重试
+    }
   }
 
   private getAvatarUrl(): string {

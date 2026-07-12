@@ -436,7 +436,17 @@
 
 ---
 
-> 最后更新：F32 浏览历史，基于 2026-07-12
+> 最后更新：F33 个人中心头像自动补抓，基于 2026-07-12
+
+---
+
+## F33 - 个人中心头像自动补抓
+
+- **描述**：用户每次切换到「我的」页面时，自动检测本地头像缓存文件是否存在；若缺失则通过 Pixiv API (`refreshUserInfo()`) 获取头像 URL 并下载到本地缓存，确保已登录用户始终能看到自己的头像而非默认占位图
+- **涉及文件**：
+  - `entry/src/main/ets/pages/setting/SettingPage.ets` — 新增 `checkAndRefetchAvatar()` 私有方法，在 `aboutToAppear()` 中触发
+  - `entry/src/main/ets/store/AppState.ets` — 复用已有 `refreshUserInfo()` / `cacheAvatar()` 方法
+- **测试**：`entry/src/test/AppState.test.ets` — 新增「头像自动补抓逻辑」测试套件
 
 ---
 
