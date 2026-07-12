@@ -274,6 +274,8 @@
 | 34 | 排行榜浏览 | 切换到「排行」Tab → 默认显示每日排行 → 切换模式（每周/每月/新人等） → 列表正常加载 → 下拉刷新 → 翻页到末尾 | ☐ |
 | 35 | 排名角标 | 排行榜卡片左上角显示 `#1` `#2` 等排名数字 | ☐ |
 | 36 | 排行榜 R18 | 登录前 R18/R18周 模式按钮隐藏 → 登录后可见 | ☐ |
+| 37 | 评论表情显示 | 评论内容中 `(heart)` 正确显示为 ❤️，`(laugh)` 为 😄，未知关键词保持原样 | ☐ |
+| 38 | Stamp 贴图 | 含有 Stamp 的评论显示对应的贴图图片（48×48） | ☐ |
 
 ---
 
@@ -409,7 +411,24 @@
 
 ---
 
-> 最后更新：F30 评论回复（楼中楼），基于 2026-07-10
+## F31 - 评论 Emoji 表情转换与 StampId 贴图渲染
+
+- **描述**：将 Pixiv 评论 API 返回的表情关键词（如 `(heart)`、`(laugh)`、`(love2)`）转换为 Unicode Emoji（❤️、😄、🥰）；支持 `stampId` 字段的 Stamp 贴图渲染（如 stampId=302 显示对应贴图图片）
+- **新增文件**：
+  - `entry/src/main/ets/common/utils/EmojiUtil.ets` — Pixiv 表情映射表（120+ 条）、`convertPixivEmojis()` 函数、`getStampImageUrl()` 辅助函数
+- **修改文件**：
+  - `entry/src/main/ets/models/CommentModels.ets` — `stamp?: object` → `stampId?: string`（匹配实际 API 返回格式）
+  - `entry/src/main/ets/components/CommentsComponent.ets` — 主评论与回复的 `Text` 渲染前调用 `convertPixivEmojis()`；在 `stampId` 存在时通过 `ImageComponent` 渲染贴图图片
+- **测试**：`entry/src/test/EmojiUtil.test.ets`
+- **验证项**：
+  - 评论内容中 `(heart)` 显示为 ❤️，`(laugh)` 显示为 😄
+  - 变体关键词 `(love2)` 显示为 🥰，`(heart_eyes)` 显示为 😍
+  - 未知关键词如 `(unknown)` 保持原样
+  - Stamp 贴图图片（基于 stampId）正常显示
+
+---
+
+> 最后更新：F31 评论表情转换与 Stamp 贴图渲染，基于 2026-07-12
 
 ---
 

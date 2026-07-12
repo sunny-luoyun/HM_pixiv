@@ -4,6 +4,7 @@ import { AjaxComment, AjaxCommentsResponse } from '../models/PixivModels';
 import { BasicDataSource } from '../common/utils/BasicDataSource';
 import { AppState } from '../store/AppState';
 import { ImageComponent } from './ImageComponent';
+import { convertPixivEmojis } from '../common/utils/EmojiUtil';
 
 interface ReplyTarget {
   id: string;
@@ -422,11 +423,17 @@ export struct CommentsComponent {
       .width('100%')
       .alignItems(VerticalAlign.Top)
 
-      Text(comment.comment)
+      Text(convertPixivEmojis(comment.comment))
         .fontSize(14)
         .fontColor('#CCCCCC')
         .margin({ top: 6, left: 46 })
         .width('100%')
+
+      if (comment.stampUrl) {
+        ImageComponent({ src: comment.stampUrl, imgBorderRadius: 8, objectFit: ImageFit.Contain })
+          .width(96).height(96)
+          .margin({ top: 4, left: 46 })
+      }
 
       if (this.expandedReplies.has(comment.id) && this.expandedReplies.get(comment.id) === true && this.repliesCache.has(comment.id)) {
         Column() {
@@ -468,11 +475,17 @@ export struct CommentsComponent {
             .margin({ left: 6 })
         }
 
-        Text(reply.comment)
+        Text(convertPixivEmojis(reply.comment))
           .fontSize(13)
           .fontColor('#CCCCCC')
           .margin({ top: 2 })
           .width('100%')
+
+        if (reply.stampUrl) {
+          ImageComponent({ src: reply.stampUrl, imgBorderRadius: 8, objectFit: ImageFit.Contain })
+            .width(96).height(96)
+            .margin({ top: 4 })
+        }
       }
       .margin({ left: 8 })
       .layoutWeight(1)

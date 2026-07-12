@@ -16,7 +16,7 @@ export interface AjaxComment {
   userAccount: string;
   img: string;
   hasReplies: boolean;
-  stamp?: object;
+  stampUrl?: string;
   replies?: AjaxComment[];
 }
 

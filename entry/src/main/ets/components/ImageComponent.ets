@@ -78,9 +78,10 @@ export struct ImageComponent {
 
   private generateFileName(url: string): string {
     const parts = url.split('/');
-    const last = parts[parts.length - 1];
+    const raw = parts[parts.length - 1] || 'image.jpg';
+    const last = raw.split('?')[0]; // 去掉查询参数（如 ?20180605）
     const hash = this.simpleHash(url);
-    return `img_${hash}_${last || 'image.jpg'}`;
+    return `img_${hash}_${last}`;
   }
 
   private simpleHash(str: string): string {

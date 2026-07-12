@@ -204,13 +204,18 @@ export interface CommentUser {
   profile_image_urls: CommentProfileImageUrls;
 }
 
+export interface CommentStamp {
+  stamp_id: number;
+  stamp_url: string;
+}
+
 export interface IllustComment {
   id: number;
   comment: string;
   date: string;
   user: CommentUser;
   has_replies: boolean;
-  stamp?: object;
+  stamp?: CommentStamp;
 }
 
 export interface IllustCommentsResponse {

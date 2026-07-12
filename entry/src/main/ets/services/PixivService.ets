@@ -112,19 +112,19 @@ export class PixivService {
   }
 
   static async getIllustComments(illustId: string, offset: number = 0): Promise<AjaxCommentsResponse> {
-    return PixivApiService.getIllustComments(illustId, offset);
+    return AppApiService.getAppIllustComments(Number(illustId), offset);
   }
 
   static async getNovelComments(novelId: string, offset: number = 0): Promise<AjaxCommentsResponse> {
-    return PixivApiService.getNovelComments(novelId, offset);
+    return AppApiService.getAppNovelComments(Number(novelId), offset);
   }
 
   static async getIllustCommentReplies(commentId: string, page: number = 1): Promise<AjaxCommentsResponse> {
-    return PixivApiService.getIllustCommentReplies(commentId, page);
+    return AppApiService.getAppIllustCommentReplies(Number(commentId));
   }
 
   static async getNovelCommentReplies(commentId: string, page: number = 1): Promise<AjaxCommentsResponse> {
-    return PixivApiService.getNovelCommentReplies(commentId, page);
+    return AppApiService.getAppNovelCommentReplies(Number(commentId));
   }
 
   static async getRanking(mode: string = 'daily', page: number = 1, content: string = 'all'): Promise<RankingResponse> {

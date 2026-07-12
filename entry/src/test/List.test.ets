@@ -29,6 +29,7 @@ import latestCheckTest from './LatestCheck.test';
 import pixivAuthTest from './PixivAuth.test';
 import rankingServiceTest from './RankingService.test';
 import commentsServiceTest from './CommentsService.test';
+import emojiUtilTest from './EmojiUtil.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -62,4 +63,5 @@ export default function testsuite() {
   pixivAuthTest();
   rankingServiceTest();
   commentsServiceTest();
+  emojiUtilTest();
 }

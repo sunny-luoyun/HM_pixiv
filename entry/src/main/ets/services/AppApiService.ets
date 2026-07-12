@@ -4,7 +4,9 @@ import { ProxyService } from './ProxyService';
 import { ApiConfig } from '../common/constants/ApiConfig';
 import {
   IllustCommentsResponse, AppUserIllustsResponse, AppUserNovelsResponse,
+  AjaxCommentsResponse,
 } from '../models/PixivModels';
+import { AjaxComment } from '../models/CommentModels';
 
 interface ApiResult<T> {
   error: boolean;
@@ -81,6 +83,37 @@ interface PostNovelCommentReplyParams {
 
 interface DeleteCommentParams {
   comment_id: number;
+}
+
+interface AppV3CommentProfileUrls {
+  medium: string;
+}
+
+interface AppV3CommentUser {
+  id: number;
+  name: string;
+  account: string;
+  profile_image_urls: AppV3CommentProfileUrls;
+}
+
+interface AppV3Stamp {
+  stamp_id: number;
+  stamp_url: string;
+}
+
+interface AppV3Comment {
+  id: number;
+  comment: string;
+  date: string;
+  user: AppV3CommentUser;
+  stamp: AppV3Stamp | null;
+  has_replies?: boolean;
+  replies?: AppV3Comment[];
+}
+
+interface AppV3CommentsResponse {
+  comments: AppV3Comment[];
+  next_url: string | null;
 }
 
 interface AddIllustBookmarkParams {
@@ -353,6 +386,79 @@ export class AppApiService {
       http.RequestMethod.GET,
       `/v1/user/novels?user_id=${userId}&offset=${offset}`
     );
+  }
+
+  // ==============================
+  // App API v3 评论读取（返回 stamp.stamp_url）
+  // ==============================
+
+  static async getAppIllustComments(illustId: number, offset: number = 0): Promise<AjaxCommentsResponse> {
+    const raw: AppV3CommentsResponse = await AppApiService.request<AppV3CommentsResponse>(
+      http.RequestMethod.GET,
+      `/v3/illust/comments?illust_id=${illustId}&offset=${offset}`
+    );
+    return AppApiService.v3ToAjaxResponse(raw, offset);
+  }
+
+  static async getAppIllustCommentReplies(commentId: number): Promise<AjaxCommentsResponse> {
+    const raw: AppV3CommentsResponse = await AppApiService.request<AppV3CommentsResponse>(
+      http.RequestMethod.GET,
+      `/v2/illust/comment/replies?comment_id=${commentId}`
+    );
+    return AppApiService.v3ToAjaxResponse(raw, 0);
+  }
+
+  static async getAppNovelComments(novelId: number, offset: number = 0): Promise<AjaxCommentsResponse> {
+    const raw: AppV3CommentsResponse = await AppApiService.request<AppV3CommentsResponse>(
+      http.RequestMethod.GET,
+      `/v3/novel/comments?novel_id=${novelId}&offset=${offset}`
+    );
+    return AppApiService.v3ToAjaxResponse(raw, offset);
+  }
+
+  static async getAppNovelCommentReplies(commentId: number): Promise<AjaxCommentsResponse> {
+    const raw: AppV3CommentsResponse = await AppApiService.request<AppV3CommentsResponse>(
+      http.RequestMethod.GET,
+      `/v2/novel/comment/replies?comment_id=${commentId}`
+    );
+    return AppApiService.v3ToAjaxResponse(raw, 0);
+  }
+
+  private static v3ToAjaxResponse(raw: AppV3CommentsResponse, offset: number): AjaxCommentsResponse {
+    const comments: AjaxComment[] = [];
+    const rawComments: AppV3Comment[] = raw.comments || [];
+    for (let i: number = 0; i < rawComments.length; i++) {
+      comments.push(AppApiService.transformV3Comment(rawComments[i]));
+    }
+    return {
+      error: false,
+      body: {
+        total: offset + rawComments.length + (raw.next_url ? 1 : 0),
+        comments: comments,
+      },
+    };
+  }
+
+  private static transformV3Comment(raw: AppV3Comment): AjaxComment {
+    const result: AjaxComment = {
+      id: String(raw.id),
+      comment: raw.comment,
+      date: raw.date,
+      userId: String(raw.user.id),
+      userName: raw.user.name,
+      userAccount: raw.user.account,
+      img: raw.user.profile_image_urls.medium,
+      hasReplies: raw.has_replies || false,
+      stampUrl: raw.stamp ? raw.stamp.stamp_url : undefined,
+    };
+    if (raw.replies && raw.replies.length > 0) {
+      const replyList: AjaxComment[] = [];
+      for (let i: number = 0; i < raw.replies.length; i++) {
+        replyList.push(AppApiService.transformV3Comment(raw.replies[i]));
+      }
+      result.replies = replyList;
+    }
+    return result;
   }
 
 }
