@@ -1,5 +1,6 @@
 import { PixivApiService, sanitizeNovelBookmark } from './PixivApiService';
 import { ImageCacheService } from './ImageCacheService';
+import { SearchCondition } from '../models/SearchModels';
 import { AppApiService } from './AppApiService';
 import { Context } from '@kit.AbilityKit';
 import {
@@ -71,16 +72,18 @@ export class PixivService {
     return PixivApiService.fetchNovelText(novelId);
   }
 
-  static async searchIllusts(keyword: string, page: number = 1, sMode: string = 's_tag', type: string = 'illust_and_ugoira', order: string = 'date_d', mode: string = 'all'): Promise<SearchIllustResponse> {
-    return PixivApiService.searchIllusts(keyword, page, sMode, type, order, mode);
+  static async searchIllusts(keyword: string, page: number = 1, sMode: string = 's_tag', type: string = 'illust_and_ugoira', order: string = 'date_d', mode: string = 'all', condition?: SearchCondition): Promise<SearchIllustResponse> {
+    console.info(`[PixivService] searchIllusts keyword=${keyword} page=${page} sMode=${sMode} type=${type} order=${order} mode=${mode} condition=${JSON.stringify(condition)}`);
+    return PixivApiService.searchIllusts(keyword, page, sMode, type, order, mode, condition);
   }
 
-  static async searchNovels(keyword: string, page: number = 1, sMode: string = 's_tag', order: string = 'date_d', mode: string = 'all'): Promise<SearchNovelResponse> {
-    return PixivApiService.searchNovels(keyword, page, sMode, order, mode);
+  static async searchNovels(keyword: string, page: number = 1, sMode: string = 's_tag', order: string = 'date_d', mode: string = 'all', condition?: SearchCondition): Promise<SearchNovelResponse> {
+    console.info(`[PixivService] searchNovels keyword=${keyword} page=${page} sMode=${sMode} order=${order} mode=${mode} condition=${JSON.stringify(condition)}`);
+    return PixivApiService.searchNovels(keyword, page, sMode, order, mode, condition);
   }
 
-  static async searchUsers(keyword: string, page: number = 1): Promise<SearchUserResponse> {
-    return PixivApiService.searchUsers(keyword, page);
+  static async searchUsers(keyword: string, page: number = 1, sMode: string = 's_usr'): Promise<SearchUserResponse> {
+    return PixivApiService.searchUsers(keyword, page, sMode);
   }
 
   static async getFollowingList(userId: string, offset: number = 0, limit: number = 30): Promise<FollowingUserResponse> {

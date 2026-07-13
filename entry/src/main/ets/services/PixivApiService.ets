@@ -22,6 +22,7 @@ import {
 } from '../models/PixivModels';
 import { ApiConfig } from '../common/constants/ApiConfig';
 import { ProxyService } from './ProxyService';
+import { SearchCondition, searchConditionToQueryString } from '../models/SearchModels';
 
 interface NovelAjaxResponse<T> {
   error: boolean;
@@ -388,15 +389,38 @@ export class PixivApiService {
     }
   }
 
-  static async searchIllusts(keyword: string, page: number = 1, sMode: string = 's_tag', type: string = 'illust_and_ugoira', order: string = 'date_d', mode: string = 'all'): Promise<SearchIllustResponse> {
+  static async searchIllusts(keyword: string, page: number = 1, sMode: string = 's_tag', type: string = 'illust_and_ugoira', order: string = 'date_d', mode: string = 'all', condition?: SearchCondition): Promise<SearchIllustResponse> {
     const encoded = encodeURIComponent(keyword);
-    const path = `/ajax/search/illustrations/${encoded}?word=${encoded}&type=${type}&order=${order}&mode=${mode}&s_mode=${sMode}&p=${page}`;
-    return PixivApiService.request<SearchIllustResponse>(path);
+    let path = `/ajax/search/illustrations/${encoded}?word=${encoded}&type=${type}&order=${order}&mode=${mode}&s_mode=${sMode}&p=${page}`;
+    if (condition !== undefined) {
+      path += searchConditionToQueryString(condition);
+    }
+    console.info(`[PixivApi] searchIllusts path: ${path}`);
+    const resp = await PixivApiService.request<SearchIllustResponse>(path);
+    if (!resp.error && resp.body !== undefined) {
+      if (resp.body.illust === undefined || resp.body.illust.data === undefined) {
+        if (resp.body.illustManga !== undefined) {
+          const adapted: SearchIllustBody = {
+            illust: {
+              data: resp.body.illustManga.data,
+              total: resp.body.illustManga.total
+            },
+            illustManga: resp.body.illustManga
+          };
+          return { error: false, body: adapted };
+        }
+      }
+    }
+    return resp;
   }
 
-  static async searchNovels(keyword: string, page: number = 1, sMode: string = 's_tag', order: string = 'date_d', mode: string = 'all'): Promise<SearchNovelResponse> {
+  static async searchNovels(keyword: string, page: number = 1, sMode: string = 's_tag', order: string = 'date_d', mode: string = 'all', condition?: SearchCondition): Promise<SearchNovelResponse> {
     const encoded = encodeURIComponent(keyword);
-    const path = `/ajax/search/novels/${encoded}?word=${encoded}&order=${order}&mode=${mode}&s_mode=${sMode}&include_translated_tags=1&p=${page}&type=novel&lang=zh`;
+    let path = `/ajax/search/novels/${encoded}?word=${encoded}&order=${order}&mode=${mode}&s_mode=${sMode}&include_translated_tags=1&p=${page}&type=novel&lang=zh`;
+    if (condition !== undefined) {
+      path += searchConditionToQueryString(condition);
+    }
+    console.info(`[PixivApi] searchNovels path: ${path}`);
     const resp = await PixivApiService.request<SearchNovelResponse>(path);
     if (!resp.error && resp.body?.novel?.data) {
       resp.body.novel.data = resp.body.novel.data.map(sanitizeNovelBookmark);
@@ -404,9 +428,9 @@ export class PixivApiService {
     return resp;
   }
 
-  static async searchUsers(keyword: string, page: number = 1): Promise<SearchUserResponse> {
+  static async searchUsers(keyword: string, page: number = 1, sMode: string = 's_usr'): Promise<SearchUserResponse> {
     const encoded = encodeURIComponent(keyword);
-    const path = `/ajax/search/users?nick=${encoded}&s_mode=s_usr&i=0&lang=en&p=${page}`;
+    const path = `/ajax/search/users?nick=${encoded}&s_mode=${sMode}&i=0&lang=en&p=${page}`;
     return PixivApiService.request<SearchUserResponse>(path);
   }
 

@@ -112,6 +112,7 @@ export interface SearchIllustData {
 
 export interface SearchIllustBody {
   illust: SearchIllustData;
+  illustManga?: SearchIllustData;
 }
 
 export interface SearchIllustResponse {

@@ -38,17 +38,26 @@
 
 ---
 
-## F04 - 多维度搜索（含过滤条件）
+## F04 - 多维度搜索（含过滤条件 + 詳細検索条件）
 
-- **描述**：按插画/小说/用户多维度搜索，支持排序（最新/最早/最多收藏）、匹配模式（标签部分/完全/标题说明）、内容类型（插画/动图/漫画）、R18 筛选
+- **描述**：按插画/小说/用户多维度搜索，支持排序、匹配模式、内容类型、R18 筛选、以及详细搜索条件（收藏数范围、投稿日期范围、AI生成过滤、宽高比、作品语言、原创过滤等）
 - **页面**：`entry/src/main/ets/pages/search/SearchPage.ets`
 - **API**：`entry/src/main/ets/services/PixivApiService.ets`（`searchIllusts`、`searchNovels`、`searchUsers`）
-- **组件**：`entry/src/main/ets/components/SegmentedTabBar.ets`
+- **组件**：`entry/src/main/ets/components/SegmentedTabBar.ets`、`entry/src/main/ets/components/AdvancedSearchDialog.ets`
+- **模型**：`entry/src/main/ets/models/SearchModels.ets`（`SearchCondition` 接口、`searchConditionToQueryString` 序列化、`isSearchConditionActive` 状态判断）
 - **过滤参数**（2025-06-23 新增）：
   - `sortOrder`：`date_d`(最新)/`date`(最旧)/`popular_d`(最多收藏)
   - `searchMode`：`s_tag`(标签部分)/`s_tag_full`(标签完全)/`s_tc`(标题说明)
   - `contentType`：`illust_and_ugoira`(全部)/`illust`(插画)/`ugoira`(动图)/`manga`(漫画)
   - `r18Mode`：`all`(全部)/`safe`(全年龄)/`r18`(R-18)
+  - **詳細検索条件**（2026-07-12 新增）：
+    - `bookmark_num_min` / `bookmark_num_max` — 收藏数範囲指定
+    - `start_date` / `end_date` — 投稿日範囲指定（YYYY-MM-DD）
+    - `ai_type` — AI生成フィルター（0=全表示/1=AIのみ/2=非AIのみ）
+    - `ratio` — 作品の縦横比（''=指定なし/0.6=横長/1.0=正方形/1.5=縦長）
+    - `work_lang` — 作品言語（''=指定なし/ja/zh/en）
+    - `is_original` — オリジナルのみ（0=すべて/1=オリジナルのみ）
+    - `duration` — 投稿期間（''=指定なし/within_last_week/within_last_month/within_last_year）
 
 ---
 
