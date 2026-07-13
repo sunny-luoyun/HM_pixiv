@@ -4,9 +4,11 @@ import { common } from '@kit.AbilityKit';
 import { curves, display } from '@kit.ArkUI';
 import { image } from '@kit.ImageKit';
 import { PixivService } from '../../services/PixivService';
-import { IllustDetailBody, BrowseHistoryRecord, UgoiraMetaBody } from '../../models/PixivModels';
+import { IllustDetailBody, BrowseHistoryRecord, UgoiraMetaBody, UgoiraFrame } from '../../models/PixivModels';
 import { ILLUST_TYPE_UGOIRA } from '../../models/UgoiraModels';
 import { UgoiraPlayer } from '../../components/UgoiraPlayer';
+import { GifEncoder } from '../../services/GifEncoder';
+import fileIo from '@ohos.file.fs';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { PageContext } from '../../common/utils/PageContext';
 import { toLocalISODateTime } from '../../common/utils/TimeUtils';
@@ -188,6 +190,59 @@ struct IllustDetailPage {
     }
   }
 
+  private async handleUgoiraDownload(): Promise<void> {
+    if (!this.detail || !this.ugoiraMeta || this.isDownloading) {
+      return;
+    }
+    this.isDownloading = true;
+    this.downloadSuccess = false;
+    this.downloadFail = false;
+    try {
+      const ctx = getContext(this) as common.UIAbilityContext;
+      const atManager = abilityAccessCtrl.createAtManager();
+      const permissions: Array<Permissions> = ['ohos.permission.WRITE_IMAGEVIDEO'];
+      const result = await atManager.requestPermissionsFromUser(ctx, permissions);
+      const granted = result.authResults.every(r => r === 0);
+      if (!granted) {
+        console.error('用户未授予相册写入权限');
+        this.downloadFail = true;
+        this.isDownloading = false;
+        return;
+      }
+      promptAction.showToast({ message: '正在生成动图...' });
+      const gifPath: string = ctx.filesDir + '/temp_ugoira_' + this.illustId + '.gif';
+      const ok: boolean = await GifEncoder.createGifFromUgoira(
+        this.illustId,
+        this.ugoiraMeta.frames,
+        this.ugoiraMeta.src,
+        gifPath,
+        this.detail.width,
+        this.detail.height,
+      );
+      if (!ok) {
+        this.downloadFail = true;
+        this.isDownloading = false;
+        return;
+      }
+      const saved: boolean = await PixivService.saveImageToGallery(
+        ctx,
+        'file://' + gifPath,
+        'ugoira_' + this.illustId + '.gif',
+      );
+      if (saved) {
+        this.downloadSuccess = true;
+        promptAction.showToast({ message: '动图已保存到相册' });
+      } else {
+        this.downloadFail = true;
+      }
+      try { fileIo.unlinkSync(gifPath); } catch (_) {}
+    } catch (err) {
+      console.error('动图下载失败:', err);
+      this.downloadFail = true;
+    }
+    this.isDownloading = false;
+  }
+
   private async saveIllustHistory(detail: IllustDetailBody): Promise<void> {
     try {
       const ctx = getContext(this) as common.UIAbilityContext;
@@ -357,16 +412,22 @@ struct IllustDetailPage {
 
               Blank()
 
-              Button({ type: ButtonType.Circle }) {
-                Text('↓')
-                  .fontSize(18)
-                  .fontColor(Color.White)
+              if (this.isDownloading) {
+                LoadingProgress().width(20).height(20).color(Color.White)
+              } else if (this.downloadSuccess) {
+                Text('✓ 已保存').fontSize(12).fontColor($r('app.color.success'))
+              } else {
+                Button({ type: ButtonType.Circle }) {
+                  Text('↓')
+                    .fontSize(18)
+                    .fontColor(Color.White)
+                }
+                .width(40).height(40)
+                .backgroundColor($r('app.color.overlay_light'))
+                .onClick(() => {
+                  this.handleUgoiraDownload();
+                })
               }
-              .width(40).height(40)
-              .backgroundColor($r('app.color.overlay_light'))
-              .onClick(() => {
-                promptAction.showToast({ message: '动图下载暂不支持' });
-              })
 
               if (this.isBookmarkLoading) {
                 LoadingProgress()
