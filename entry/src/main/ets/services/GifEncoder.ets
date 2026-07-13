@@ -37,6 +37,9 @@ export class GifEncoder {
     if (palette.length < 2) {
       return false;
     }
+    const lut: number[] = GifEncoder.buildLut(palette);
+    const tLut: number = Date.now();
+    console.info(`[DL] buildLut: ${lut.length} entries in ${tLut - t1}ms`);
     const paletteSize: number = GifEncoder.nextPow2(palette.length);
     const minCodeSize: number = Math.ceil(Math.log2(paletteSize));
     const bitsPerPalette: number = minCodeSize;
@@ -51,7 +54,7 @@ export class GifEncoder {
 
       for (let fi: number = 0; fi < framePaths.length; fi += frameStep) {
         const ft0: number = Date.now();
-        const indexed: Uint8Array = await GifEncoder.frameToIndexed(framePaths[fi], palette, gifWidth, gifHeight);
+        const indexed: Uint8Array = await GifEncoder.frameToIndexed(framePaths[fi], lut, gifWidth, gifHeight);
         if (indexed.length === 0) {
           continue;
         }
@@ -189,9 +192,24 @@ export class GifEncoder {
     return bestIdx;
   }
 
+  private static buildLut(palette: RgbTriplet[]): number[] {
+    const lut: number[] = new Array(32768);
+    for (let r5: number = 0; r5 < 32; r5++) {
+      for (let g5: number = 0; g5 < 32; g5++) {
+        for (let b5: number = 0; b5 < 32; b5++) {
+          const cr: number = r5 * 8 + 4;
+          const cg: number = g5 * 8 + 4;
+          const cb: number = b5 * 8 + 4;
+          lut[(r5 << 10) | (g5 << 5) | b5] = GifEncoder.findNearestColor(cr, cg, cb, palette);
+        }
+      }
+    }
+    return lut;
+  }
+
   private static async frameToIndexed(
     filePath: string,
-    palette: RgbTriplet[],
+    lut: number[],
     w: number,
     h: number,
   ): Promise<Uint8Array> {
@@ -202,7 +220,10 @@ export class GifEncoder {
     const indexed: Uint8Array = new Uint8Array(w * h);
     for (let i: number = 0; i < w * h; i++) {
       const idx: number = i * 3;
-      indexed[i] = GifEncoder.findNearestColor(rgb[idx], rgb[idx + 1], rgb[idx + 2], palette);
+      const r5: number = rgb[idx] >> 3;
+      const g5: number = rgb[idx + 1] >> 3;
+      const b5: number = rgb[idx + 2] >> 3;
+      indexed[i] = lut[(r5 << 10) | (g5 << 5) | b5];
     }
     return indexed;
   }
