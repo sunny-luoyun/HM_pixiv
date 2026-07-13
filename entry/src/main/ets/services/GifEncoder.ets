@@ -53,7 +53,9 @@ export class GifEncoder {
     if (framePaths.length === 0 || delays.length === 0) {
       return false;
     }
-    const palette: RgbTriplet[] = await GifEncoder.buildPalette(framePaths, imgWidth, imgHeight);
+    const gifWidth: number = Math.ceil(imgWidth / 2);
+    const gifHeight: number = Math.ceil(imgHeight / 2);
+    const palette: RgbTriplet[] = await GifEncoder.buildPalette(framePaths, gifWidth, gifHeight);
     if (palette.length < 2) {
       return false;
     }
@@ -64,18 +66,19 @@ export class GifEncoder {
     const file = fileIo.openSync(outputPath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY);
     const fd: number = file.fd;
     try {
-      GifEncoder.writeHeader(fd, imgWidth, imgHeight, palette, bitsPerPalette);
+      GifEncoder.writeHeader(fd, gifWidth, gifHeight, palette, bitsPerPalette);
       const clearCode: number = 1 << bitsPerPalette;
 
       for (let fi: number = 0; fi < framePaths.length; fi++) {
-        const indexed: Uint8Array = await GifEncoder.frameToIndexed(framePaths[fi], palette, imgWidth, imgHeight);
+        const indexed: Uint8Array = await GifEncoder.frameToIndexed(framePaths[fi], palette, gifWidth, gifHeight);
         if (indexed.length === 0) {
           continue;
         }
         const delayCs: number = Math.max(1, Math.round(delays[fi] / 10));
         GifEncoder.writeGraphicsControlExt(fd, delayCs);
-        GifEncoder.writeImageDescriptor(fd, imgWidth, imgHeight);
+        GifEncoder.writeImageDescriptor(fd, gifWidth, gifHeight);
         GifEncoder.writeLzwData(fd, indexed, bitsPerPalette, clearCode);
+        await GifEncoder.yieldToUi();
       }
       const trailer: Uint8Array = new Uint8Array([0x3B]);
       fileIo.writeSync(fd, trailer.buffer as ArrayBuffer);
@@ -87,6 +90,10 @@ export class GifEncoder {
     }
     fileIo.closeSync(file);
     return true;
+  }
+
+  private static yieldToUi(): Promise<void> {
+    return new Promise<void>(resolve => setTimeout(resolve, 0));
   }
 
   private static async buildPalette(
@@ -114,6 +121,7 @@ export class GifEncoder {
           colorCount.set(key, (existing ?? 0) + 1);
         }
       }
+      await GifEncoder.yieldToUi();
     }
 
     const sorted: ColorEntry[] = [];
