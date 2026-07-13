@@ -24,6 +24,7 @@ export class GifEncoder {
     outputPath: string,
     imgWidth: number,
     imgHeight: number,
+    frameStep: number = 2,
   ): Promise<boolean> {
     const entries = await UgoiraExtractor.extractUgoiraFrames(illustId, zipUrl, frames);
     if (entries.length === 0) {
@@ -32,7 +33,7 @@ export class GifEncoder {
     }
     const framePaths: string[] = [];
     const delays: number[] = [];
-    for (let i: number = 0; i < entries.length; i++) {
+    for (let i: number = 0; i < entries.length; i += frameStep) {
       let rawPath: string = entries[i].localUri;
       if (rawPath.startsWith('file://')) {
         rawPath = rawPath.slice(7);
