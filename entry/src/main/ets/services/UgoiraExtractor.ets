@@ -31,6 +31,7 @@ export class UgoiraExtractor {
     zipUrl: string,
     frames: UgoiraFrame[]
   ): Promise<UgoiraCacheEntry[]> {
+    const t0: number = Date.now();
     const cacheDir: string = UgoiraExtractor.getUgoiraCacheDir(illustId);
     if (!cacheDir) {
       return [];
@@ -38,15 +39,21 @@ export class UgoiraExtractor {
 
     const existing: UgoiraCacheEntry[] = UgoiraExtractor.checkExistingFrames(cacheDir, frames);
     if (existing.length === frames.length) {
+      console.info(`[DL] extractUgoiraFrames: cache hit (${existing.length} frames) in ${Date.now() - t0}ms`);
       return existing;
     }
+    console.info(`[DL] extractUgoiraFrames: cache miss, need download ZIP`);
 
     const zipData: ArrayBuffer = await UgoiraExtractor.downloadZip(zipUrl);
+    const t1: number = Date.now();
+    console.info(`[DL] downloadZip: ${zipData.byteLength} bytes in ${t1 - t0}ms`);
     if (!zipData || zipData.byteLength === 0) {
       return [];
     }
-
+    console.info(`[DL] parseZipEntries start...`);
     const entries: ZipEntryInfo[] = UgoiraExtractor.parseZipEntries(zipData);
+    const t2: number = Date.now();
+    console.info(`[DL] parseZipEntries: ${entries.length} entries in ${t2 - t1}ms`);
     if (entries.length === 0) {
       return [];
     }
@@ -73,6 +80,8 @@ export class UgoiraExtractor {
         localUri: 'file://' + outPath,
       });
     }
+    const t3: number = Date.now();
+    console.info(`[DL] extractFrameFiles: ${result.length} frames written in ${t3 - t2}ms`);
     return result;
   }
 

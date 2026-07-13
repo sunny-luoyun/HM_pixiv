@@ -26,9 +26,14 @@ export class GifEncoder {
     if (framePaths.length === 0 || delays.length === 0) {
       return false;
     }
+    const t0: number = Date.now();
     const gifWidth: number = Math.ceil(imgWidth / 2);
     const gifHeight: number = Math.ceil(imgHeight / 2);
+    console.info(`[DL] GifEncoder: ${framePaths.length} frames, ${gifWidth}x${gifHeight}, frameStep=${frameStep}`);
+
     const palette: RgbTriplet[] = await GifEncoder.buildPalette(framePaths, gifWidth, gifHeight);
+    const t1: number = Date.now();
+    console.info(`[DL] buildPalette: ${palette.length} colors in ${t1 - t0}ms`);
     if (palette.length < 2) {
       return false;
     }
@@ -38,11 +43,14 @@ export class GifEncoder {
 
     const file = fileIo.openSync(outputPath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY);
     const fd: number = file.fd;
+    let frameCount: number = 0;
     try {
       GifEncoder.writeHeader(fd, gifWidth, gifHeight, palette, bitsPerPalette);
       const clearCode: number = 1 << bitsPerPalette;
+      const totalEncode: number = Math.ceil(framePaths.length / frameStep);
 
       for (let fi: number = 0; fi < framePaths.length; fi += frameStep) {
+        const ft0: number = Date.now();
         const indexed: Uint8Array = await GifEncoder.frameToIndexed(framePaths[fi], palette, gifWidth, gifHeight);
         if (indexed.length === 0) {
           continue;
@@ -52,6 +60,10 @@ export class GifEncoder {
         GifEncoder.writeImageDescriptor(fd, gifWidth, gifHeight);
         GifEncoder.writeLzwData(fd, indexed, bitsPerPalette, clearCode);
         await GifEncoder.yieldToUi();
+        frameCount++;
+        if (frameCount % 10 === 0 || frameCount === totalEncode) {
+          console.info(`[DL] encodeFrame [${frameCount}/${totalEncode}] frameIdx=${fi} took ${Date.now() - ft0}ms`);
+        }
       }
       const trailer: Uint8Array = new Uint8Array([0x3B]);
       fileIo.writeSync(fd, trailer.buffer as ArrayBuffer);
@@ -62,6 +74,7 @@ export class GifEncoder {
       return false;
     }
     fileIo.closeSync(file);
+    console.info(`[DL] GifEncoder done: ${frameCount} frames in ${Date.now() - t0}ms`);
     return true;
   }
 
@@ -79,6 +92,7 @@ export class GifEncoder {
 
     const processLimit: number = framePaths.length < 5 ? framePaths.length : 5;
     for (let fi: number = 0; fi < processLimit; fi++) {
+      const pt0: number = Date.now();
       const indexed: Uint8Array | null = await GifEncoder.readRgbPixels(framePaths[fi], imgWidth, imgHeight);
       if (indexed === null) {
         continue;
@@ -94,6 +108,7 @@ export class GifEncoder {
           colorCount.set(key, (existing ?? 0) + 1);
         }
       }
+      console.info(`[DL] paletteSample frame ${fi}: ${Date.now() - pt0}ms`);
       await GifEncoder.yieldToUi();
     }
 
@@ -128,6 +143,7 @@ export class GifEncoder {
     w: number,
     h: number,
   ): Promise<Uint8Array | null> {
+    const t0: number = Date.now();
     try {
       const imageSource: image.ImageSource = image.createImageSource(filePath);
       const pixelMap: image.PixelMap = await imageSource.createPixelMap({
@@ -137,6 +153,10 @@ export class GifEncoder {
       const buf: ArrayBuffer = new ArrayBuffer(w * h * 4);
       await pixelMap.readPixelsToBuffer(buf);
       imageSource.release();
+      const t1: number = Date.now();
+      if (w > 200) {
+        console.info(`[DL] readRgb ${filePath.slice(-30)} in ${t1 - t0}ms (${w}x${h})`);
+      }
       const rgba: Uint8Array = new Uint8Array(buf);
       const rgb: Uint8Array = new Uint8Array(w * h * 3);
       let dstIdx: number = 0;

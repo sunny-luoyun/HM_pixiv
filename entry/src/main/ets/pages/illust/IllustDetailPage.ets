@@ -202,7 +202,9 @@ struct IllustDetailPage {
       const ctx = getContext(this) as common.UIAbilityContext;
       const atManager = abilityAccessCtrl.createAtManager();
       const permissions: Array<Permissions> = ['ohos.permission.WRITE_IMAGEVIDEO'];
+      const dt0: number = Date.now();
       const result = await atManager.requestPermissionsFromUser(ctx, permissions);
+      console.info(`[DL] permission request: ${Date.now() - dt0}ms`);
       const granted = result.authResults.every(r => r === 0);
       if (!granted) {
         console.error('用户未授予相册写入权限');
@@ -212,9 +214,12 @@ struct IllustDetailPage {
       }
       promptAction.showToast({ message: '正在生成动图...' });
       const gifPath: string = ctx.filesDir + '/temp_ugoira_' + this.illustId + '.gif';
+      const t0: number = Date.now();
       const entries = await UgoiraExtractor.extractUgoiraFrames(
         this.illustId, this.ugoiraMeta.src, this.ugoiraMeta.frames,
       );
+      const t1: number = Date.now();
+      console.info(`[DL] extractUgoiraFrames: ${entries.length} entries in ${t1 - t0}ms`);
       const framePaths: string[] = [];
       const delays: number[] = [];
       for (let i: number = 0; i < entries.length; i++) {
@@ -228,6 +233,8 @@ struct IllustDetailPage {
       const ok: boolean = await GifEncoder.createGifFromFramePaths(
         framePaths, delays, gifPath, this.detail.width, this.detail.height,
       );
+      const t2: number = Date.now();
+      console.info(`[DL] createGif done: ${Date.now() - t1}ms`);
       if (!ok) {
         this.downloadFail = true;
         this.isDownloading = false;
@@ -238,6 +245,8 @@ struct IllustDetailPage {
         'file://' + gifPath,
         'ugoira_' + this.illustId + '.gif',
       );
+      const t3: number = Date.now();
+      console.info(`[DL] saveImageToGallery: ${t3 - t2}ms`);
       if (saved) {
         this.downloadSuccess = true;
         promptAction.showToast({ message: '动图已保存到相册' });
@@ -245,6 +254,7 @@ struct IllustDetailPage {
         this.downloadFail = true;
       }
       try { fileIo.unlinkSync(gifPath); } catch (_) {}
+      console.info(`[DL] total download: ${Date.now() - t0}ms`);
     } catch (err) {
       console.error('动图下载失败:', err);
       this.downloadFail = true;
