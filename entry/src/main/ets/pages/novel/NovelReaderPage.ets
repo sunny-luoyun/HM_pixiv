@@ -10,6 +10,7 @@ import preferences from '@ohos.data.preferences';
 import { ReaderColors, getReaderColors } from '../../common/utils/ThemeUtil';
 import { ContentBlock, parsePixivBlocks } from '../../common/utils/NovelParser';
 import { PageContext } from '../../common/utils/PageContext';
+import { toLocalISODateTime } from '../../common/utils/TimeUtils';
 import { PageEnum } from '../../common/constants/PageEnum';
 import { NovCommentsParam } from '../../common/constants/PageParamTypes';
 
@@ -176,7 +177,7 @@ struct NovelReaderPage {
         seriesTitle: novel.series?.title ?? '',
         createDate: novel.createDate,
         updateDate: novel.updateDate,
-        viewedAt: new Date().toISOString()
+        viewedAt: toLocalISODateTime(new Date())
       };
       const ctx = getContext(this) as common.UIAbilityContext;
       await pixivCacheDB.saveBrowseHistory(record, ctx);

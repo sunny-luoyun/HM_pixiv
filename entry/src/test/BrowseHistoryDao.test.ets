@@ -22,7 +22,7 @@ export default function browseHistoryDaoTest() {
           seriesTitle: '',
           createDate: '2026-01-01T00:00:00+00:00',
           updateDate: '',
-          viewedAt: '2026-07-12T00:00:00.000Z'
+          viewedAt: '2026-07-12T00:00:00'
         };
         expect(record.id).assertEqual('illust_123');
         expect(record.contentType).assertEqual('illust');
@@ -41,7 +41,7 @@ export default function browseHistoryDaoTest() {
         expect(record.seriesTitle).assertEqual('');
         expect(record.createDate).assertEqual('2026-01-01T00:00:00+00:00');
         expect(record.updateDate).assertEqual('');
-        expect(record.viewedAt).assertEqual('2026-07-12T00:00:00.000Z');
+        expect(record.viewedAt).assertEqual('2026-07-12T00:00:00');
       });
 
       it('novel 类型记录应包含系列信息', 0, () => {
@@ -61,7 +61,7 @@ export default function browseHistoryDaoTest() {
           seriesTitle: '测试系列',
           createDate: '2026-02-01T00:00:00+00:00',
           updateDate: '2026-03-01T00:00:00+00:00',
-          viewedAt: '2026-07-12T00:00:00.000Z'
+          viewedAt: '2026-07-12T00:00:00'
         };
         expect(record.id).assertEqual('novel_789');
         expect(record.contentType).assertEqual('novel');

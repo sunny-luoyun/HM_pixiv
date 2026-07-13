@@ -7,6 +7,7 @@ import { PixivService } from '../../services/PixivService';
 import { IllustDetailBody, BrowseHistoryRecord } from '../../models/PixivModels';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { PageContext } from '../../common/utils/PageContext';
+import { toLocalISODateTime } from '../../common/utils/TimeUtils';
 import { PageEnum } from '../../common/constants/PageEnum';
 import { IllustCommentsParam } from '../../common/constants/PageParamTypes';
 import { SnapShotImage } from '../../common/utils/SnapShotImage';
@@ -186,7 +187,7 @@ struct IllustDetailPage {
         seriesTitle: '',
         createDate: detail.createDate,
         updateDate: '',
-        viewedAt: new Date().toISOString()
+        viewedAt: toLocalISODateTime(new Date())
       };
       await pixivCacheDB.saveBrowseHistory(record, ctx);
     } catch (err) {

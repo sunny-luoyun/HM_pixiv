@@ -1,6 +1,7 @@
 import relationalStore from '@ohos.data.relationalStore';
 import common from '@ohos.app.ability.common';
 import { PixivNovel, PixivTag, PixivSeries, CacheStatus } from '../models/PixivModels';
+import { toLocalISODateTime } from '../common/utils/TimeUtils';
 
 const DB_NAME = 'pixiv_cache.db';
 
@@ -21,7 +22,7 @@ const TABLES: TableNames = {
   PROGRESS: 'reading_progress',
   BROWSE_HISTORY: 'browse_history',
 };
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 
 const SQL_CREATE_NOVELS_TABLE = `
   CREATE TABLE IF NOT EXISTS ${TABLES.NOVELS} (
@@ -326,6 +327,13 @@ export class DatabaseCore {
         console.warn(`[DatabaseCore] 浏览历史表创建跳过: ${JSON.stringify(e)}`);
       }
     }
+    if (oldVersion < 6) {
+      try {
+        await DatabaseCore.migrateBrowseHistoryTimezone();
+      } catch (e) {
+        console.warn(`[DatabaseCore] 浏览历史时区迁移跳过: ${JSON.stringify(e)}`);
+      }
+    }
     DatabaseCore.rdbStore!.version = newVersion;
   }
 
@@ -386,6 +394,39 @@ export class DatabaseCore {
       await DatabaseCore.rdbStore.executeSql(SQL_CREATE_BROWSE_HISTORY_TABLE);
     } catch (err) {
       console.error('[DatabaseCore] 浏览历史表初始化失败:', JSON.stringify(err));
+    }
+  }
+
+  private static async migrateBrowseHistoryTimezone(): Promise<void> {
+    if (!DatabaseCore.rdbStore) return;
+    try {
+      const result = await DatabaseCore.rdbStore.querySql(
+        `SELECT id, viewed_at FROM ${TABLES.BROWSE_HISTORY}`
+      );
+      interface IdTimePair {
+        id: string;
+        localTime: string;
+      }
+      const updates: IdTimePair[] = [];
+      while (result.goToNextRow()) {
+        const id = result.getString(0);
+        const viewedAt = result.getString(1);
+        if (viewedAt.endsWith('Z') || viewedAt.endsWith('+00:00')) {
+          const localTime = toLocalISODateTime(new Date(viewedAt));
+          const pair: IdTimePair = { id: id, localTime: localTime };
+          updates.push(pair);
+        }
+      }
+      result.close();
+      for (let i = 0; i < updates.length; i++) {
+        const predicates = new relationalStore.RdbPredicates(TABLES.BROWSE_HISTORY);
+        predicates.equalTo('id', updates[i].id);
+        const values: relationalStore.ValuesBucket = { 'viewed_at': updates[i].localTime };
+        await DatabaseCore.rdbStore.update(values, predicates);
+      }
+      console.info(`[DatabaseCore] 浏览历史时区迁移完成，共处理 ${updates.length} 条记录`);
+    } catch (err) {
+      console.error('[DatabaseCore] 浏览历史时区迁移失败:', JSON.stringify(err));
     }
   }
 }
