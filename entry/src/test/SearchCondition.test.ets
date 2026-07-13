@@ -66,7 +66,7 @@ export default function searchConditionTest() {
       it('startDate 和 endDate 应生成正确参数', 0, () => {
         const cond = makeCond({ startDate: '2024-01-01', endDate: '2024-12-31' });
         const result = searchConditionToQueryString(cond);
-        expect(result).assertEqual('&start_date=2024-01-01&end_date=2024-12-31');
+        expect(result).assertEqual('&scd=2024-01-01&ecd=2024-12-31');
       });
 
       it('aiType 非0应生成参数', 0, () => {
@@ -110,7 +110,7 @@ export default function searchConditionTest() {
           isOriginal: 1,
         });
         const result = searchConditionToQueryString(cond);
-        expect(result).assertEqual('&start_date=2024-06-01&end_date=2024-08-31&bookmark_num_min=500&bookmark_num_max=5000&ai_type=2&work_lang=ja&is_original=1');
+        expect(result).assertEqual('&scd=2024-06-01&ecd=2024-08-31&bookmark_num_min=500&bookmark_num_max=5000&ai_type=2&work_lang=ja&is_original=1');
       });
 
       it('所有条件同时设置', 0, () => {
@@ -126,7 +126,7 @@ export default function searchConditionTest() {
           duration: 'within_last_year',
         });
         const result = searchConditionToQueryString(cond);
-        const expected = '&start_date=2024-01-01&end_date=2024-12-31&bookmark_num_min=100&bookmark_num_max=10000&ai_type=1&ratio=1.0&work_lang=en&is_original=1&duration=within_last_year';
+        const expected = '&scd=2024-01-01&ecd=2024-12-31&bookmark_num_min=100&bookmark_num_max=10000&ai_type=1&ratio=1.0&work_lang=en&is_original=1&duration=within_last_year';
         expect(result).assertEqual(expected);
       });
     });

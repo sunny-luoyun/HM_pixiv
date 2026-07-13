@@ -35,10 +35,10 @@ export const DEFAULT_SEARCH_CONDITION: SearchCondition = {
 export function searchConditionToQueryString(cond: SearchCondition): string {
   const params: string[] = [];
   if (cond.startDate !== undefined) {
-    params.push('start_date=' + cond.startDate);
+    params.push('scd=' + cond.startDate);
   }
   if (cond.endDate !== undefined) {
-    params.push('end_date=' + cond.endDate);
+    params.push('ecd=' + cond.endDate);
   }
   if (cond.bookmarkMin !== undefined) {
     params.push('bookmark_num_min=' + cond.bookmarkMin);
