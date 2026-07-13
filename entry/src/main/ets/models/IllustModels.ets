@@ -25,6 +25,7 @@ export interface IllustDetailUrls {
 export interface IllustDetailBody {
   illustId: string;
   illustTitle: string;
+  illustType: number;
   userId: string;
   userName: string;
   userAccount: string;

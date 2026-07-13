@@ -4,3 +4,4 @@ export * from './NovelModels';
 export * from './UserModels';
 export * from './CommentModels';
 export * from './RankingModels';
+export * from './UgoiraModels';

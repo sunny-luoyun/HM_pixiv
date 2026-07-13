@@ -14,6 +14,7 @@ import {
   IllustDetailResponse, AjaxCommentsResponse,
   NovelBookmark,
   RankingResponse, NovelRankingResponse,
+  UgoiraMetaResponse,
 } from '../models/PixivModels';
 
 export { sanitizeNovelBookmark };
@@ -112,6 +113,10 @@ export class PixivService {
 
   static async getIllustDetail(illustId: string): Promise<IllustDetailResponse> {
     return PixivApiService.getIllustDetail(illustId);
+  }
+
+  static async getUgoiraMeta(illustId: string): Promise<UgoiraMetaResponse> {
+    return PixivApiService.getUgoiraMeta(illustId);
   }
 
   static async getIllustComments(illustId: string, offset: number = 0): Promise<AjaxCommentsResponse> {

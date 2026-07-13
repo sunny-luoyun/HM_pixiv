@@ -130,6 +130,22 @@ export struct IllustCard {
             .width('100%')
             .height(this.imageHeight)
             .opacity(this.imageOpacity)
+          if (this.item.illustType === 2) {
+            Row() {
+              Circle()
+                .width(6)
+                .height(6)
+                .fill(Color.White)
+                .margin({ right: 3 })
+              Text('动图')
+                .fontSize(11)
+                .fontColor(Color.White)
+            }
+            .padding({ left: 6, right: 6, top: 3, bottom: 3 })
+            .backgroundColor($r('app.color.overlay_dark'))
+            .borderRadius(8)
+            .position({ top: 6, left: 6 })
+          }
           if (this.item.pageCount > 1) {
             Text(`${this.item.pageCount}页`)
               .fontSize(11)

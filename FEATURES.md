@@ -293,6 +293,10 @@
 | 44 | 重复浏览更新 | 多次浏览同一作品 → 仅保留一条记录 | ☐ |
 | 45 | 浏览历史日期显示 | 历史页每张卡片上方显示浏览时间（如「7月12日 14:30」） | ☐ |
 | 46 | 浏览历史翻页加载 | 列表滚到底部自动加载更多，底部有 loading 和「已显示全部记录」提示 | ☐ |
+| 47 | 动图播放 | 打开动图作品 ID（如 147154771） → 动图正常循环播放 | ☐ |
+| 48 | 动图暂停/播放 | 动图播放时点击右下角按钮 → 暂停/恢复播放切换正常 | ☐ |
+| 49 | 动图卡片标识 | 动图作品卡片左上角显示「动图」徽标（白点+文字） | ☐ |
+| 50 | 动图下载提示 | 动图详情页点击下载按钮 → 提示「动图下载暂不支持」 | ☐ |
 
 ---
 
@@ -445,7 +449,26 @@
 
 ---
 
-> 最后更新：F33 个人中心头像自动补抓，基于 2026-07-12
+## F34 - Ugoira 动图播放支持
+
+- **描述**：支持 Pixiv 平台上的 ugoira（动画插画）作品。通过 `ugoira_meta` API 获取帧序列和延时数据，下载 ZIP 包提取帧图片，使用 ImageAnimator 组件循环播放
+- **新增文件**：
+  - `entry/src/main/ets/models/UgoiraModels.ets` — `UgoiraFrame`、`UgoiraMetaBody`、`UgoiraMetaResponse` 接口定义
+  - `entry/src/main/ets/services/UgoiraExtractor.ets` — ZIP 下载 + 二进制解析 + 帧图片提取到缓存目录
+  - `entry/src/main/ets/components/UgoiraPlayer.ets` — 使用 ImageAnimator 的动图播放组件（支持播放/暂停控制）
+- **修改文件**：
+  - `entry/src/main/ets/models/IllustModels.ets` — `IllustDetailBody` 添加 `illustType` 字段
+  - `entry/src/main/ets/models/PixivModels.ets` — `export * from './UgoiraModels'`
+  - `entry/src/main/ets/services/PixivApiService.ets` — 新增 `getUgoiraMeta()` 方法
+  - `entry/src/main/ets/services/PixivService.ets` — 桥接 `getUgoiraMeta()`
+  - `entry/src/main/ets/pages/illust/IllustDetailPage.ets` — 检测 `illustType === 2` 时替换 Swiper 为 UgoiraPlayer
+  - `entry/src/main/ets/components/IllustCard.ets` — 动图作品左上角添加"动图"徽标
+- **测试**：`entry/src/test/UgoiraModels.test.ets`
+- **验证项**：打开动图作品 → 动图正常循环播放 → 播放/暂停控制正常 → 卡片列表显示"动图"标识 → 普通插画不受影响
+
+---
+
+> 最后更新：F34 Ugoira 动图播放支持，基于 2026-07-13
 
 ---
 

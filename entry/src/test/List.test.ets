@@ -32,6 +32,7 @@ import commentsServiceTest from './CommentsService.test';
 import emojiUtilTest from './EmojiUtil.test';
 import browseHistoryDaoTest from './BrowseHistoryDao.test';
 import searchConditionTest from './SearchCondition.test';
+import ugoiraModelsTest from './UgoiraModels.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -68,4 +69,5 @@ export default function testsuite() {
   emojiUtilTest();
   browseHistoryDaoTest();
   searchConditionTest();
+  ugoiraModelsTest();
 }

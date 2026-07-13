@@ -19,6 +19,7 @@ import {
   ProfileNovel, ProfileNovelsBody, ProfileNovelsResponse,
   ProfileAllBody, ProfileAllResponse,
   RankingResponse, NovelRankingResponse,
+  UgoiraMetaResponse,
 } from '../models/PixivModels';
 import { ApiConfig } from '../common/constants/ApiConfig';
 import { ProxyService } from './ProxyService';
@@ -538,6 +539,11 @@ export class PixivApiService {
   static async getIllustDetail(illustId: string): Promise<IllustDetailResponse> {
     const path = `/ajax/illust/${illustId}`;
     return PixivApiService.request<IllustDetailResponse>(path);
+  }
+
+  static async getUgoiraMeta(illustId: string): Promise<UgoiraMetaResponse> {
+    const path = `/ajax/illust/${illustId}/ugoira_meta`;
+    return PixivApiService.request<UgoiraMetaResponse>(path);
   }
 
   static async getIllustComments(illustId: string, offset: number = 0): Promise<AjaxCommentsResponse> {

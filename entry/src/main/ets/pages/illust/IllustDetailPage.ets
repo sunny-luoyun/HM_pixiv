@@ -4,7 +4,9 @@ import { common } from '@kit.AbilityKit';
 import { curves, display } from '@kit.ArkUI';
 import { image } from '@kit.ImageKit';
 import { PixivService } from '../../services/PixivService';
-import { IllustDetailBody, BrowseHistoryRecord } from '../../models/PixivModels';
+import { IllustDetailBody, BrowseHistoryRecord, UgoiraMetaBody } from '../../models/PixivModels';
+import { ILLUST_TYPE_UGOIRA } from '../../models/UgoiraModels';
+import { UgoiraPlayer } from '../../components/UgoiraPlayer';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { PageContext } from '../../common/utils/PageContext';
 import { toLocalISODateTime } from '../../common/utils/TimeUtils';
@@ -35,6 +37,8 @@ struct IllustDetailPage {
   @State downloadFail: boolean = false;
   @State illustPageCount: number = 1;
   @State isActive: boolean = false;
+  @State isUgoira: boolean = false;
+  @State ugoiraMeta: UgoiraMetaBody | null = null;
 
   @State isBookmarked: boolean = false;
   @State isBookmarkLoading: boolean = false;
@@ -108,49 +112,56 @@ struct IllustDetailPage {
       if (!res.error && res.body) {
         this.detail = res.body;
         this.isBookmarked = !!res.body.bookmarkData;
+        this.isUgoira = (res.body.illustType === ILLUST_TYPE_UGOIRA);
         const pageCount = res.body.pageCount;
         this.illustPageCount = pageCount;
-        const urls = PixivService.generatePageUrls(res.body.urls.regular, pageCount);
-        this.pageRegularUrls = urls;
 
-        const newUrls = new Array<string>(pageCount).fill('');
-        if (this.thumbnailLocalUrl) {
-          newUrls[0] = this.thumbnailLocalUrl;
+        if (this.isUgoira) {
+          this.isLoading = false;
+          this.loadUgoiraMeta(res.body.illustId);
+        } else {
+          const urls = PixivService.generatePageUrls(res.body.urls.regular, pageCount);
+          this.pageRegularUrls = urls;
+
+          const newUrls = new Array<string>(pageCount).fill('');
+          if (this.thumbnailLocalUrl) {
+            newUrls[0] = this.thumbnailLocalUrl;
+          }
+          this.localImageUrls = newUrls;
+          this.imageOpacityArray = new Array<number>(pageCount).fill(0);
+          this.imageRenderSizes = new Array(pageCount);
+          this.isLoading = false;
+
+          if (this.thumbnailLocalUrl) {
+            PixivService.extractDominantColor(this.thumbnailLocalUrl)
+              .then((color: string) => {
+                if (this.isActive) {
+                  const c = color || '#1a1a2e';
+                  this.dominantColor = c;
+                  animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
+                    this.bgColor = c;
+                  });
+                }
+              });
+          }
+
+          const illustId = res.body.illustId;
+          const groupId = `detail_${illustId}`;
+          urls.forEach((url, i) => {
+            PixivService.cacheImage(url, `illust_${illustId}_pg${i}.jpg`, groupId)
+              .then((path) => {
+                if (this.isActive && path) {
+                  const updated = [...this.localImageUrls];
+                  updated[i] = path;
+                  this.localImageUrls = updated;
+                  const opacityUpdated = [...this.imageOpacityArray];
+                  opacityUpdated[i] = 0;
+                  this.imageOpacityArray = opacityUpdated;
+                }
+              })
+              .catch(() => {});
+          });
         }
-        this.localImageUrls = newUrls;
-        this.imageOpacityArray = new Array<number>(pageCount).fill(0);
-        this.imageRenderSizes = new Array(pageCount);
-        this.isLoading = false;
-
-        if (this.thumbnailLocalUrl) {
-          PixivService.extractDominantColor(this.thumbnailLocalUrl)
-            .then((color: string) => {
-              if (this.isActive) {
-                const c = color || '#1a1a2e';
-                this.dominantColor = c;
-                animateTo({ curve: curves.springMotion(0.4, 0.8) }, () => {
-                  this.bgColor = c;
-                });
-              }
-            });
-        }
-
-        const illustId = res.body.illustId;
-        const groupId = `detail_${illustId}`;
-        urls.forEach((url, i) => {
-          PixivService.cacheImage(url, `illust_${illustId}_pg${i}.jpg`, groupId)
-            .then((path) => {
-              if (this.isActive && path) {
-                const updated = [...this.localImageUrls];
-                updated[i] = path;
-                this.localImageUrls = updated;
-                const opacityUpdated = [...this.imageOpacityArray];
-                opacityUpdated[i] = 0;
-                this.imageOpacityArray = opacityUpdated;
-              }
-            })
-            .catch(() => {});
-        });
         this.saveIllustHistory(res.body);
       } else {
         this.errorMsg = res.message || '获取详情失败';
@@ -161,6 +172,19 @@ struct IllustDetailPage {
       console.error('获取插画详情失败:', err);
       this.errorMsg = '加载失败，请检查网络';
       this.isLoading = false;
+    }
+  }
+
+  private async loadUgoiraMeta(illustId: string): Promise<void> {
+    try {
+      const res = await PixivService.getUgoiraMeta(illustId);
+      if (!this.isActive) return;
+      if (!res.error && res.body) {
+        this.ugoiraMeta = res.body;
+      }
+    } catch (err) {
+      if (!this.isActive) return;
+      console.error('获取动图元数据失败:', err);
     }
   }
 
@@ -295,6 +319,119 @@ struct IllustDetailPage {
         .height('100%')
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
+      } else if (this.isUgoira && this.ugoiraMeta) {
+        Stack({ alignContent: Alignment.TopStart }) {
+          Stack({ alignContent: Alignment.TopStart }) {
+            UgoiraPlayer({
+              illustId: this.illustId,
+              frames: this.ugoiraMeta.frames,
+              zipUrl: this.ugoiraMeta.src,
+              illustWidth: this.detail?.width ?? 0,
+              illustHeight: this.detail?.height ?? 0,
+            })
+          }
+          .width('100%')
+          .height('100%')
+          .opacity(this.longTakeAnim.contentOpacity)
+
+          // Top bar
+          Column() {
+            Row() {
+              Button({ type: ButtonType.Circle }) {
+                Text('←')
+                  .fontSize(20)
+                  .fontColor(Color.White)
+              }
+              .width(40).height(40)
+              .backgroundColor($r('app.color.overlay_light'))
+              .onClick(() => this.goBack())
+
+              Blank()
+
+              Text('动图')
+                .fontSize(13)
+                .fontColor(Color.White)
+                .backgroundColor($r('app.color.overlay_medium'))
+                .borderRadius(10)
+                .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+
+              Blank()
+
+              Button({ type: ButtonType.Circle }) {
+                Text('↓')
+                  .fontSize(18)
+                  .fontColor(Color.White)
+              }
+              .width(40).height(40)
+              .backgroundColor($r('app.color.overlay_light'))
+              .onClick(() => {
+                promptAction.showToast({ message: '动图下载暂不支持' });
+              })
+
+              if (this.isBookmarkLoading) {
+                LoadingProgress()
+                  .width(22).height(22)
+                  .color($r('app.color.danger'))
+                  .margin({ left: 12 })
+              } else {
+                Text(this.isBookmarked ? '❤' : '♡')
+                  .fontSize(22)
+                  .fontColor(this.isBookmarked ? $r('app.color.danger') : Color.White)
+                  .margin({ left: 12 })
+                  .scale({ x: this.bookmarkScale, y: this.bookmarkScale })
+                  .onClick(() => this.toggleBookmark())
+              }
+            }
+            .width('100%')
+            .padding({ left: 16, right: 16, top: 8 })
+            .height(52)
+          }
+          .width('100%')
+          .alignItems(HorizontalAlign.Center)
+          .position({ top: 0 })
+          .hitTestBehavior(HitTestMode.Transparent)
+
+          // Bottom info bar
+          Column() {
+            if (this.detail) {
+              Text(this.detail.illustTitle)
+                .fontSize(14)
+                .fontWeight(FontWeight.Medium)
+                .fontColor(Color.White)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+              Text(this.detail.userName)
+                .fontSize(12)
+                .fontColor(Color.White)
+                .maxLines(1)
+                .margin({ top: 2 })
+              Text(`评论 (${this.detail.commentCount ?? 0})`)
+                .fontSize(12)
+                .fontColor('#66FFFFFF')
+                .margin({ top: 4 })
+                .onClick(() => {
+                  const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+                  if (pageCtx) {
+                    const params: IllustCommentsParam = {
+                      illustId: this.illustId
+                    };
+                    pageCtx.openPage(PageEnum.ILLUST_COMMENTS, params as Object);
+                  }
+                })
+            }
+          }
+          .width('100%')
+          .padding(16)
+          .alignItems(HorizontalAlign.Start)
+          .position({ bottom: 0 })
+          .backgroundColor($r('app.color.overlay_heavy'))
+          .hitTestBehavior(HitTestMode.Transparent)
+        }
+        .width(this.longTakeAnim.clipWidth)
+        .height(this.longTakeAnim.clipHeight)
+        .borderRadius(this.longTakeAnim.radius)
+        .backgroundColor(this.bgColor)
+        .clip(true)
       } else if (this.thumbnailLocalUrl || (this.detail && this.localImageUrls.length > 0)) {
         Stack({ alignContent: Alignment.TopStart }) {
           Stack({ alignContent: Alignment.TopStart }) {
