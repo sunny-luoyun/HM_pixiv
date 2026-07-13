@@ -41,6 +41,9 @@ struct IllustDetailPage {
   @State isActive: boolean = false;
   @State isUgoira: boolean = false;
   @State ugoiraMeta: UgoiraMetaBody | null = null;
+  @State gifEncodeState: string = 'idle';
+  @State gifTempPath: string = '';
+  private bgEncodeTimer: number = -1;
 
   @State isBookmarked: boolean = false;
   @State isBookmarkLoading: boolean = false;
@@ -97,6 +100,10 @@ struct IllustDetailPage {
     if (this.bgTransitionTimer !== -1) {
       clearTimeout(this.bgTransitionTimer);
       this.bgTransitionTimer = -1;
+    }
+    this.clearBgEncodeTimer();
+    if (this.gifTempPath) {
+      try { fileIo.unlinkSync(this.gifTempPath); } catch (_) {}
     }
   }
 
@@ -183,6 +190,7 @@ struct IllustDetailPage {
       if (!this.isActive) return;
       if (!res.error && res.body) {
         this.ugoiraMeta = res.body;
+        this.scheduleBackgroundEncode();
       }
     } catch (err) {
       if (!this.isActive) return;
@@ -190,40 +198,104 @@ struct IllustDetailPage {
     }
   }
 
-  private async handleUgoiraDownload(): Promise<void> {
-    if (!this.detail || !this.ugoiraMeta || this.isDownloading) {
+  private scheduleBackgroundEncode(): void {
+    this.clearBgEncodeTimer();
+    this.bgEncodeTimer = setTimeout(() => {
+      this.bgEncodeTimer = -1;
+      if (this.isActive && this.detail && this.ugoiraMeta) {
+        this.startBackgroundEncode();
+      }
+    }, 1000);
+  }
+
+  private clearBgEncodeTimer(): void {
+    if (this.bgEncodeTimer !== -1) {
+      clearTimeout(this.bgEncodeTimer);
+      this.bgEncodeTimer = -1;
+    }
+  }
+
+  private async startBackgroundEncode(): Promise<void> {
+    if (!this.detail || !this.ugoiraMeta) {
       return;
     }
-    this.isDownloading = true;
-    this.downloadSuccess = false;
-    this.downloadFail = false;
+    this.gifEncodeState = 'encoding';
+    const ctx = getContext(this) as common.UIAbilityContext;
+    const path: string = ctx.filesDir + '/temp_ugoira_' + this.illustId + '.gif';
+    this.gifTempPath = path;
     try {
-      const ctx = getContext(this) as common.UIAbilityContext;
-      const atManager = abilityAccessCtrl.createAtManager();
-      const permissions: Array<Permissions> = ['ohos.permission.WRITE_IMAGEVIDEO'];
-      const result = await atManager.requestPermissionsFromUser(ctx, permissions);
-      const granted = result.authResults.every(r => r === 0);
-      if (!granted) {
-        console.error('用户未授予相册写入权限');
-        this.downloadFail = true;
-        this.isDownloading = false;
-        return;
-      }
-      promptAction.showToast({ message: '正在生成动图...' });
-      const gifPath: string = ctx.filesDir + '/temp_ugoira_' + this.illustId + '.gif';
       const ok: boolean = await GifEncoder.createGifFromUgoira(
         this.illustId,
         this.ugoiraMeta.frames,
         this.ugoiraMeta.src,
-        gifPath,
+        path,
         this.detail.width,
         this.detail.height,
       );
-      if (!ok) {
+      if (ok) {
+        this.gifEncodeState = 'done';
+      } else {
+        this.gifEncodeState = 'failed';
+      }
+    } catch (err) {
+      console.error('后台动图编码失败:', err);
+      this.gifEncodeState = 'failed';
+      try { fileIo.unlinkSync(path); } catch (_) {}
+    }
+  }
+
+  private async handleUgoiraDownload(): Promise<void> {
+    if (!this.detail || !this.ugoiraMeta || this.isDownloading) {
+      return;
+    }
+    if (this.gifEncodeState === 'encoding') {
+      promptAction.showToast({ message: '动图正在生成中，请稍候…' });
+      return;
+    }
+    const ctx = getContext(this) as common.UIAbilityContext;
+    const atManager = abilityAccessCtrl.createAtManager();
+    const permissions: Array<Permissions> = ['ohos.permission.WRITE_IMAGEVIDEO'];
+    const result = await atManager.requestPermissionsFromUser(ctx, permissions);
+    const granted = result.authResults.every(r => r === 0);
+    if (!granted) {
+      console.error('用户未授予相册写入权限');
+      promptAction.showToast({ message: '需要相册写入权限' });
+      return;
+    }
+
+    let gifPath: string = this.gifTempPath;
+    if (this.gifEncodeState === 'failed' || !gifPath) {
+      promptAction.showToast({ message: '正在生成动图...' });
+      this.isDownloading = true;
+      this.downloadSuccess = false;
+      this.downloadFail = false;
+      gifPath = ctx.filesDir + '/temp_ugoira_' + this.illustId + '.gif';
+      try {
+        const ok: boolean = await GifEncoder.createGifFromUgoira(
+          this.illustId,
+          this.ugoiraMeta.frames,
+          this.ugoiraMeta.src,
+          gifPath,
+          this.detail.width,
+          this.detail.height,
+        );
+        if (!ok) {
+          this.downloadFail = true;
+          this.isDownloading = false;
+          return;
+        }
+      } catch (err) {
+        console.error('动图编码失败:', err);
         this.downloadFail = true;
         this.isDownloading = false;
         return;
       }
+    }
+
+    this.isDownloading = true;
+    this.downloadSuccess = false;
+    this.downloadFail = false;
+    try {
       const saved: boolean = await PixivService.saveImageToGallery(
         ctx,
         'file://' + gifPath,
@@ -235,7 +307,6 @@ struct IllustDetailPage {
       } else {
         this.downloadFail = true;
       }
-      try { fileIo.unlinkSync(gifPath); } catch (_) {}
     } catch (err) {
       console.error('动图下载失败:', err);
       this.downloadFail = true;
@@ -416,6 +487,8 @@ struct IllustDetailPage {
                 LoadingProgress().width(20).height(20).color(Color.White)
               } else if (this.downloadSuccess) {
                 Text('✓ 已保存').fontSize(12).fontColor($r('app.color.success'))
+              } else if (this.gifEncodeState === 'encoding') {
+                LoadingProgress().width(18).height(18).color(Color.White).opacity(0.6)
               } else {
                 Button({ type: ButtonType.Circle }) {
                   Text('↓')
