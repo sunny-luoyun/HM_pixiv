@@ -21,6 +21,7 @@ function makeCond(overrides: Partial<SearchCondition>): SearchCondition {
     searchMode: overrides.searchMode !== undefined ? overrides.searchMode : DEFAULT_SEARCH_CONDITION.searchMode,
     contentType: overrides.contentType !== undefined ? overrides.contentType : DEFAULT_SEARCH_CONDITION.contentType,
     r18Mode: overrides.r18Mode !== undefined ? overrides.r18Mode : DEFAULT_SEARCH_CONDITION.r18Mode,
+    genre: overrides.genre !== undefined ? overrides.genre : DEFAULT_SEARCH_CONDITION.genre,
   };
 }
 
