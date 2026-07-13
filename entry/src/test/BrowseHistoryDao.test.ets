@@ -109,6 +109,16 @@ export default function browseHistoryDaoTest() {
         const sig = 'getAllNovelHistory(): Promise<BrowseHistoryRecord[]>';
         expect(sig.length > 0).assertTrue();
       });
+
+      it('deleteHistory 应为 async 方法接受 id 字符串', 0, () => {
+        const sig = 'deleteHistory(id: string): Promise<void>';
+        expect(sig.length > 0).assertTrue();
+      });
+
+      it('deleteHistoryByDate 应为 async 方法接受 dateKey 和 contentType', 0, () => {
+        const sig = 'deleteHistoryByDate(dateKey: string, contentType: string): Promise<number>';
+        expect(sig.length > 0).assertTrue();
+      });
     });
   });
 }

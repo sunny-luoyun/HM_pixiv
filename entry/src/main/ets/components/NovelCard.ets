@@ -20,6 +20,7 @@ interface DialogButton {
 export struct NovelCard {
   private item!: NovelBookmark;
   @Prop @Require index: number;
+  private onLongPress?: () => void;
   @State cardOpacity: number = 0;
   @State cardTranslateY: number = 20;
   @State coverImageOpacity: number = 0;
@@ -218,6 +219,10 @@ export struct NovelCard {
   }
 
   showBlockOptions() {
+    if (this.onLongPress !== undefined) {
+      this.onLongPress!();
+      return;
+    }
     const buttons: DialogButton[] = [
       { text: '取消', color: '#666666' },
       { text: `屏蔽作者「${this.item.userName}」`, color: '#FF4D4F' }

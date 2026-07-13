@@ -160,6 +160,16 @@ export class PixivCacheDB {
     await DatabaseCore.init(ctx);
     return BrowseHistoryDao.getCountByType(contentType);
   }
+
+  async deleteBrowseHistory(ctx: common.UIAbilityContext, id: string): Promise<void> {
+    await DatabaseCore.init(ctx);
+    return BrowseHistoryDao.deleteHistory(id);
+  }
+
+  async deleteBrowseHistoryByDate(ctx: common.UIAbilityContext, dateKey: string, contentType: string): Promise<number> {
+    await DatabaseCore.init(ctx);
+    return BrowseHistoryDao.deleteHistoryByDate(dateKey, contentType);
+  }
 }
 
 export const pixivCacheDB = new PixivCacheDB();

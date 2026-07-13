@@ -104,6 +104,33 @@ export class BrowseHistoryDao {
     }
   }
 
+  static async deleteHistory(id: string): Promise<void> {
+    if (!DatabaseCore.isReady()) return;
+    const store = DatabaseCore.getStore()!;
+    try {
+      const predicates = new relationalStore.RdbPredicates(DatabaseCore.TableBrowseHistory);
+      predicates.equalTo('id', id);
+      await store.delete(predicates);
+    } catch (err) {
+      console.error('[BrowseHistoryDao] deleteHistory 失败:', JSON.stringify(err));
+    }
+  }
+
+  static async deleteHistoryByDate(dateKey: string, contentType: string): Promise<number> {
+    if (!DatabaseCore.isReady()) return 0;
+    const store = DatabaseCore.getStore()!;
+    try {
+      const predicates = new relationalStore.RdbPredicates(DatabaseCore.TableBrowseHistory);
+      predicates.equalTo('content_type', contentType);
+      predicates.like('viewed_at', dateKey + '%');
+      const rows = await store.delete(predicates);
+      return rows;
+    } catch (err) {
+      console.error('[BrowseHistoryDao] deleteHistoryByDate 失败:', JSON.stringify(err));
+      return 0;
+    }
+  }
+
   static async getCountByType(contentType: string): Promise<number> {
     if (!DatabaseCore.isReady()) return 0;
     const store = DatabaseCore.getStore()!;

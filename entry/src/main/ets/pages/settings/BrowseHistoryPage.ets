@@ -1,3 +1,4 @@
+import promptAction from '@ohos.promptAction';
 import common from '@ohos.app.ability.common';
 import { curves } from '@kit.ArkUI';
 import { PixivService } from '../../services/PixivService';
@@ -180,8 +181,10 @@ export struct BrowseHistoryPage {
   @State novelGroups: DateGroup[] = [];
   private illustOffset: number = 0;
   private novelOffset: number = 0;
-  private illustAllRecords: BrowseHistoryRecord[] = [];
-  private novelAllRecords: BrowseHistoryRecord[] = [];
+  @State illustAllRecords: BrowseHistoryRecord[] = [];
+  @State novelAllRecords: BrowseHistoryRecord[] = [];
+  @State illustRefreshKey: number = 0;
+  @State novelRefreshKey: number = 0;
   @State isSearching: boolean = false;
   @State searchQuery: string = '';
   private lastPreloadY: number = -1;
@@ -304,6 +307,84 @@ export struct BrowseHistoryPage {
     }
   }
 
+  async deleteRecord(record: BrowseHistoryRecord): Promise<void> {
+    const result = await promptAction.showDialog({
+      title: '删除历史记录',
+      message: `确定要删除「${record.title}」的浏览记录吗？`,
+      buttons: [
+        { text: '取消', color: '#666666' },
+        { text: '删除', color: '#FF4D4F' }
+      ]
+    });
+    if (result.index !== 1) return;
+
+    try {
+      const ctx = getContext(this) as common.UIAbilityContext;
+      await pixivCacheDB.deleteBrowseHistory(ctx, record.id);
+
+      let removed: boolean = false;
+      if (this.illustAllRecords.some((r: BrowseHistoryRecord): boolean => r.id === record.id)) {
+        this.illustAllRecords = this.illustAllRecords.filter(
+          (r: BrowseHistoryRecord): boolean => r.id !== record.id);
+        this.illustOffset = Math.max(0, this.illustOffset - 1);
+        this.illustGroups = groupByDate(this.illustAllRecords);
+        this.illustRefreshKey++;
+        removed = true;
+      }
+      if (this.novelAllRecords.some((r: BrowseHistoryRecord): boolean => r.id === record.id)) {
+        this.novelAllRecords = this.novelAllRecords.filter(
+          (r: BrowseHistoryRecord): boolean => r.id !== record.id);
+        this.novelOffset = Math.max(0, this.novelOffset - 1);
+        this.novelGroups = groupByDate(this.novelAllRecords);
+        this.novelRefreshKey++;
+        removed = true;
+      }
+
+      if (removed) {
+        promptAction.showToast({ message: '已删除' });
+      }
+    } catch (err) {
+      console.error('删除浏览历史失败:', err);
+      promptAction.showToast({ message: '删除失败' });
+    }
+  }
+
+  async deleteRecordsInGroup(dateKey: string, contentType: string, groupLabel: string): Promise<void> {
+    const typeLabel: string = contentType === 'illust' ? '插画' : '小说';
+    const result = await promptAction.showDialog({
+      title: '删除当日记录',
+      message: `确定要删除${groupLabel}的所有${typeLabel}浏览记录吗？`,
+      buttons: [
+        { text: '取消', color: '#666666' },
+        { text: '删除', color: '#FF4D4F' }
+      ]
+    });
+    if (result.index !== 1) return;
+
+    try {
+      const ctx = getContext(this) as common.UIAbilityContext;
+      const deletedCount = await pixivCacheDB.deleteBrowseHistoryByDate(ctx, dateKey, contentType);
+
+      if (deletedCount > 0) {
+        if (contentType === 'illust') {
+          this.illustAllRecords = this.illustAllRecords.filter(
+            (r: BrowseHistoryRecord): boolean => !r.viewedAt.startsWith(dateKey));
+          this.illustGroups = groupByDate(this.illustAllRecords);
+          this.illustRefreshKey++;
+        } else {
+          this.novelAllRecords = this.novelAllRecords.filter(
+            (r: BrowseHistoryRecord): boolean => !r.viewedAt.startsWith(dateKey));
+          this.novelGroups = groupByDate(this.novelAllRecords);
+          this.novelRefreshKey++;
+        }
+        promptAction.showToast({ message: `已删除${deletedCount}条记录` });
+      }
+    } catch (err) {
+      console.error('删除日期浏览历史失败:', err);
+      promptAction.showToast({ message: '删除失败' });
+    }
+  }
+
   getDisplayIllustGroups(): DateGroup[] {
     if (!this.searchQuery) {
       return this.illustGroups;
@@ -326,7 +407,7 @@ export struct BrowseHistoryPage {
   }
 
   @Builder
-  DateHeader(title: string) {
+  DateHeader(title: string, dateKey: string, contentType: string) {
     Text(title)
       .fontSize(16)
       .fontWeight(FontWeight.Medium)
@@ -334,6 +415,12 @@ export struct BrowseHistoryPage {
       .width('100%')
       .padding({ left: 16, top: 12, bottom: 10 })
       .backgroundColor($r('app.color.page_background'))
+      .gesture(
+        LongPressGesture({ repeat: false, duration: 500 })
+          .onAction(() => {
+            this.deleteRecordsInGroup(dateKey, contentType, title);
+          })
+      )
   }
 
   @Builder
@@ -458,12 +545,14 @@ export struct BrowseHistoryPage {
           } else {
             List() {
               ForEach(this.getDisplayIllustGroups(), (group: DateGroup) => {
-                ListItemGroup({ header: this.DateHeader(group.dateLabel) }) {
+                ListItemGroup({ header: this.DateHeader(group.dateLabel, group.dateKey, 'illust') }) {
                   ListItem() {
                     Grid() {
                       ForEach(group.records, (record: BrowseHistoryRecord, idx: number) => {
                         GridItem() {
-                          IllustCard({ item: toIllustBookmark(record), index: idx })
+                          IllustCard({ item: toIllustBookmark(record), index: idx,
+                            onLongPress: (): void => { this.deleteRecord(record); }
+                          })
                         }
                       }, (record: BrowseHistoryRecord) => record.id)
                     }
@@ -474,7 +563,7 @@ export struct BrowseHistoryPage {
                     .width('100%')
                   }
                 }
-              }, (group: DateGroup) => group.dateKey + '_' + this.searchQuery)
+              }, (group: DateGroup) => group.dateKey + '_' + this.searchQuery + '_i' + this.illustRefreshKey)
 
               if (this.illustAllRecords.length > 0 && this.getDisplayIllustGroups().length === 0) {
                 ListItem() {
@@ -538,12 +627,14 @@ export struct BrowseHistoryPage {
           } else {
             List() {
               ForEach(this.getDisplayNovelGroups(), (group: DateGroup) => {
-                ListItemGroup({ header: this.DateHeader(group.dateLabel) }) {
+                ListItemGroup({ header: this.DateHeader(group.dateLabel, group.dateKey, 'novel') }) {
                   ListItem() {
                     Grid() {
                       ForEach(group.records, (record: BrowseHistoryRecord, idx: number) => {
                         GridItem() {
-                          NovelCard({ item: toNovelBookmark(record), index: idx })
+                          NovelCard({ item: toNovelBookmark(record), index: idx,
+                            onLongPress: (): void => { this.deleteRecord(record); }
+                          })
                         }
                       }, (record: BrowseHistoryRecord) => record.id)
                     }
@@ -554,7 +645,7 @@ export struct BrowseHistoryPage {
                     .width('100%')
                   }
                 }
-              }, (group: DateGroup) => group.dateKey + '_' + this.searchQuery)
+              }, (group: DateGroup) => group.dateKey + '_' + this.searchQuery + '_n' + this.novelRefreshKey)
 
               if (this.novelAllRecords.length > 0 && this.getDisplayNovelGroups().length === 0) {
                 ListItem() {

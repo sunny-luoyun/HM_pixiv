@@ -14,6 +14,7 @@ import { SnapShotImage } from '../common/utils/SnapShotImage';
 export struct IllustCard {
   private item!: IllustBookmark;
   @Prop @Require index: number;
+  private onLongPress?: () => void;
   @State localUrl: string = '';
   @State isCaching: boolean = true;
   @State isBookmarked: boolean = false;
@@ -240,5 +241,13 @@ export struct IllustCard {
     .opacity(this.cardOpacity)
     .translate({ y: this.cardTranslateY })
     .visibility(this.cardVisibility)
+    .gesture(
+      LongPressGesture({ repeat: false, duration: 500 })
+        .onAction(() => {
+          if (this.onLongPress !== undefined) {
+            this.onLongPress!();
+          }
+        })
+    )
   }
 }
