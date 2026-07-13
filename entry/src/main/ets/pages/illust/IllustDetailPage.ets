@@ -7,8 +7,6 @@ import { PixivService } from '../../services/PixivService';
 import { IllustDetailBody, BrowseHistoryRecord, UgoiraMetaBody, UgoiraFrame } from '../../models/PixivModels';
 import { ILLUST_TYPE_UGOIRA } from '../../models/UgoiraModels';
 import { UgoiraPlayer } from '../../components/UgoiraPlayer';
-import { UgoiraExtractor } from '../../services/UgoiraExtractor';
-import fileIo from '@ohos.file.fs';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { PageContext } from '../../common/utils/PageContext';
 import { toLocalISODateTime } from '../../common/utils/TimeUtils';
@@ -190,36 +188,6 @@ struct IllustDetailPage {
     }
   }
 
-  private async handleUgoiraDownload(): Promise<void> {
-    if (!this.detail || !this.ugoiraMeta || this.isDownloading) {
-      return;
-    }
-    this.isDownloading = true;
-    this.downloadSuccess = false;
-    this.downloadFail = false;
-    try {
-      const ctx = getContext(this) as common.UIAbilityContext;
-      promptAction.showToast({ message: '正在保存原始动图文件...' });
-      const dlDir: string = ctx.filesDir + '/downloads';
-      try { fileIo.mkdirSync(dlDir, true); } catch (_) {}
-      const savePath: string = dlDir + '/ugoira_' + this.illustId + '.zip';
-      const ok: boolean = await UgoiraExtractor.saveOriginalZip(
-        this.ugoiraMeta.src, savePath,
-      );
-      if (ok) {
-        this.downloadSuccess = true;
-        promptAction.showToast({ message: '动图 ZIP 已保存' });
-      } else {
-        this.downloadFail = true;
-        promptAction.showToast({ message: '下载失败，请重试' });
-      }
-    } catch (err) {
-      console.error('动图 ZIP 下载失败:', err);
-      this.downloadFail = true;
-    }
-    this.isDownloading = false;
-  }
-
   private async saveIllustHistory(detail: IllustDetailBody): Promise<void> {
     try {
       const ctx = getContext(this) as common.UIAbilityContext;
@@ -388,23 +356,6 @@ struct IllustDetailPage {
                 .padding({ left: 10, right: 10, top: 4, bottom: 4 })
 
               Blank()
-
-              if (this.isDownloading) {
-                LoadingProgress().width(20).height(20).color(Color.White)
-              } else if (this.downloadSuccess) {
-                Text('✓ 已保存').fontSize(12).fontColor($r('app.color.success'))
-              } else {
-                Button({ type: ButtonType.Circle }) {
-                  Text('↓')
-                    .fontSize(18)
-                    .fontColor(Color.White)
-                }
-                .width(40).height(40)
-                .backgroundColor($r('app.color.overlay_light'))
-                .onClick(() => {
-                  this.handleUgoiraDownload();
-                })
-              }
 
               if (this.isBookmarkLoading) {
                 LoadingProgress()

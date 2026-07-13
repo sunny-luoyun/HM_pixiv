@@ -85,15 +85,6 @@ export class UgoiraExtractor {
     return result;
   }
 
-  static async saveOriginalZip(zipUrl: string, savePath: string): Promise<boolean> {
-    const data: ArrayBuffer = await UgoiraExtractor.downloadZip(zipUrl);
-    if (!data || data.byteLength === 0) {
-      return false;
-    }
-    UgoiraExtractor.writeFileSync(savePath, data);
-    return true;
-  }
-
   static async clearUgoiraCache(illustId: string): Promise<void> {
     const cacheDir: string = UgoiraExtractor.getUgoiraCacheDir(illustId);
     if (!cacheDir) {
