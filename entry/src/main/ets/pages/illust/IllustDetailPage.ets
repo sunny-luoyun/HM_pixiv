@@ -8,6 +8,7 @@ import { IllustDetailBody, BrowseHistoryRecord, UgoiraMetaBody, UgoiraFrame } fr
 import { ILLUST_TYPE_UGOIRA } from '../../models/UgoiraModels';
 import { UgoiraPlayer } from '../../components/UgoiraPlayer';
 import { GifEncoder } from '../../services/GifEncoder';
+import { UgoiraExtractor } from '../../services/UgoiraExtractor';
 import fileIo from '@ohos.file.fs';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { PageContext } from '../../common/utils/PageContext';
@@ -211,13 +212,21 @@ struct IllustDetailPage {
       }
       promptAction.showToast({ message: '正在生成动图...' });
       const gifPath: string = ctx.filesDir + '/temp_ugoira_' + this.illustId + '.gif';
-      const ok: boolean = await GifEncoder.createGifFromUgoira(
-        this.illustId,
-        this.ugoiraMeta.frames,
-        this.ugoiraMeta.src,
-        gifPath,
-        this.detail.width,
-        this.detail.height,
+      const entries = await UgoiraExtractor.extractUgoiraFrames(
+        this.illustId, this.ugoiraMeta.src, this.ugoiraMeta.frames,
+      );
+      const framePaths: string[] = [];
+      const delays: number[] = [];
+      for (let i: number = 0; i < entries.length; i++) {
+        let p: string = entries[i].localUri;
+        if (p.startsWith('file://')) {
+          p = p.slice(7);
+        }
+        framePaths.push(p);
+        delays.push(entries[i].delay);
+      }
+      const ok: boolean = await GifEncoder.createGifFromFramePaths(
+        framePaths, delays, gifPath, this.detail.width, this.detail.height,
       );
       if (!ok) {
         this.downloadFail = true;

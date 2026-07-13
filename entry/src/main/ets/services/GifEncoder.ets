@@ -1,8 +1,6 @@
 import fileIo from '@ohos.file.fs';
 import image from '@ohos.multimedia.image';
 import { BusinessError } from '@kit.BasicServicesKit';
-import { UgoiraFrame } from '../models/PixivModels';
-import { UgoiraExtractor } from './UgoiraExtractor';
 
 interface RgbTriplet {
   r: number;
@@ -17,39 +15,13 @@ interface ColorEntry {
 
 export class GifEncoder {
 
-  static async createGifFromUgoira(
-    illustId: string,
-    frames: UgoiraFrame[],
-    zipUrl: string,
-    outputPath: string,
-    imgWidth: number,
-    imgHeight: number,
-    frameStep: number = 2,
-  ): Promise<boolean> {
-    const entries = await UgoiraExtractor.extractUgoiraFrames(illustId, zipUrl, frames);
-    if (entries.length === 0) {
-      console.error('GifEncoder: no frames extracted');
-      return false;
-    }
-    const framePaths: string[] = [];
-    const delays: number[] = [];
-    for (let i: number = 0; i < entries.length; i += frameStep) {
-      let rawPath: string = entries[i].localUri;
-      if (rawPath.startsWith('file://')) {
-        rawPath = rawPath.slice(7);
-      }
-      framePaths.push(rawPath);
-      delays.push(entries[i].delay);
-    }
-    return GifEncoder.createGifFromFramePaths(framePaths, delays, outputPath, imgWidth, imgHeight);
-  }
-
   static async createGifFromFramePaths(
     framePaths: string[],
     delays: number[],
     outputPath: string,
     imgWidth: number,
     imgHeight: number,
+    frameStep: number = 2,
   ): Promise<boolean> {
     if (framePaths.length === 0 || delays.length === 0) {
       return false;
@@ -70,12 +42,12 @@ export class GifEncoder {
       GifEncoder.writeHeader(fd, gifWidth, gifHeight, palette, bitsPerPalette);
       const clearCode: number = 1 << bitsPerPalette;
 
-      for (let fi: number = 0; fi < framePaths.length; fi++) {
+      for (let fi: number = 0; fi < framePaths.length; fi += frameStep) {
         const indexed: Uint8Array = await GifEncoder.frameToIndexed(framePaths[fi], palette, gifWidth, gifHeight);
         if (indexed.length === 0) {
           continue;
         }
-        const delayCs: number = Math.max(1, Math.round(delays[fi] / 10));
+        const delayCs: number = Math.max(1, Math.round(delays[fi] / 10)) * frameStep;
         GifEncoder.writeGraphicsControlExt(fd, delayCs);
         GifEncoder.writeImageDescriptor(fd, gifWidth, gifHeight);
         GifEncoder.writeLzwData(fd, indexed, bitsPerPalette, clearCode);
