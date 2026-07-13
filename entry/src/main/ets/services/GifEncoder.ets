@@ -54,7 +54,7 @@ export class GifEncoder {
 
       for (let fi: number = 0; fi < framePaths.length; fi += frameStep) {
         const ft0: number = Date.now();
-        const indexed: Uint8Array = await GifEncoder.frameToIndexed(framePaths[fi], lut, palette, gifWidth, gifHeight);
+        const indexed: Uint8Array = await GifEncoder.frameToIndexed(framePaths[fi], lut, gifWidth, gifHeight);
         if (indexed.length === 0) {
           continue;
         }
@@ -91,7 +91,7 @@ export class GifEncoder {
     imgHeight: number,
   ): Promise<RgbTriplet[]> {
     const colorCount: Map<number, number> = new Map<number, number>();
-    const sampleStride: number = 4;
+    const sampleStride: number = 2;
     const sampleCount: number = 8;
     const totalFrames: number = framePaths.length;
     const step: number = Math.max(1, Math.floor(totalFrames / sampleCount));
@@ -195,14 +195,14 @@ export class GifEncoder {
   }
 
   private static buildLut(palette: RgbTriplet[]): number[] {
-    const lut: number[] = new Array(32768);
-    for (let r5: number = 0; r5 < 32; r5++) {
+    const lut: number[] = new Array(131072);
+    for (let r6: number = 0; r6 < 64; r6++) {
       for (let g5: number = 0; g5 < 32; g5++) {
-        for (let b5: number = 0; b5 < 32; b5++) {
-          const cr: number = r5 * 8 + 4;
+        for (let b6: number = 0; b6 < 64; b6++) {
+          const cr: number = r6 * 4 + 2;
           const cg: number = g5 * 8 + 4;
-          const cb: number = b5 * 8 + 4;
-          lut[(r5 << 10) | (g5 << 5) | b5] = GifEncoder.findNearestColor(cr, cg, cb, palette);
+          const cb: number = b6 * 4 + 2;
+          lut[(r6 << 11) | (g5 << 6) | b6] = GifEncoder.findNearestColor(cr, cg, cb, palette);
         }
       }
     }
@@ -212,7 +212,6 @@ export class GifEncoder {
   private static async frameToIndexed(
     filePath: string,
     lut: number[],
-    palette: RgbTriplet[],
     w: number,
     h: number,
   ): Promise<Uint8Array> {
@@ -221,60 +220,14 @@ export class GifEncoder {
       return new Uint8Array(0);
     }
     const indexed: Uint8Array = new Uint8Array(w * h);
-    for (let y: number = 0; y < h; y++) {
-      for (let x: number = 0; x < w; x++) {
-        const pi: number = (y * w + x) * 3;
-        const r: number = rgb[pi];
-        const g: number = rgb[pi + 1];
-        const b: number = rgb[pi + 2];
-
-        const r5: number = r >> 3;
-        const g5: number = g >> 3;
-        const b5: number = b >> 3;
-        const palIdx: number = lut[(r5 << 10) | (g5 << 5) | b5];
-        indexed[y * w + x] = palIdx;
-
-        const pr: number = palette[palIdx].r;
-        const pg: number = palette[palIdx].g;
-        const pb: number = palette[palIdx].b;
-        const errR: number = r - pr;
-        const errG: number = g - pg;
-        const errB: number = b - pb;
-
-        // Floyd-Steinberg dithering
-        if (x + 1 < w) {
-          const ri: number = pi + 3;
-          rgb[ri] = GifEncoder.clampU8(rgb[ri] + (errR * 7 / 16));
-          rgb[ri + 1] = GifEncoder.clampU8(rgb[ri + 1] + (errG * 7 / 16));
-          rgb[ri + 2] = GifEncoder.clampU8(rgb[ri + 2] + (errB * 7 / 16));
-        }
-        if (y + 1 < h) {
-          if (x > 0) {
-            const li: number = ((y + 1) * w + (x - 1)) * 3;
-            rgb[li] = GifEncoder.clampU8(rgb[li] + (errR * 3 / 16));
-            rgb[li + 1] = GifEncoder.clampU8(rgb[li + 1] + (errG * 3 / 16));
-            rgb[li + 2] = GifEncoder.clampU8(rgb[li + 2] + (errB * 3 / 16));
-          }
-          const di: number = ((y + 1) * w + x) * 3;
-          rgb[di] = GifEncoder.clampU8(rgb[di] + (errR * 5 / 16));
-          rgb[di + 1] = GifEncoder.clampU8(rgb[di + 1] + (errG * 5 / 16));
-          rgb[di + 2] = GifEncoder.clampU8(rgb[di + 2] + (errB * 5 / 16));
-          if (x + 1 < w) {
-            const ri2: number = ((y + 1) * w + (x + 1)) * 3;
-            rgb[ri2] = GifEncoder.clampU8(rgb[ri2] + (errR / 16));
-            rgb[ri2 + 1] = GifEncoder.clampU8(rgb[ri2 + 1] + (errG / 16));
-            rgb[ri2 + 2] = GifEncoder.clampU8(rgb[ri2 + 2] + (errB / 16));
-          }
-        }
-      }
+    for (let i: number = 0; i < w * h; i++) {
+      const pi: number = i * 3;
+      const r6: number = rgb[pi] >> 2;
+      const g5: number = rgb[pi + 1] >> 3;
+      const b6: number = rgb[pi + 2] >> 2;
+      indexed[i] = lut[(r6 << 11) | (g5 << 6) | b6];
     }
     return indexed;
-  }
-
-  private static clampU8(v: number): number {
-    if (v < 0) { return 0; }
-    if (v > 255) { return 255; }
-    return v;
   }
 
   private static nextPow2(n: number): number {
