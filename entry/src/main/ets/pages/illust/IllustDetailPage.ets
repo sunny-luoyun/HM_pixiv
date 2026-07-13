@@ -7,7 +7,6 @@ import { PixivService } from '../../services/PixivService';
 import { IllustDetailBody, BrowseHistoryRecord, UgoiraMetaBody, UgoiraFrame } from '../../models/PixivModels';
 import { ILLUST_TYPE_UGOIRA } from '../../models/UgoiraModels';
 import { UgoiraPlayer } from '../../components/UgoiraPlayer';
-import { GifEncoder } from '../../services/GifEncoder';
 import { UgoiraExtractor } from '../../services/UgoiraExtractor';
 import fileIo from '@ohos.file.fs';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
@@ -200,63 +199,22 @@ struct IllustDetailPage {
     this.downloadFail = false;
     try {
       const ctx = getContext(this) as common.UIAbilityContext;
-      const atManager = abilityAccessCtrl.createAtManager();
-      const permissions: Array<Permissions> = ['ohos.permission.WRITE_IMAGEVIDEO'];
-      const dt0: number = Date.now();
-      const result = await atManager.requestPermissionsFromUser(ctx, permissions);
-      console.info(`[DL] permission request: ${Date.now() - dt0}ms`);
-      const granted = result.authResults.every(r => r === 0);
-      if (!granted) {
-        console.error('用户未授予相册写入权限');
-        this.downloadFail = true;
-        this.isDownloading = false;
-        return;
-      }
-      promptAction.showToast({ message: '正在生成动图...' });
-      const gifPath: string = ctx.filesDir + '/temp_ugoira_' + this.illustId + '.gif';
-      const t0: number = Date.now();
-      const entries = await UgoiraExtractor.extractUgoiraFrames(
-        this.illustId, this.ugoiraMeta.src, this.ugoiraMeta.frames,
+      promptAction.showToast({ message: '正在保存原始动图文件...' });
+      const dlDir: string = ctx.filesDir + '/downloads';
+      try { fileIo.mkdirSync(dlDir, true); } catch (_) {}
+      const savePath: string = dlDir + '/ugoira_' + this.illustId + '.zip';
+      const ok: boolean = await UgoiraExtractor.saveOriginalZip(
+        this.ugoiraMeta.src, savePath,
       );
-      const t1: number = Date.now();
-      console.info(`[DL] extractUgoiraFrames: ${entries.length} entries in ${t1 - t0}ms`);
-      const framePaths: string[] = [];
-      const delays: number[] = [];
-      for (let i: number = 0; i < entries.length; i++) {
-        let p: string = entries[i].localUri;
-        if (p.startsWith('file://')) {
-          p = p.slice(7);
-        }
-        framePaths.push(p);
-        delays.push(entries[i].delay);
-      }
-      const ok: boolean = await GifEncoder.createGifFromFramePaths(
-        framePaths, delays, gifPath, this.detail.width, this.detail.height,
-      );
-      const t2: number = Date.now();
-      console.info(`[DL] createGif done: ${Date.now() - t1}ms`);
-      if (!ok) {
-        this.downloadFail = true;
-        this.isDownloading = false;
-        return;
-      }
-      const saved: boolean = await PixivService.saveImageToGallery(
-        ctx,
-        'file://' + gifPath,
-        'ugoira_' + this.illustId + '.gif',
-      );
-      const t3: number = Date.now();
-      console.info(`[DL] saveImageToGallery: ${t3 - t2}ms`);
-      if (saved) {
+      if (ok) {
         this.downloadSuccess = true;
-        promptAction.showToast({ message: '动图已保存到相册' });
+        promptAction.showToast({ message: '动图 ZIP 已保存' });
       } else {
         this.downloadFail = true;
+        promptAction.showToast({ message: '下载失败，请重试' });
       }
-      try { fileIo.unlinkSync(gifPath); } catch (_) {}
-      console.info(`[DL] total download: ${Date.now() - t0}ms`);
     } catch (err) {
-      console.error('动图下载失败:', err);
+      console.error('动图 ZIP 下载失败:', err);
       this.downloadFail = true;
     }
     this.isDownloading = false;
