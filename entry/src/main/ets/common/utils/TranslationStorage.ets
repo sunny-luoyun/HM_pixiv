@@ -52,4 +52,34 @@ export class TranslationStorage {
     const pref = await preferences.getPreferences(TranslationStorage.context, TranslationStorage.PREFERENCES_NAME);
     return await pref.get(TranslationStorage.KEY_RESET_ON_REACH_END, false) as boolean;
   }
+
+  private static KEY_MAX_NOVEL_TAGS = 'max_novel_tags';
+
+  static async saveMaxNovelTags(value: number): Promise<void> {
+    if (!TranslationStorage.context) return;
+    const pref = await preferences.getPreferences(TranslationStorage.context, TranslationStorage.PREFERENCES_NAME);
+    await pref.put(TranslationStorage.KEY_MAX_NOVEL_TAGS, value);
+    await pref.flush();
+  }
+
+  static async getMaxNovelTags(): Promise<number> {
+    if (!TranslationStorage.context) return 50;
+    const pref = await preferences.getPreferences(TranslationStorage.context, TranslationStorage.PREFERENCES_NAME);
+    return await pref.get(TranslationStorage.KEY_MAX_NOVEL_TAGS, 50) as number;
+  }
+
+  private static KEY_NOVEL_TAG_FILTER_ENABLED = 'novel_tag_filter_enabled';
+
+  static async saveNovelTagFilterEnabled(enabled: boolean): Promise<void> {
+    if (!TranslationStorage.context) return;
+    const pref = await preferences.getPreferences(TranslationStorage.context, TranslationStorage.PREFERENCES_NAME);
+    await pref.put(TranslationStorage.KEY_NOVEL_TAG_FILTER_ENABLED, enabled);
+    await pref.flush();
+  }
+
+  static async getNovelTagFilterEnabled(): Promise<boolean> {
+    if (!TranslationStorage.context) return true;
+    const pref = await preferences.getPreferences(TranslationStorage.context, TranslationStorage.PREFERENCES_NAME);
+    return await pref.get(TranslationStorage.KEY_NOVEL_TAG_FILTER_ENABLED, false) as boolean;
+  }
 }

@@ -9,6 +9,7 @@ import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { BasicDataSource } from '../../common/utils/BasicDataSource';
 import { getColumnsTemplate, getNovelColumnsTemplate } from '../../common/utils/BreakpointManager';
 import { SearchCondition, DEFAULT_SEARCH_CONDITION, isSearchConditionActive, conditionLabelSummary } from '../../models/SearchModels';
+import { filterByMaxTags } from '../../common/utils/NovelFilterUtils';
 import { AdvancedSearchDialog } from '../../components/AdvancedSearchDialog';
 import { ScrollHeaderManager, ScrollHeaderAction } from '../../common/utils/ScrollHeaderManager';
 import inputMethod from '@ohos.inputMethod';
@@ -200,7 +201,8 @@ export struct SearchPage {
             works.push(item);
           }
         }
-        const filtered = await this.filterBlockedNovels(works);
+        const filtered = filterByMaxTags(await this.filterBlockedNovels(works),
+          (AppStorage.get<boolean>('novelTagFilterEnabled') ?? false ? (AppStorage.get<number>('maxNovelTags') ?? 50) : 0));
         if (reset) {
           this.novelSource.reset(filtered);
         } else {

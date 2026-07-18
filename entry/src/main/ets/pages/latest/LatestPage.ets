@@ -10,6 +10,7 @@ import { SegmentedTabBar } from '../../components/SegmentedTabBar';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { BasicDataSource } from '../../common/utils/BasicDataSource';
 import { getColumnsTemplate, getNovelColumnsTemplate } from '../../common/utils/BreakpointManager';
+import { filterByMaxTags } from '../../common/utils/NovelFilterUtils';
 import { ScrollHeaderManager, ScrollHeaderAction } from '../../common/utils/ScrollHeaderManager';
 import common from '@ohos.app.ability.common';
 
@@ -212,7 +213,8 @@ export struct LatestPage {
       const res = await PixivService.getFollowLatestNovels(1, 'all');
       if (!res.error) {
         const rawWorks = res.body?.thumbnails?.novel ?? [];
-        this.novelSource.reset(this.filterBlockedNovelsCached(rawWorks));
+        this.novelSource.reset(filterByMaxTags(this.filterBlockedNovelsCached(rawWorks),
+          (AppStorage.get<boolean>('novelTagFilterEnabled') ?? false ? (AppStorage.get<number>('maxNovelTags') ?? 50) : 0)));
         this.novelPage = res.body?.page ?? 1;
         this.novelPages = res.body?.pages ?? 1;
       } else {
@@ -237,7 +239,8 @@ export struct LatestPage {
       const res = await PixivService.getFollowLatestNovels(nextPage, 'all');
       if (!res.error) {
         const rawNew = res.body?.thumbnails?.novel ?? [];
-        const filteredNew = this.filterBlockedNovelsCached(rawNew);
+        const filteredNew = filterByMaxTags(this.filterBlockedNovelsCached(rawNew),
+          (AppStorage.get<boolean>('novelTagFilterEnabled') ?? false ? (AppStorage.get<number>('maxNovelTags') ?? 50) : 0));
         this.novelSource.batchPush(...filteredNew);
         this.novelPage = res.body?.page ?? nextPage;
         this.novelPages = res.body?.pages ?? this.novelPages;

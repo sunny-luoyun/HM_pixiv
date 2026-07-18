@@ -6,6 +6,7 @@ import { IllustCard } from '../../components/IllustCard';
 import { SegmentedTabBar } from '../../components/SegmentedTabBar';
 import { BasicDataSource } from '../../common/utils/BasicDataSource';
 import { getColumnsTemplate, getNovelColumnsTemplate } from '../../common/utils/BreakpointManager';
+import { filterByMaxTags } from '../../common/utils/NovelFilterUtils';
 import { ScrollHeaderManager, ScrollHeaderAction } from '../../common/utils/ScrollHeaderManager';
 import { appState } from '../../store/AppState';
 import { PageContext } from '../../common/utils/PageContext';
@@ -118,7 +119,8 @@ struct FavoritesPage {
       const res = await PixivService.getNovelBookmarks(appState.userId, 0, PAGE_SIZE);
       if (!this.isActive) return;
       if (!res.error) {
-        this.novelSource.reset(res.body.works);
+        this.novelSource.reset(filterByMaxTags(res.body.works,
+          (AppStorage.get<boolean>('novelTagFilterEnabled') ?? false ? (AppStorage.get<number>('maxNovelTags') ?? 50) : 0)));
         this.novelOffset = this.novelSource.totalCount();
         if (this.novelOffset >= res.body.total) {
           this.hasMoreNovel = false;
@@ -142,7 +144,8 @@ struct FavoritesPage {
       const res = await PixivService.getNovelBookmarks(appState.userId, this.novelOffset, PAGE_SIZE);
       if (!this.isActive) return;
       if (!res.error) {
-        this.novelSource.batchPush(...res.body.works);
+        this.novelSource.batchPush(...filterByMaxTags(res.body.works,
+          (AppStorage.get<boolean>('novelTagFilterEnabled') ?? false ? (AppStorage.get<number>('maxNovelTags') ?? 50) : 0)));
         this.novelOffset += res.body.works.length;
         if (this.novelOffset >= res.body.total) {
           this.hasMoreNovel = false;

@@ -33,6 +33,7 @@ import emojiUtilTest from './EmojiUtil.test';
 import browseHistoryDaoTest from './BrowseHistoryDao.test';
 import searchConditionTest from './SearchCondition.test';
 import ugoiraModelsTest from './UgoiraModels.test';
+import novelFilterUtilsTest from './NovelFilterUtils.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -70,4 +71,5 @@ export default function testsuite() {
   browseHistoryDaoTest();
   searchConditionTest();
   ugoiraModelsTest();
+  novelFilterUtilsTest();
 }

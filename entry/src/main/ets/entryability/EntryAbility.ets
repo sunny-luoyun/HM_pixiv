@@ -48,6 +48,16 @@ export default class EntryAbility extends UIAbility {
       console.info('✅ resetOnReachEnd 已从磁盘恢复: ' + enabled);
     });
 
+    TranslationStorage.getMaxNovelTags().then((value: number) => {
+      AppStorage.setOrCreate('maxNovelTags', value);
+      console.info('✅ maxNovelTags 已从磁盘恢复: ' + value);
+    });
+
+    TranslationStorage.getNovelTagFilterEnabled().then((val: boolean) => {
+      AppStorage.setOrCreate('novelTagFilterEnabled', val);
+      console.info('✅ novelTagFilterEnabled 已从磁盘恢复: ' + val);
+    });
+
     this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
 
     const isDark = this.context.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK;

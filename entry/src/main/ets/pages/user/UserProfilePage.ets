@@ -9,6 +9,7 @@ import { NovelCard } from '../../components/NovelCard';
 import { SegmentedTabBar } from '../../components/SegmentedTabBar';
 import { BasicDataSource } from '../../common/utils/BasicDataSource';
 import { getColumnsTemplate, getNovelColumnsTemplate } from '../../common/utils/BreakpointManager';
+import { filterByMaxTags } from '../../common/utils/NovelFilterUtils';
 import { ScrollHeaderManager, ScrollHeaderAction } from '../../common/utils/ScrollHeaderManager';
 import { PageContext } from '../../common/utils/PageContext';
 
@@ -364,7 +365,8 @@ struct UserProfilePage {
             works.push(mapProfileNovelToBookmark(work, this.userName));
           }
         }
-        this.novelSource.reset(works);
+        this.novelSource.reset(filterByMaxTags(works,
+          (AppStorage.get<boolean>('novelTagFilterEnabled') ?? false ? (AppStorage.get<number>('maxNovelTags') ?? 50) : 0)));
         this.novelOffset = works.length;
         this.hasMoreNovel = allIds.length > PAGE_SIZE;
       } else {
@@ -401,7 +403,8 @@ struct UserProfilePage {
             works.push(mapProfileNovelToBookmark(work, this.userName));
           }
         }
-        this.novelSource.batchPush(...works);
+        this.novelSource.batchPush(...filterByMaxTags(works,
+          (AppStorage.get<boolean>('novelTagFilterEnabled') ?? false ? (AppStorage.get<number>('maxNovelTags') ?? 50) : 0)));
         this.novelOffset += works.length;
         this.novelPage++;
         this.hasMoreNovel = start + PAGE_SIZE < this.allNovelIds.length;
@@ -480,7 +483,8 @@ struct UserProfilePage {
       const res = await PixivService.getNovelBookmarks(this.userId, 0, PAGE_SIZE, '', 'show');
       if (!this.isActive) return;
       if (!res.error) {
-        this.bookmarkNovelSource.reset(res.body.works);
+        this.bookmarkNovelSource.reset(filterByMaxTags(res.body.works,
+          (AppStorage.get<boolean>('novelTagFilterEnabled') ?? false ? (AppStorage.get<number>('maxNovelTags') ?? 50) : 0)));
         this.bookmarkNovelOffset = this.bookmarkNovelSource.totalCount();
         if (this.bookmarkNovelOffset >= res.body.total) {
           this.hasMoreBookmarkNovel = false;
@@ -504,7 +508,8 @@ struct UserProfilePage {
       const res = await PixivService.getNovelBookmarks(this.userId, this.bookmarkNovelOffset, PAGE_SIZE, '', 'show');
       if (!this.isActive) return;
       if (!res.error) {
-        this.bookmarkNovelSource.batchPush(...res.body.works);
+        this.bookmarkNovelSource.batchPush(...filterByMaxTags(res.body.works,
+          (AppStorage.get<boolean>('novelTagFilterEnabled') ?? false ? (AppStorage.get<number>('maxNovelTags') ?? 50) : 0)));
         this.bookmarkNovelOffset += res.body.works.length;
         if (this.bookmarkNovelOffset >= res.body.total) {
           this.hasMoreBookmarkNovel = false;

@@ -12,6 +12,7 @@ import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { NovelCard } from '../../components/NovelCard';
 import { PageContext } from '../../common/utils/PageContext';
 import { ScrollHeaderManager, ScrollHeaderAction } from '../../common/utils/ScrollHeaderManager';
+import { filterByMaxTags } from '../../common/utils/NovelFilterUtils';
 import { PageEnum } from '../../common/constants/PageEnum';
 import { UserProfileParam } from '../../common/constants/PageParamTypes';
 
@@ -110,7 +111,8 @@ struct NovelSeriesPage {
       return orderA - orderB;
     });
     this.seriesNovels = cached;
-    this.bookmarks = cached.map(n => pixivNovelToBookmark(n, this.seriesTitle));
+    this.bookmarks = filterByMaxTags(cached.map(n => pixivNovelToBookmark(n, this.seriesTitle)),
+      (AppStorage.get<boolean>('novelTagFilterEnabled') ?? false ? (AppStorage.get<number>('maxNovelTags') ?? 50) : 0));
     this.offlineCachedCount = cached.length;
     this.hasMore = false;
   }
@@ -150,7 +152,8 @@ struct NovelSeriesPage {
       } else {
         this.seriesNovels = this.seriesNovels.concat(result.novels);
       }
-      this.bookmarks = this.seriesNovels.map(n => pixivNovelToBookmark(n, this.seriesTitle));
+      this.bookmarks = filterByMaxTags(this.seriesNovels.map(n => pixivNovelToBookmark(n, this.seriesTitle)),
+        (AppStorage.get<boolean>('novelTagFilterEnabled') ?? false ? (AppStorage.get<number>('maxNovelTags') ?? 50) : 0));
       this.hasMore = result.hasMore;
       this.currentPage = page;
 

@@ -7,6 +7,7 @@ import { IllustCard } from '../../components/IllustCard';
 import { NovelCard } from '../../components/NovelCard';
 import { SegmentedTabBar } from '../../components/SegmentedTabBar';
 import { getColumnsTemplate, getNovelColumnsTemplate } from '../../common/utils/BreakpointManager';
+import { filterByMaxTags } from '../../common/utils/NovelFilterUtils';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { PageContext } from '../../common/utils/PageContext';
 
@@ -393,10 +394,19 @@ export struct BrowseHistoryPage {
   }
 
   getDisplayNovelGroups(): DateGroup[] {
-    if (!this.searchQuery) {
-      return this.novelGroups;
+    const maxTags = (AppStorage.get<boolean>('novelTagFilterEnabled') ?? false ? (AppStorage.get<number>('maxNovelTags') ?? 50) : 0);
+    const source: DateGroup[] = this.searchQuery
+      ? groupByDate(filterRecords(this.novelAllRecords, this.searchQuery))
+      : this.novelGroups;
+    const result: DateGroup[] = [];
+    for (let i = 0; i < source.length; i++) {
+      const g = source[i];
+      const filtered = filterByMaxTags(g.records, maxTags);
+      if (filtered.length > 0) {
+        result.push({ dateKey: g.dateKey, dateLabel: g.dateLabel, records: filtered });
+      }
     }
-    return groupByDate(filterRecords(this.novelAllRecords, this.searchQuery));
+    return result;
   }
 
   pageTransition() {

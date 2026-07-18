@@ -7,6 +7,7 @@ import { PullToRefresh } from '../../components/PullToRefresh';
 import { SegmentedTabBar } from '../../components/SegmentedTabBar';
 import { BasicDataSource } from '../../common/utils/BasicDataSource';
 import { getColumnsTemplate, getNovelColumnsTemplate } from '../../common/utils/BreakpointManager';
+import { filterByMaxTags } from '../../common/utils/NovelFilterUtils';
 
 interface RankingMode {
   key: string;
@@ -220,7 +221,8 @@ export struct RankingPage {
         for (let i = 0; i < rawNovels.length; i++) {
           mapped.push(mapNovelRankItemToNovelBookmark(rawNovels[i]));
         }
-        this.novelSource.reset(mapped);
+        this.novelSource.reset(filterByMaxTags(mapped,
+          (AppStorage.get<boolean>('novelTagFilterEnabled') ?? false ? (AppStorage.get<number>('maxNovelTags') ?? 50) : 0)));
         this.novelCurrentPage = 1;
         this.novelHasMore = res.body?.display_a?.next !== null;
       }
@@ -286,7 +288,8 @@ export struct RankingPage {
       for (let i = 0; i < rawWorks.length; i++) {
         mapped.push(mapNovelRankItemToNovelBookmark(rawWorks[i]));
       }
-      this.novelSource.batchPush(...mapped);
+      this.novelSource.batchPush(...filterByMaxTags(mapped,
+        (AppStorage.get<boolean>('novelTagFilterEnabled') ?? false ? (AppStorage.get<number>('maxNovelTags') ?? 50) : 0)));
       this.novelCurrentPage = nextPage;
       this.novelHasMore = res.body?.display_a?.next !== null;
     } catch (err) {
