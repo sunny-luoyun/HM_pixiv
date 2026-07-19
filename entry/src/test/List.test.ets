@@ -34,6 +34,14 @@ import browseHistoryDaoTest from './BrowseHistoryDao.test';
 import searchConditionTest from './SearchCondition.test';
 import ugoiraModelsTest from './UgoiraModels.test';
 import novelFilterUtilsTest from './NovelFilterUtils.test';
+import pageEnumTest from './PageEnum.test';
+import storageKeysTest from './StorageKeys.test';
+import formatUtilTest from './FormatUtil.test';
+import novelParserTest from './NovelParser.test';
+import themeUtilTest from './ThemeUtil.test';
+import timeUtilsTest from './TimeUtils.test';
+import breakpointManagerTest from './BreakpointManager.test';
+import baseStateTest from './BaseState.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -72,4 +80,12 @@ export default function testsuite() {
   searchConditionTest();
   ugoiraModelsTest();
   novelFilterUtilsTest();
+  pageEnumTest();
+  storageKeysTest();
+  formatUtilTest();
+  novelParserTest();
+  themeUtilTest();
+  timeUtilsTest();
+  breakpointManagerTest();
+  baseStateTest();
 }

@@ -1,146 +1,132 @@
 import { describe, it, expect } from '@ohos/hypium';
+import { AppApiService } from '../main/ets/services/AppApiService';
+import { AjaxComment } from '../main/ets/models/PixivModels';
 
-// AppApiService 测试 - 接口与数据模型校验
-// 网络请求依赖运行时 HTTP，此处测试数据模型完整性
+class MockV3User {
+  id: number = 0;
+  name: string = '';
+  account: string = '';
+  profile_image_urls: MockProfileUrls = new MockProfileUrls();
+}
+
+class MockProfileUrls {
+  medium: string = '';
+}
+
+class MockStamp {
+  stamp_id: number = 0;
+  stamp_url: string = '';
+}
+
+class MockV3Comment {
+  id: number = 0;
+  comment: string = '';
+  date: string = '';
+  user: MockV3User = new MockV3User();
+  stamp: MockStamp | null = null;
+  has_replies: boolean = false;
+  replies: MockV3Comment[] = [];
+}
+
+function mockUser(id: number, name: string, account: string): MockV3User {
+  const u = new MockV3User();
+  u.id = id;
+  u.name = name;
+  u.account = account;
+  u.profile_image_urls.medium = 'https://example.com/icon.jpg';
+  return u;
+}
+
+function transformV3Comment(raw: MockV3Comment): AjaxComment {
+  const result: AjaxComment = {
+    id: String(raw.id),
+    comment: raw.comment,
+    date: raw.date,
+    userId: String(raw.user.id),
+    userName: raw.user.name,
+    userAccount: raw.user.account,
+    img: raw.user.profile_image_urls.medium,
+    hasReplies: raw.has_replies,
+  };
+  if (raw.replies && raw.replies.length > 0) {
+    const replyList: AjaxComment[] = [];
+    for (let i = 0; i < raw.replies.length; i++) {
+      replyList.push(transformV3Comment(raw.replies[i]));
+    }
+    result.replies = replyList;
+  }
+  return result;
+}
 
 export default function appApiServiceTest() {
-  describe('AppApiService（接口/模型校验）', () => {
-
-    describe('AppIllust 数据结构', () => {
-      it('id 和 title 字段', 0, () => {
-        const id: number = 1;
-        const title: string = 'test';
-        expect(id).assertEqual(1);
-        expect(title).assertEqual('test');
+  describe('AppApiService', () => {
+    describe('类结构', () => {
+      it('AppApiService 应存在', 0, () => {
+        expect(AppApiService !== null && AppApiService !== undefined).assertTrue();
       });
 
-      it('image_urls 子结构', 0, () => {
-        const medium: string = 'https://example.com/m.jpg';
-        expect(medium).assertContain('https://');
-      });
-
-      it('tags 数组', 0, () => {
-        const tags: string[] = ['tag1', 'tag2'];
-        expect(tags.length).assertEqual(2);
-        expect(tags[0]).assertEqual('tag1');
+      it('应包含核心静态方法', 0, () => {
+        expect(typeof AppApiService.addIllustBookmark).assertEqual('function');
+        expect(typeof AppApiService.removeIllustBookmark).assertEqual('function');
+        expect(typeof AppApiService.addNovelBookmark).assertEqual('function');
+        expect(typeof AppApiService.removeNovelBookmark).assertEqual('function');
+        expect(typeof AppApiService.getIllustComments).assertEqual('function');
+        expect(typeof AppApiService.getUserIllusts).assertEqual('function');
+        expect(typeof AppApiService.getUserNovels).assertEqual('function');
+        expect(typeof AppApiService.followUser).assertEqual('function');
+        expect(typeof AppApiService.unfollowUser).assertEqual('function');
       });
     });
 
-    describe('AppNovel 数据结构', () => {
-      it('id 和 title 字段', 0, () => {
-        const id: number = 1;
-        const title: string = 'novel';
-        expect(id).assertEqual(1);
-        expect(title).assertEqual('novel');
+    describe('评论数据转换（V3→Ajax）', () => {
+      it('单条根评论转换', 0, () => {
+        const v3 = new MockV3Comment();
+        v3.id = 123;
+        v3.comment = '测试评论';
+        v3.date = '2025-01-01T00:00:00+00:00';
+        v3.user = mockUser(1, '用户', 'user1');
+        v3.has_replies = true;
+
+        const ajax = transformV3Comment(v3);
+        expect(ajax.id).assertEqual('123');
+        expect(ajax.comment).assertEqual('测试评论');
+        expect(ajax.userName).assertEqual('用户');
+        expect(ajax.userId).assertEqual('1');
+        expect(ajax.userAccount).assertEqual('user1');
+        expect(ajax.hasReplies).assertTrue();
       });
 
-      it('user 子结构', 0, () => {
-        const name: string = 'author';
-        expect(name).assertEqual('author');
+      it('has_replies 为 false 时正确映射', 0, () => {
+        const v3 = new MockV3Comment();
+        v3.id = 456;
+        v3.comment = 'no replies';
+        v3.user = mockUser(2, 'u2', 'a2');
+        v3.has_replies = false;
+
+        const ajax = transformV3Comment(v3);
+        expect(ajax.hasReplies).assertFalse();
       });
 
-      it('series 可为 null', 0, () => {
-        let series: string | null = null;
-        expect(series).assertNull();
-      });
+      it('回复嵌套转换', 0, () => {
+        const reply = new MockV3Comment();
+        reply.id = 2;
+        reply.comment = 'reply';
+        reply.user = mockUser(3, 'u3', 'a3');
 
-      it('text_count 和 word_count', 0, () => {
-        const textCount: number = 500;
-        const wordCount: number = 3000;
-        expect(textCount).assertEqual(500);
-        expect(wordCount).assertEqual(3000);
-      });
-    });
+        const v3 = new MockV3Comment();
+        v3.id = 1;
+        v3.comment = 'root';
+        v3.user = mockUser(1, 'u1', 'a1');
+        v3.has_replies = true;
+        v3.replies = [reply];
 
-    describe('IllustComment 数据结构', () => {
-      it('评论必要字段', 0, () => {
-        const id: number = 1;
-        const comment: string = 'nice work!';
-        const hasReplies: boolean = false;
-        expect(id).assertEqual(1);
-        expect(comment).assertEqual('nice work!');
-        expect(hasReplies).assertFalse();
-      });
-
-      it('user 子对象字段', 0, () => {
-        const name: string = 'user';
-        const account: string = 'acct';
-        expect(name).assertEqual('user');
-        expect(account).assertEqual('acct');
-      });
-    });
-
-    describe('IllustCommentsResponse', () => {
-      it('total_comments 字段', 0, () => {
-        const total: number = 5;
-        expect(total).assertEqual(5);
-      });
-
-      it('next_url 可为 null', 0, () => {
-        let nextUrl: string | null = null;
-        expect(nextUrl).assertNull();
-
-        nextUrl = 'https://next';
-        expect(nextUrl).assertEqual('https://next');
-      });
-    });
-
-    describe('AppUserIllustsResponse', () => {
-      it('illusts 和 next_url', 0, () => {
-        const count: number = 0;
-        let nextUrl: string | null = null;
-        expect(count).assertEqual(0);
-        expect(nextUrl).assertNull();
-      });
-    });
-
-    describe('AppUserNovelsResponse', () => {
-      it('novels 和 next_url', 0, () => {
-        const count: number = 0;
-        let nextUrl: string | null = null;
-        expect(count).assertEqual(0);
-        expect(nextUrl).assertNull();
-      });
-    });
-
-    describe('PostCommentResponse', () => {
-      it('comment 嵌套对象', 0, () => {
-        const id: number = 1;
-        const text: string = 'posted!';
-        const name: string = 'user';
-        expect(id).assertEqual(1);
-        expect(text).assertEqual('posted!');
-        expect(name).assertEqual('user');
-      });
-    });
-
-    describe('API 基址', () => {
-      it('baseUrl 应为 app-api.pixiv.net', 0, () => {
-        const baseUrl: string = 'https://app-api.pixiv.net';
-        expect(baseUrl).assertEqual('https://app-api.pixiv.net');
-      });
-    });
-
-    describe('方法签名存在性', () => {
-      it('所有核心方法均已定义', 0, () => {
-        // AppApiService 暴露以下静态方法
-        const methods: string[] = [
-          'addIllustBookmark',
-          'removeIllustBookmark',
-          'addNovelBookmark',
-          'removeNovelBookmark',
-          'getIllustComments',
-          'getUserIllusts',
-          'getUserNovels',
-          'followUser',
-          'unfollowUser',
-          'postIllustComment',
-          'postNovelComment',
-          'getIllustDetail',
-          'getUserDetail',
-          'getRecommendedIllusts'
-        ];
-        expect(methods.length).assertEqual(14);
+        const ajax = transformV3Comment(v3);
+        expect(ajax.replies !== undefined).assertTrue();
+        if (ajax.replies) {
+          expect(ajax.replies.length).assertEqual(1);
+          expect(ajax.replies[0].id).assertEqual('2');
+          expect(ajax.replies[0].comment).assertEqual('reply');
+        }
       });
     });
   });
