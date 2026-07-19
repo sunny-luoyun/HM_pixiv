@@ -45,6 +45,7 @@
 - **API**：`entry/src/main/ets/services/PixivApiService.ets`（`searchIllusts`、`searchNovels`、`searchUsers`）
 - **组件**：`entry/src/main/ets/components/SegmentedTabBar.ets`、`entry/src/main/ets/components/AdvancedSearchDialog.ets`
 - **模型**：`entry/src/main/ets/models/SearchModels.ets`（`SearchCondition` 接口、`searchConditionToQueryString` 序列化、`isSearchConditionActive` 状态判断）
+- **测试**：`entry/src/test/SearchCondition.test.ets`
 - **过滤参数**（2025-06-23 新增）：
   - `sortOrder`：`date_d`(最新)/`date`(最旧)/`popular_d`(最多收藏)
   - `searchMode`：`s_tag`(标签部分)/`s_tag_full`(标签完全)/`s_tc`(标题说明)
@@ -354,8 +355,6 @@
 
 ---
 
----
-
 ## F27 - 关注更新通知推送
 
 - **描述**：当关注画师发布新插画或小说时，通过系统通知推送提醒用户。支持前台轮询（5分钟间隔）和后台 WorkScheduler（30分钟间隔）两种检测方式
@@ -384,6 +383,8 @@
   - `entry/src/main/ets/common/utils/MD5.ets` — MD5 哈希工具（OAuth 签名用）
   - `entry/src/main/ets/common/utils/TimeUtils.ets` — ISO8601 UTC 时间格式化
   - `entry/src/test/PixivAuth.test.ets` — 认证逻辑单测
+  - `entry/src/test/TimeUtils.test.ets` — 时间格式化单测
+  - `entry/src/test/CryptoUtils.test.ets` — AES-GCM 加密格式校验单测
 - **修改文件**：
   - `entry/src/main/ets/pages/login/LoginPage.ets` — WebView URL 改为 PKCE OAuth，回调拦截 pixiv:// 协议
   - `entry/src/main/ets/pages/login/LoginPageViewModel.ets` — 登录流程改为 code 换 token
@@ -469,7 +470,7 @@
 
 ---
 
-> 最后更新：F34 Ugoira 动图播放支持，基于 2026-07-13
+> 最后更新：全量测试补完 + F35 项目标准化改造，基于 2026-07-19
 
 ---
 
@@ -500,6 +501,7 @@
   - `entry/src/main/ets/pages/novel/NovelReaderPage.ets` — 阅读小说时写入历史
 - **数据存储**：本地 SQLite `browse_history` 表（id/content_type/content_id/title/cover_url/user_id/user_name/page_count/tags/bookmark_count/word_count/series_id/series_title/create_date/update_date/viewed_at）
 - **历史记录规则**：同一作品重复浏览仅更新时间戳（UPSERT 语义）；纯本地，不依赖 Pixiv 服务端
+- **测试**：`entry/src/test/BrowseHistoryDao.test.ets`
 
 ---
 
@@ -532,9 +534,9 @@
 - **CacheSettingsSection**：`entry/src/main/ets/pages/settings/CacheSettingsSection.ets`
 
 ### 工具函数提取
-- **FormatUtil**：`entry/src/main/ets/common/utils/FormatUtil.ets`
-- **ThemeUtil**：`entry/src/main/ets/common/utils/ThemeUtil.ets`
-- **NovelParser**：`entry/src/main/ets/common/utils/NovelParser.ets`
+- **FormatUtil**：`entry/src/main/ets/common/utils/FormatUtil.ets`（测试：`entry/src/test/FormatUtil.test.ets`）
+- **ThemeUtil**：`entry/src/main/ets/common/utils/ThemeUtil.ets`（测试：`entry/src/test/ThemeUtil.test.ets`）
+- **NovelParser**：`entry/src/main/ets/common/utils/NovelParser.ets`（测试：`entry/src/test/NovelParser.test.ets`）
 
 ### 代码清理
 - 删除死代码：`fetchUserName`、`deleteSingleNovelCover`、`getAllImageCacheInfo`
@@ -543,22 +545,22 @@
 
 ### 路由迁移：router.pushUrl → PageContext.openPage
 - **PageContext**：`entry/src/main/ets/common/utils/PageContext.ets` — 封装 NavPathStack 替代 @ohos.router
-- **PageEnum**：`entry/src/main/ets/common/constants/PageEnum.ets` — 页面路由枚举
+- **PageEnum**：`entry/src/main/ets/common/constants/PageEnum.ets` — 页面路由枚举（测试：`entry/src/test/PageEnum.test.ets`）
 - **PageParamTypes**：`entry/src/main/ets/common/constants/PageParamTypes.ets` — 页面参数类型定义
 - **涉及文件**：IllustCard、NovelCard、UserCard、IllustDetailPage、NovelReaderPage、NovelSeriesPage、SettingPage、BlockedContentPage、AuthorDetailPage、CacheSettingsSection、CachedNovelsPage、SeriesDetailPage（共 12 个文件）
 - **说明**：所有 router.pushUrl 调用已替换为 PageContext.openPage，通过 AppStorage 获取 rootPageContext，使用具名路由和类型化参数接口
 
 ---
 
-## F24 - 项目标准化改造（对标官方 HarmonyOS 示例）
+## F35 - 项目标准化改造（对标官方 HarmonyOS 示例）
 
 ### 全局状态管理：globalThis → AppStorage
 - **修改文件**：EntryAbility、SubscriptionService、ImageCacheService、TranslationController、BlockedContentPage、NovelReaderPage、SearchPage、AuthorDetailPage、CachedNovelsSimplePage、CacheSettingsSection、CachedNovelsPage、ProxySettingsSection、SeriesDetailPage、TranslationSettingsSection（共 14 个文件）
 - **说明**：清除全部 26 处 globalThis 引用，统一使用 AppStorage 管理全局状态。appContext 通过 `AppStorage.setOrCreate('appContext', context)` 存储，isDarkMode 通过 `AppStorage.setOrCreate('isDarkMode', value)` 管理
-- **StorageKeys**：`entry/src/main/ets/common/constants/StorageKeys.ets` — AppStorage 键名常量
+- **StorageKeys**：`entry/src/main/ets/common/constants/StorageKeys.ets` — AppStorage 键名常量（测试：`entry/src/test/StorageKeys.test.ets`）
 
 ### MVVM 架构引入
-- **BaseState**：`entry/src/main/ets/viewmodel/BaseState.ets` — State 基类
+- **BaseState**：`entry/src/main/ets/viewmodel/BaseState.ets` — State 基类（测试：`entry/src/test/BaseState.test.ets`）
 - **BaseVM**：`entry/src/main/ets/viewmodel/BaseVM.ets` — ViewModel 抽象基类（含事件分发）
 - **LoadingModel**：`entry/src/main/ets/models/LoadingModel.ets` — 统一加载状态模型（LoadingStatus 枚举 + @Observed）
 - **PageLoadModel**：分页加载状态模型（PageStatus 枚举 + @Observed）
@@ -577,12 +579,27 @@
 - **返回操作**：router.back() → PageContext.popPage()
 - **main_pages.json**：仅保留 pages/Index，其余 15 个页面从配置中移除
 
-### 测试新增
+### 测试新增（2026-07-19 全量补完）
 - **PageContext.test.ets**：NavPathStack 封装测试
 - **LoadingModel.test.ets**：加载状态模型测试
 - **BaseVM.test.ets**：ViewModel 基类事件分发测试
+- **BaseState.test.ets**：空基类实例化测试
 - **Constants.test.ets**：PageEnum + StorageKeys 常量验证
-- **List.test.ets**：注册 4 个新测试套件
+- **FormatUtil.test.ets**：文件大小格式化纯函数测试（边界：0、1KB、1MB）
+- **NovelParser.test.ets**：小说标记解析（[chapter]、[newpage]、[[rb:]]、[b]）
+- **ThemeUtil.test.ets**：阅读器颜色配置（dark/light）
+- **TimeUtils.test.ets**：UTC 与本地时间格式化
+- **BreakpointManager.test.ets**：响应式断点映射（xs~xl 全部阈值）
+- **PageEnum.test.ets**：页面路由名常量值验证
+- **StorageKeys.test.ets**：AppStorage 键名常量验证
+- **List.test.ets**：注册全量 46 个测试套件
+
+#### 本次补完修复的现有测试
+- **AppApiService.test.ets**：重写为 V3→Ajax 评论数据转换测试
+- **CryptoUtils.test.ets**：重写为 AES-GCM 格式校验 + Base64 往返
+- **EmptyView.test.ets** / **ErrorView.test.ets** / **LoadingView.test.ets**：重写为组件接口约束 + 条件渲染逻辑测试
+- **CommentsService.test.ets**：重写为评论 API 路径 + AjaxComment 模型测试
+- **LocalUnit.test.ets**：清理无意义骨架代码
 
 ### 修复
 - **EntryAbility.ets**：AppStorage.SetOrCreate → setOrCreate（API 大小写修正）
