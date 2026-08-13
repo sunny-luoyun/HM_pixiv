@@ -49,5 +49,31 @@ export default function llmServiceFactoryTest() {
         expect(svc.getSystemPrompt(true)).assertEqual('工厂同步的标题规则');
       });
     });
+
+    describe('配置刷新（provider 不变时每次调用同步）', () => {
+      it('custom：修改 key 后再次调用立即生效', 0, () => {
+        AppStorage.setOrCreate('llmProvider', 'custom');
+        AppStorage.setOrCreate('customLlmApiBase', 'https://example.com/v1');
+        AppStorage.setOrCreate('customLlmApiKey', '');
+        AppStorage.setOrCreate('customLlmModel', 'my-model');
+        resetLlmServiceInstance();
+        const svc = getLlmService();
+        expect(svc.hasValidKey()).assertFalse();
+        AppStorage.setOrCreate('customLlmApiKey', 'sk-new');
+        getLlmService();
+        expect(svc.hasValidKey()).assertTrue();
+      });
+
+      it('deepseek：修改 key 后再次调用立即生效', 0, () => {
+        AppStorage.setOrCreate('llmProvider', 'deepseek');
+        AppStorage.setOrCreate('deepseekApiKey', '');
+        resetLlmServiceInstance();
+        const svc = getLlmService();
+        expect(svc.hasValidKey()).assertFalse();
+        AppStorage.setOrCreate('deepseekApiKey', 'sk-deep');
+        getLlmService();
+        expect(svc.hasValidKey()).assertTrue();
+      });
+    });
   });
 }

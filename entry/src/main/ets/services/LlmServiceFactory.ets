@@ -22,6 +22,16 @@ export function getLlmService(): BaseLlmService {
     }
   }
 
+  // 每次调用都从 AppStorage 同步最新的 apiKey/自定义配置，保证设置修改即时生效
+  if (_llmInstance instanceof OpenAiCompatService) {
+    const baseUrl = AppStorage.get<string>(StorageKeys.CUSTOM_LLM_API_BASE) ?? '';
+    const apiKey = AppStorage.get<string>(StorageKeys.CUSTOM_LLM_API_KEY) ?? '';
+    const model = AppStorage.get<string>(StorageKeys.CUSTOM_LLM_MODEL) ?? '';
+    _llmInstance.updateConfig(baseUrl, apiKey, model);
+  } else {
+    _llmInstance.updateApiKey(AppStorage.get<string>(StorageKeys.DEEPSEEK_API_KEY) ?? '');
+  }
+
   _llmInstance.updatePrompts(
     AppStorage.get<string>(StorageKeys.TITLE_PROMPT) ?? '',
     AppStorage.get<string>(StorageKeys.FULL_PROMPT) ?? '',
