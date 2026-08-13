@@ -1219,6 +1219,18 @@ export class DeepSeekService extends BaseLlmService {
   }
 }
 
+let _deepSeekInstance: DeepSeekService | null = null;
+
+export function getDeepSeekService(): DeepSeekService {
+  const apiKey = AppStorage.get<string>('deepseekApiKey') ?? '';
+  if (!_deepSeekInstance) {
+    _deepSeekInstance = new DeepSeekService(apiKey);
+  } else {
+    _deepSeekInstance.updateApiKey(apiKey);
+  }
+  return _deepSeekInstance;
+}
+
 - [ ] **Step 3: 运行测试验证**
 
 Run: `hvigorw test 2>&1 | grep -E 'ERROR|BUILD|FAIL'`
