@@ -1,10 +1,23 @@
 import { describe, it, expect } from '@ohos/hypium';
+import { TranslationStorage } from '../main/ets/common/utils/TranslationStorage';
 
 // TranslationStorage 纯逻辑测试
 // 存储操作依赖 preferences 和 CryptoUtils，此处验证接口定义和数据流逻辑
 
 export default function translationStorageTest() {
   describe('TranslationStorage（接口/逻辑校验）', () => {
+
+    describe('默认值（未初始化上下文时走 guard 分支）', () => {
+      it('getLlmProvider 默认 deepseek', 0, async () => {
+        const v = await TranslationStorage.getLlmProvider();
+        expect(v).assertEqual('deepseek');
+      });
+
+      it('getUnifiedPrompt 默认 false', 0, async () => {
+        const v = await TranslationStorage.getUnifiedPrompt();
+        expect(v).assertFalse();
+      });
+    });
 
     describe('Preferences 名称', () => {
       it('PREFERENCES_NAME 应为 app_translation', 0, () => {

@@ -63,11 +63,10 @@ export default function openAiCompatServiceTest() {
     });
 
     describe('translateText（无 key 时）', () => {
-      it('返回失败并提示配置密钥', 0, () => {
+      it('返回失败并提示配置密钥', 0, async () => {
         const svc = new OpenAiCompatService('', '', '');
-        svc.translateText('テスト', true).then((r: TranslationResult) => {
-          expect(r.success).assertFalse();
-        });
+        const r: TranslationResult = await svc.translateText('テスト', true);
+        expect(r.success).assertFalse();
       });
     });
   });

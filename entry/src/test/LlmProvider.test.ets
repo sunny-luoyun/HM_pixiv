@@ -156,22 +156,30 @@ export default function llmProviderTest() {
       });
     });
 
+    describe('getMaxSafeTokens', () => {
+      it('自定义模式（maxTokensFull=8192）返回 16384', 0, () => {
+        expect(makeService({ maxTokensFull: 8192 }).getMaxSafeTokens()).assertEqual(16384);
+      });
+
+      it('大配置（maxTokensFull=131072）封顶 100000', 0, () => {
+        expect(makeService({ maxTokensFull: 131072 }).getMaxSafeTokens()).assertEqual(100000);
+      });
+    });
+
     describe('translateText（无 key 时）', () => {
-      it('返回失败并提示配置密钥', 0, () => {
+      it('返回失败并提示配置密钥', 0, async () => {
         const svc = makeService({ apiKey: '' });
-        svc.translateText('テスト', true).then((r: TranslationResult) => {
-          expect(r.success).assertFalse();
-          expect(r.error === '请先在设置中配置翻译 API 密钥').assertTrue();
-        });
+        const r: TranslationResult = await svc.translateText('テスト', true);
+        expect(r.success).assertFalse();
+        expect(r.error === '请先在设置中配置翻译 API 密钥').assertTrue();
       });
     });
 
     describe('translateText（空文本）', () => {
-      it('返回失败', 0, () => {
+      it('返回失败', 0, async () => {
         const svc = makeService();
-        svc.translateText('', true).then((r: TranslationResult) => {
-          expect(r.success).assertFalse();
-        });
+        const r: TranslationResult = await svc.translateText('', true);
+        expect(r.success).assertFalse();
       });
     });
   });

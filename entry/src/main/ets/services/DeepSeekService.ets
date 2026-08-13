@@ -9,11 +9,6 @@ const PRICE_INPUT = 1.0;
 const PRICE_OUTPUT = 2.0;
 const PROMPT_OVERHEAD = 55;
 
-interface StatsResult {
-  totalChars: number;
-  totalRequests: number;
-}
-
 interface DeepSeekBalanceInfo {
   currency: string;
   total_balance: string;

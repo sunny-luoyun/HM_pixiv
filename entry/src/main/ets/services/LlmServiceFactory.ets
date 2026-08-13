@@ -1,5 +1,5 @@
 import { BaseLlmService } from './LlmProvider';
-import { DeepSeekService } from './DeepSeekService';
+import { getDeepSeekService } from './DeepSeekService';
 import { OpenAiCompatService } from './OpenAiCompatService';
 import { StorageKeys } from '../common/constants/StorageKeys';
 
@@ -17,8 +17,8 @@ export function getLlmService(): BaseLlmService {
       const model = AppStorage.get<string>(StorageKeys.CUSTOM_LLM_MODEL) ?? '';
       _llmInstance = new OpenAiCompatService(baseUrl, apiKey, model);
     } else {
-      const apiKey = AppStorage.get<string>(StorageKeys.DEEPSEEK_API_KEY) ?? '';
-      _llmInstance = new DeepSeekService(apiKey);
+      // 复用 DeepSeekService 单例，保证设置页校准与翻译路径状态一致
+      _llmInstance = getDeepSeekService();
     }
   }
 

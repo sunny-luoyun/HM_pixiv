@@ -138,9 +138,14 @@
   - `TranslationController.ets` — 新增纯函数 `buildEstimateInfo(...)`，按 `service.supportsCostEstimate` 组装确认对话框估算文案：DeepSeek 模式显示 字符/tokens/费用/校准比；自定义模式仅显示字符数+预计耗时
   - **测试**：`entry/src/test/TranslationController.test.ets`
 - **扩展（2026-08-13）**：设置页翻译服务切换、自定义模型配置与翻译提示词编辑
-  - `TranslationSettingsViewModel.ets` — `TranslationSettingsState` 新增 `llmProvider`/`customApiBase`/`customModel`/`customApiKey`/`titlePrompt`/`fullPrompt`/`unifiedPrompt`；`loadSettings()` 恢复全部新键；新增 `updateLlmProvider`/`updateCustomConfig`/`updateTitlePrompt`/`updateFullPrompt`/`updateUnifiedPrompt`/`resetPrompts`（同步 AppStorage + TranslationStorage）
   - `TranslationSettingsSection.ets` — 顶部新增「翻译服务」Radio 组（DeepSeek 预设/自定义模型）；自定义模式显示 API 地址/模型名称/API Key 输入区；余额/校准区域仅 DeepSeek 模式且有密钥时显示；新增「翻译提示词」卡片（统一提示词 Toggle + 标题/全文 TextArea + 恢复默认确认对话框），两种 provider 均显示
-  - **测试**：无（`viewmodel/` 与 `pages/settings/` 属 AGENTS.md 例外清单，不可测）
+  - **测试**：无（`pages/settings/` 属 AGENTS.md 例外清单，不可测）
+- **修复（2026-08-14）**：长文翻译截断、DeepSeek 双实例状态分叉
+  - `LlmProvider.ets` — `translateLongText` 分段阈值由硬编码 100000 改为 `getMaxSafeTokens()`（`min(100000, maxTokensFull * 2)`），自定义模式（8192）单次调用输出上限不会超过响应 max_tokens
+  - `LlmServiceFactory.ets` — deepseek 分支复用 `getDeepSeekService()` 单例，设置页校准重置与翻译路径共享同一 adaptiveRatio/averageSpeed 状态
+  - `TranslationSettingsViewModel.ets` — 删除无消费者的 `updateLlmProvider`/`updateCustomConfig`/`updateTitlePrompt`/`updateFullPrompt`/`updateUnifiedPrompt`/`resetPrompts` 与 7 个对应状态字段（设置页沿用内联 @State + AppStorage + TranslationStorage 模式）
+  - `DeepSeekService.ets` — 移除未使用的 `StatsResult` 接口；`NovelReaderPage.ets` — 移除未使用的 `getDeepSeekService` 导入
+  - **测试**：`entry/src/test/LlmProvider.test.ets`（getMaxSafeTokens × 2）、`entry/src/test/TranslationStorage.test.ets`（默认值断言 × 2）
 
 ---
 
@@ -494,7 +499,7 @@
 
 ---
 
-> 最后更新：F11 设置页翻译服务切换/自定义模型配置/翻译提示词编辑，基于 2026-08-13
+> 最后更新：F11 长文翻译分段阈值与输出上限挂钩 + 工厂复用 DeepSeek 单例 + 删除 ViewModel 死代码，基于 2026-08-14
 
 ---
 

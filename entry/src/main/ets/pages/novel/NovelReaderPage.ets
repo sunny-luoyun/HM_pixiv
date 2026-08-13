@@ -4,7 +4,6 @@ import { curves } from '@kit.ArkUI';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { BrowseHistoryRecord } from '../../models/PixivModels';
 import { PixivService } from '../../services/PixivService';
-import { getDeepSeekService } from '../../services/DeepSeekService';
 import { TranslationController, PrepareFullTranslationError, PrepareFullTranslationSuccess } from '../../services/TranslationController';
 import preferences from '@ohos.data.preferences';
 import { ReaderColors, getReaderColors } from '../../common/utils/ThemeUtil';

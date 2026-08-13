@@ -170,6 +170,10 @@ export abstract class BaseLlmService {
     return 0;
   }
 
+  getMaxSafeTokens(): number {
+    return Math.min(100000, this.maxTokensFull * 2);
+  }
+
   protected async onTranslateSuccess(
     actualInput: number,
     actualOutput: number,
@@ -393,7 +397,7 @@ export abstract class BaseLlmService {
   ): Promise<TranslationResult> {
     const inputTokens = this.estimateTokens(text);
     const estimatedTotal = inputTokens * 2;
-    const MAX_SAFE_TOKENS = 100000;
+    const MAX_SAFE_TOKENS = this.getMaxSafeTokens();
 
     if (estimatedTotal < MAX_SAFE_TOKENS) {
       const estimatedMs = this.estimateTime(inputTokens);
