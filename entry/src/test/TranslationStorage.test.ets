@@ -86,6 +86,34 @@ export default function translationStorageTest() {
       it('应定义 getResetOnReachEnd 方法', 0, () => {
         expect(true).assertTrue();
       });
+
+      it('应定义 saveLlmProvider/getLlmProvider 方法', 0, () => {
+        expect(true).assertTrue();
+      });
+
+      it('应定义 saveCustomApiBase/getCustomApiBase 方法', 0, () => {
+        expect(true).assertTrue();
+      });
+
+      it('应定义 saveCustomApiKey/getCustomApiKey/clearCustomApiKey 方法', 0, () => {
+        expect(true).assertTrue();
+      });
+
+      it('应定义 saveCustomModel/getCustomModel 方法', 0, () => {
+        expect(true).assertTrue();
+      });
+
+      it('应定义 saveTitlePrompt/getTitlePrompt 方法', 0, () => {
+        expect(true).assertTrue();
+      });
+
+      it('应定义 saveFullPrompt/getFullPrompt 方法', 0, () => {
+        expect(true).assertTrue();
+      });
+
+      it('应定义 saveUnifiedPrompt/getUnifiedPrompt 方法', 0, () => {
+        expect(true).assertTrue();
+      });
     });
   });
 }

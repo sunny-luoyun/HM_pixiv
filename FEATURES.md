@@ -122,6 +122,10 @@
 - **API**：`entry/src/main/ets/services/DeepSeekService.ets`
 - **分词器**：`entry/src/main/ets/services/DeepSeekTokenizer.ets`
 - **翻译缓存**：`entry/src/main/ets/common/utils/TranslationStorage.ets`
+- **扩展（2026-08-13）**：新增自定义翻译提供商/提示词存储键与存储方法（为自定义模型接入打基础）
+  - `StorageKeys.ets` — 新增 `LLM_PROVIDER`、`CUSTOM_LLM_API_BASE`、`CUSTOM_LLM_API_KEY`、`CUSTOM_LLM_MODEL`、`TITLE_PROMPT`、`FULL_PROMPT`、`UNIFIED_PROMPT`
+  - `TranslationStorage.ets` — 新增 `saveLlmProvider/getLlmProvider`、`saveCustomApiBase/getCustomApiBase`、`saveCustomApiKey/getCustomApiKey/clearCustomApiKey`、`saveCustomModel/getCustomModel`、`saveTitlePrompt/getTitlePrompt`、`saveFullPrompt/getFullPrompt`、`saveUnifiedPrompt/getUnifiedPrompt`
+  - **测试**：`entry/src/test/StorageKeys.test.ets`、`entry/src/test/TranslationStorage.test.ets`
 
 ---
 
@@ -470,7 +474,7 @@
 
 ---
 
-> 最后更新：全量测试补完 + F35 项目标准化改造，基于 2026-07-19
+> 最后更新：F11 自定义翻译提供商存储扩展，基于 2026-08-13
 
 ---
 

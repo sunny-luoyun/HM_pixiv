@@ -27,6 +27,34 @@ export default function storageKeysTest() {
       expect(StorageKeys.RESET_ON_REACH_END).assertEqual('resetOnReachEnd');
     });
 
+    it('LLM_PROVIDER 为 "llmProvider"', 0, () => {
+      expect(StorageKeys.LLM_PROVIDER).assertEqual('llmProvider');
+    });
+
+    it('CUSTOM_LLM_API_BASE 为 "customLlmApiBase"', 0, () => {
+      expect(StorageKeys.CUSTOM_LLM_API_BASE).assertEqual('customLlmApiBase');
+    });
+
+    it('CUSTOM_LLM_API_KEY 为 "customLlmApiKey"', 0, () => {
+      expect(StorageKeys.CUSTOM_LLM_API_KEY).assertEqual('customLlmApiKey');
+    });
+
+    it('CUSTOM_LLM_MODEL 为 "customLlmModel"', 0, () => {
+      expect(StorageKeys.CUSTOM_LLM_MODEL).assertEqual('customLlmModel');
+    });
+
+    it('TITLE_PROMPT 为 "titlePrompt"', 0, () => {
+      expect(StorageKeys.TITLE_PROMPT).assertEqual('titlePrompt');
+    });
+
+    it('FULL_PROMPT 为 "fullPrompt"', 0, () => {
+      expect(StorageKeys.FULL_PROMPT).assertEqual('fullPrompt');
+    });
+
+    it('UNIFIED_PROMPT 为 "unifiedPrompt"', 0, () => {
+      expect(StorageKeys.UNIFIED_PROMPT).assertEqual('unifiedPrompt');
+    });
+
     it('NAV_ROOT_STACK 为 "navRootStack"', 0, () => {
       expect(StorageKeys.NAV_ROOT_STACK).assertEqual('navRootStack');
     });
