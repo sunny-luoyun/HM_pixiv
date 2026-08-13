@@ -150,5 +150,39 @@ export default function deepSeekServiceTest() {
         expect(instance instanceof DeepSeekService).assertTrue();
       });
     });
+
+    describe('getSystemPrompt（继承自基类）', () => {
+      it('标题默认模板包含"标题"', 0, () => {
+        expect(service.getSystemPrompt(true)).assertContain('标题');
+      });
+
+      it('全文默认模板包含"小说"', 0, () => {
+        expect(service.getSystemPrompt(false)).assertContain('小说');
+      });
+
+      it('自定义标题 prompt 优先', 0, () => {
+        service.updatePrompts('自定义标题规则', '', false);
+        expect(service.getSystemPrompt(true)).assertEqual('自定义标题规则');
+        service.updatePrompts('', '', false);
+      });
+
+      it('supportsCostEstimate 为 true（DeepSeek 专属）', 0, () => {
+        expect(service.supportsCostEstimate).assertTrue();
+      });
+    });
+
+    describe('buildRequestBody（继承自基类）', () => {
+      it('包含 thinking.disabled 字段', 0, () => {
+        const body = service.buildRequestBody('テスト', true) as Record<string, Object>;
+        const thinking = body['thinking'] as Record<string, Object>;
+        expect(thinking !== undefined).assertTrue();
+        expect(thinking['type']).assertEqual('disabled');
+      });
+
+      it('全文 max_tokens 为 131072', 0, () => {
+        const body = service.buildRequestBody('テスト', false) as Record<string, Object>;
+        expect(body['max_tokens']).assertEqual(131072);
+      });
+    });
   });
 }
