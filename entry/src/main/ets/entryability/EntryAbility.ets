@@ -43,6 +43,35 @@ export default class EntryAbility extends UIAbility {
       }
     });
 
+    TranslationStorage.getLlmProvider().then((provider: string) => {
+      AppStorage.setOrCreate('llmProvider', provider);
+      console.info('✅ llmProvider 已从磁盘恢复: ' + provider);
+    });
+
+    TranslationStorage.getCustomApiBase().then((value: string) => {
+      AppStorage.setOrCreate('customLlmApiBase', value);
+    });
+
+    TranslationStorage.getCustomApiKey().then((value: string) => {
+      AppStorage.setOrCreate('customLlmApiKey', value);
+    });
+
+    TranslationStorage.getCustomModel().then((value: string) => {
+      AppStorage.setOrCreate('customLlmModel', value);
+    });
+
+    TranslationStorage.getTitlePrompt().then((value: string) => {
+      AppStorage.setOrCreate('titlePrompt', value);
+    });
+
+    TranslationStorage.getFullPrompt().then((value: string) => {
+      AppStorage.setOrCreate('fullPrompt', value);
+    });
+
+    TranslationStorage.getUnifiedPrompt().then((value: boolean) => {
+      AppStorage.setOrCreate('unifiedPrompt', value);
+    });
+
     TranslationStorage.getResetOnReachEnd().then((enabled: boolean) => {
       AppStorage.setOrCreate('resetOnReachEnd', enabled);
       console.info('✅ resetOnReachEnd 已从磁盘恢复: ' + enabled);
