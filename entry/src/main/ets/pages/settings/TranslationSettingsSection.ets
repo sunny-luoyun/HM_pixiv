@@ -15,6 +15,13 @@ export struct TranslationSettingsSection {
   @State balanceFetchState: 'idle' | 'loading' | 'ok' | 'fail' = 'idle';
   @State ratioValue: number = 0;
   @State ratioCount: number = 0;
+  @State llmProvider: string = 'deepseek';
+  @State customApiBase: string = '';
+  @State customModel: string = '';
+  @State customApiKey: string = '';
+  @State titlePrompt: string = '';
+  @State fullPrompt: string = '';
+  @State unifiedPrompt: boolean = false;
 
   private pageActive: boolean = true;
 
@@ -24,6 +31,13 @@ export struct TranslationSettingsSection {
 
   aboutToAppear() {
     this.deepseekApiKey = AppStorage.get<string>('deepseekApiKey') ?? '';
+    this.llmProvider = AppStorage.get<string>('llmProvider') ?? 'deepseek';
+    this.customApiBase = AppStorage.get<string>('customLlmApiBase') ?? '';
+    this.customModel = AppStorage.get<string>('customLlmModel') ?? '';
+    this.customApiKey = AppStorage.get<string>('customLlmApiKey') ?? '';
+    this.titlePrompt = AppStorage.get<string>('titlePrompt') ?? '';
+    this.fullPrompt = AppStorage.get<string>('fullPrompt') ?? '';
+    this.unifiedPrompt = AppStorage.get<boolean>('unifiedPrompt') ?? false;
     this.loadRatioInfo();
     if (this.deepseekApiKey.length > 0) {
       this.fetchBalance();
@@ -77,8 +91,46 @@ export struct TranslationSettingsSection {
     }
   }
 
+  private onProviderChange(provider: string): void {
+    this.llmProvider = provider;
+    AppStorage.setOrCreate('llmProvider', provider);
+    TranslationStorage.saveLlmProvider(provider);
+    if (provider === 'deepseek' && this.deepseekApiKey.length > 0) {
+      this.fetchBalance();
+    }
+  }
+
   build() {
     Column() {
+      Text('翻译服务')
+        .fontSize(16)
+        .fontWeight(FontWeight.Medium)
+        .fontColor($r('app.color.user_name'))
+        .margin({ bottom: 10 })
+
+      Row() {
+        Radio({ value: 'deepseek', group: 'llmProvider' })
+          .checked(this.llmProvider === 'deepseek')
+          .onChange((checked: boolean) => {
+            if (checked) this.onProviderChange('deepseek');
+          })
+        Text('DeepSeek（预设）')
+          .fontSize(14)
+          .fontColor($r('app.color.user_name'))
+          .margin({ right: 20 })
+
+        Radio({ value: 'custom', group: 'llmProvider' })
+          .checked(this.llmProvider === 'custom')
+          .onChange((checked: boolean) => {
+            if (checked) this.onProviderChange('custom');
+          })
+        Text('自定义模型')
+          .fontSize(14)
+          .fontColor($r('app.color.user_name'))
+      }
+      .width('100%')
+      .margin({ bottom: 14 })
+
       Row() {
         Row() {
           Text('DeepSeek API 密钥')
@@ -170,7 +222,7 @@ export struct TranslationSettingsSection {
         .margin({ top: 10 })
         .lineHeight(18)
 
-      if (this.deepseekApiKey.length > 0) {
+      if (this.deepseekApiKey.length > 0 && this.llmProvider === 'deepseek') {
         Divider()
           .strokeWidth(1)
           .color($r('app.color.divider'))
@@ -283,6 +335,206 @@ export struct TranslationSettingsSection {
         .width('100%')
         .alignItems(VerticalAlign.Center)
       }
+
+      if (this.llmProvider === 'custom') {
+        Divider()
+          .strokeWidth(1)
+          .color($r('app.color.divider'))
+          .margin({ top: 14, bottom: 14 })
+
+        Text('API 地址（OpenAI 兼容）')
+          .fontSize(13)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.user_name'))
+          .margin({ bottom: 6 })
+
+        TextInput({ text: this.customApiBase, placeholder: 'https://api.openai.com/v1/chat/completions' })
+          .width('100%')
+          .height(44)
+          .fontSize(13)
+          .fontColor($r('app.color.user_name'))
+          .backgroundColor($r('app.color.page_background'))
+          .borderRadius(8)
+          .padding({ left: 12, right: 12 })
+          .border({ width: 1, color: $r('app.color.divider'), radius: 8 })
+          .onChange((val: string): void => {
+            this.customApiBase = val;
+            AppStorage.setOrCreate('customLlmApiBase', val);
+            TranslationStorage.saveCustomApiBase(val);
+          })
+
+        Text('模型名称')
+          .fontSize(13)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.user_name'))
+          .margin({ top: 12, bottom: 6 })
+
+        TextInput({ text: this.customModel, placeholder: '如 gpt-4o / qwen2.5' })
+          .width('100%')
+          .height(44)
+          .fontSize(13)
+          .fontColor($r('app.color.user_name'))
+          .backgroundColor($r('app.color.page_background'))
+          .borderRadius(8)
+          .padding({ left: 12, right: 12 })
+          .border({ width: 1, color: $r('app.color.divider'), radius: 8 })
+          .onChange((val: string): void => {
+            this.customModel = val;
+            AppStorage.setOrCreate('customLlmModel', val);
+            TranslationStorage.saveCustomModel(val);
+          })
+
+        Text('API Key')
+          .fontSize(13)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.user_name'))
+          .margin({ top: 12, bottom: 6 })
+
+        TextInput({ text: this.customApiKey, placeholder: '粘贴自定义模型 API Key...' })
+          .width('100%')
+          .height(44)
+          .fontSize(13)
+          .fontColor($r('app.color.user_name'))
+          .backgroundColor($r('app.color.page_background'))
+          .borderRadius(8)
+          .padding({ left: 12, right: 12 })
+          .border({ width: 1, color: $r('app.color.divider'), radius: 8 })
+          .type(this.showApiKeyText ? InputType.Normal : InputType.Password)
+          .onChange((val: string): void => {
+            this.customApiKey = val;
+            AppStorage.setOrCreate('customLlmApiKey', val);
+            TranslationStorage.saveCustomApiKey(val);
+          })
+
+        Text('自定义模型仅显示字符数与耗时估算，不显示费用/余额')
+          .fontSize(11)
+          .fontColor($r('app.color.text_secondary'))
+          .margin({ top: 10 })
+          .lineHeight(18)
+      }
+
+      Divider()
+        .strokeWidth(1)
+        .color($r('app.color.divider'))
+        .margin({ top: 14, bottom: 14 })
+
+      Row() {
+        Text('翻译提示词')
+          .fontSize(15)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.user_name'))
+
+        Blank()
+
+        Button('恢复默认')
+          .fontSize(12)
+          .height(30)
+          .fontColor($r('app.color.danger'))
+          .backgroundColor(Color.Transparent)
+          .border({ width: 1, color: $r('app.color.danger'), radius: 8 })
+          .onClick(() => {
+            AlertDialog.show({
+              title: '恢复默认提示词',
+              message: '确定要清空自定义提示词，恢复内置默认模板吗？',
+              autoCancel: true,
+              primaryButton: {
+                value: '取消',
+                action: () => {}
+              },
+              secondaryButton: {
+                value: '恢复默认',
+                fontColor: '#FF4D4F',
+                action: () => {
+                  this.titlePrompt = '';
+                  this.fullPrompt = '';
+                  AppStorage.setOrCreate('titlePrompt', '');
+                  AppStorage.setOrCreate('fullPrompt', '');
+                  TranslationStorage.saveTitlePrompt('');
+                  TranslationStorage.saveFullPrompt('');
+                  promptAction.showToast({ message: '已恢复默认提示词' });
+                }
+              }
+            });
+          })
+      }
+      .width('100%')
+
+      Row() {
+        Toggle({ type: ToggleType.Switch, isOn: this.unifiedPrompt })
+          .onChange((isOn: boolean) => {
+            this.unifiedPrompt = isOn;
+            AppStorage.setOrCreate('unifiedPrompt', isOn);
+            TranslationStorage.saveUnifiedPrompt(isOn);
+          })
+        Text('标题与全文使用统一提示词')
+          .fontSize(13)
+          .fontColor($r('app.color.user_name'))
+          .margin({ left: 8 })
+      }
+      .width('100%')
+      .margin({ top: 10, bottom: 6 })
+
+      if (this.unifiedPrompt) {
+        Text('统一提示词（标题/全文共用）')
+          .fontSize(12)
+          .fontColor($r('app.color.text_secondary'))
+          .margin({ bottom: 6 })
+        TextArea({ text: this.titlePrompt, placeholder: '留空则使用内置默认模板' })
+          .width('100%')
+          .height(120)
+          .fontSize(13)
+          .backgroundColor($r('app.color.page_background'))
+          .borderRadius(8)
+          .padding({ left: 12, right: 12 })
+          .border({ width: 1, color: $r('app.color.divider'), radius: 8 })
+          .onChange((val: string): void => {
+            this.titlePrompt = val;
+            AppStorage.setOrCreate('titlePrompt', val);
+            TranslationStorage.saveTitlePrompt(val);
+          })
+      } else {
+        Text('标题翻译提示词')
+          .fontSize(12)
+          .fontColor($r('app.color.text_secondary'))
+          .margin({ bottom: 6 })
+        TextArea({ text: this.titlePrompt, placeholder: '留空则使用内置默认模板' })
+          .width('100%')
+          .height(100)
+          .fontSize(13)
+          .backgroundColor($r('app.color.page_background'))
+          .borderRadius(8)
+          .padding({ left: 12, right: 12 })
+          .border({ width: 1, color: $r('app.color.divider'), radius: 8 })
+          .onChange((val: string): void => {
+            this.titlePrompt = val;
+            AppStorage.setOrCreate('titlePrompt', val);
+            TranslationStorage.saveTitlePrompt(val);
+          })
+          .margin({ bottom: 12 })
+
+        Text('全文翻译提示词')
+          .fontSize(12)
+          .fontColor($r('app.color.text_secondary'))
+          .margin({ bottom: 6 })
+        TextArea({ text: this.fullPrompt, placeholder: '留空则使用内置默认模板' })
+          .width('100%')
+          .height(120)
+          .fontSize(13)
+          .backgroundColor($r('app.color.page_background'))
+          .borderRadius(8)
+          .padding({ left: 12, right: 12 })
+          .border({ width: 1, color: $r('app.color.divider'), radius: 8 })
+          .onChange((val: string): void => {
+            this.fullPrompt = val;
+            AppStorage.setOrCreate('fullPrompt', val);
+            TranslationStorage.saveFullPrompt(val);
+          })
+      }
+
+      Text('提示词为空时使用内置默认模板；自定义模型不发送 thinking 参数')
+        .fontSize(10)
+        .fontColor($r('app.color.text_secondary'))
+        .margin({ top: 8 })
     }
     .width('100%')
     .padding(16)

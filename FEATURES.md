@@ -137,6 +137,10 @@
 - **扩展（2026-08-13）**：自定义模型模式隐藏费用/token 估算信息
   - `TranslationController.ets` — 新增纯函数 `buildEstimateInfo(...)`，按 `service.supportsCostEstimate` 组装确认对话框估算文案：DeepSeek 模式显示 字符/tokens/费用/校准比；自定义模式仅显示字符数+预计耗时
   - **测试**：`entry/src/test/TranslationController.test.ets`
+- **扩展（2026-08-13）**：设置页翻译服务切换、自定义模型配置与翻译提示词编辑
+  - `TranslationSettingsViewModel.ets` — `TranslationSettingsState` 新增 `llmProvider`/`customApiBase`/`customModel`/`customApiKey`/`titlePrompt`/`fullPrompt`/`unifiedPrompt`；`loadSettings()` 恢复全部新键；新增 `updateLlmProvider`/`updateCustomConfig`/`updateTitlePrompt`/`updateFullPrompt`/`updateUnifiedPrompt`/`resetPrompts`（同步 AppStorage + TranslationStorage）
+  - `TranslationSettingsSection.ets` — 顶部新增「翻译服务」Radio 组（DeepSeek 预设/自定义模型）；自定义模式显示 API 地址/模型名称/API Key 输入区；余额/校准区域仅 DeepSeek 模式且有密钥时显示；新增「翻译提示词」卡片（统一提示词 Toggle + 标题/全文 TextArea + 恢复默认确认对话框），两种 provider 均显示
+  - **测试**：无（`viewmodel/` 与 `pages/settings/` 属 AGENTS.md 例外清单，不可测）
 
 ---
 
@@ -485,7 +489,7 @@
 
 ---
 
-> 最后更新：F11 自定义模型模式隐藏费用/token 估算信息，基于 2026-08-13
+> 最后更新：F11 设置页翻译服务切换/自定义模型配置/翻译提示词编辑，基于 2026-08-13
 
 ---
 

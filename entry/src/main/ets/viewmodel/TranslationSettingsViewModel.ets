@@ -21,6 +21,13 @@ export class TranslationSettingsState extends BaseState {
   balanceFetchState: 'idle' | 'loading' | 'ok' | 'fail' = 'idle';
   ratioValue: number = 0;
   ratioCount: number = 0;
+  llmProvider: string = 'deepseek';
+  customApiBase: string = '';
+  customModel: string = '';
+  customApiKey: string = '';
+  titlePrompt: string = '';
+  fullPrompt: string = '';
+  unifiedPrompt: boolean = false;
 }
 
 export class TranslationSettingsViewModel extends BaseVM<TranslationSettingsState> {
@@ -60,6 +67,13 @@ export class TranslationSettingsViewModel extends BaseVM<TranslationSettingsStat
   async loadSettings(): Promise<void> {
     const state = this.state;
     state.deepseekApiKey = AppStorage.get<string>('deepseekApiKey') ?? '';
+    state.llmProvider = AppStorage.get<string>('llmProvider') ?? 'deepseek';
+    state.customApiBase = AppStorage.get<string>('customLlmApiBase') ?? '';
+    state.customModel = AppStorage.get<string>('customLlmModel') ?? '';
+    state.customApiKey = AppStorage.get<string>('customLlmApiKey') ?? '';
+    state.titlePrompt = AppStorage.get<string>('titlePrompt') ?? '';
+    state.fullPrompt = AppStorage.get<string>('fullPrompt') ?? '';
+    state.unifiedPrompt = AppStorage.get<boolean>('unifiedPrompt') ?? false;
     await this.loadRatioInfo();
     if (state.deepseekApiKey.length > 0) {
       await this.fetchBalance();
@@ -125,5 +139,63 @@ export class TranslationSettingsViewModel extends BaseVM<TranslationSettingsStat
     state.apiKeyCheckState = 'idle';
     AppStorage.setOrCreate('deepseekApiKey', key);
     TranslationStorage.saveDeepSeekApiKey(key);
+  }
+
+  updateLlmProvider(provider: string): void {
+    const state = this.state;
+    state.llmProvider = provider;
+    AppStorage.setOrCreate('llmProvider', provider);
+    TranslationStorage.saveLlmProvider(provider);
+    if (provider === 'deepseek' && state.deepseekApiKey.length > 0) {
+      this.fetchBalance();
+    }
+  }
+
+  updateCustomConfig(field: 'base' | 'model' | 'key', value: string): void {
+    const state = this.state;
+    if (field === 'base') {
+      state.customApiBase = value;
+      AppStorage.setOrCreate('customLlmApiBase', value);
+      TranslationStorage.saveCustomApiBase(value);
+    } else if (field === 'model') {
+      state.customModel = value;
+      AppStorage.setOrCreate('customLlmModel', value);
+      TranslationStorage.saveCustomModel(value);
+    } else {
+      state.customApiKey = value;
+      AppStorage.setOrCreate('customLlmApiKey', value);
+      TranslationStorage.saveCustomApiKey(value);
+    }
+  }
+
+  updateTitlePrompt(prompt: string): void {
+    const state = this.state;
+    state.titlePrompt = prompt;
+    AppStorage.setOrCreate('titlePrompt', prompt);
+    TranslationStorage.saveTitlePrompt(prompt);
+  }
+
+  updateFullPrompt(prompt: string): void {
+    const state = this.state;
+    state.fullPrompt = prompt;
+    AppStorage.setOrCreate('fullPrompt', prompt);
+    TranslationStorage.saveFullPrompt(prompt);
+  }
+
+  updateUnifiedPrompt(enabled: boolean): void {
+    const state = this.state;
+    state.unifiedPrompt = enabled;
+    AppStorage.setOrCreate('unifiedPrompt', enabled);
+    TranslationStorage.saveUnifiedPrompt(enabled);
+  }
+
+  resetPrompts(): void {
+    const state = this.state;
+    state.titlePrompt = '';
+    state.fullPrompt = '';
+    AppStorage.setOrCreate('titlePrompt', '');
+    AppStorage.setOrCreate('fullPrompt', '');
+    TranslationStorage.saveTitlePrompt('');
+    TranslationStorage.saveFullPrompt('');
   }
 }
