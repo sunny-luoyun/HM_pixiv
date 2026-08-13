@@ -42,6 +42,7 @@ import themeUtilTest from './ThemeUtil.test';
 import timeUtilsTest from './TimeUtils.test';
 import breakpointManagerTest from './BreakpointManager.test';
 import baseStateTest from './BaseState.test';
+import llmProviderTest from './LlmProvider.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -88,4 +89,5 @@ export default function testsuite() {
   timeUtilsTest();
   breakpointManagerTest();
   baseStateTest();
+  llmProviderTest();
 }
