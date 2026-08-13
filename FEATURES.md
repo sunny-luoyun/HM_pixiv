@@ -130,6 +130,10 @@
   - `LlmProvider.ets` — 抽象基类 `BaseLlmService`（`LlmConfig` 配置、请求体构建、错误处理、并发控制）
   - `OpenAiCompatService.ets` — 用户自定义 OpenAI 兼容端点的模型服务（`constructor(baseUrl, apiKey, model)`、`updateConfig`，无 thinking/费用估算，全文 max_tokens 8192）
   - **测试**：`entry/src/test/LlmProvider.test.ets`、`entry/src/test/OpenAiCompatService.test.ets`
+- **扩展（2026-08-13）**：LLM 服务工厂，按 provider 分发
+  - `LlmServiceFactory.ets` — `getLlmService()` 按 AppStorage `llmProvider` 返回 DeepSeekService/OpenAiCompatService 单例并同步 prompts；`resetLlmServiceInstance()` 清单例供切换 provider
+  - `TranslationController.ets`、`NovelCard.ets` — 调用方从 `getDeepSeekService()` 迁移到 `getLlmService()`（DeepSeek 特有 tokenizer/费用估算以 instanceof 守卫保留），错误文案统一为「请先在设置中配置翻译 API 密钥」
+  - **测试**：`entry/src/test/LlmServiceFactory.test.ets`
 
 ---
 
@@ -478,7 +482,7 @@
 
 ---
 
-> 最后更新：F11 自定义 OpenAI 兼容模型服务（BaseLlmService + OpenAiCompatService），基于 2026-08-13
+> 最后更新：F11 新增 getLlmService 工厂，翻译调用方按 provider 分发并统一错误文案，基于 2026-08-13
 
 ---
 

@@ -44,6 +44,7 @@ import breakpointManagerTest from './BreakpointManager.test';
 import baseStateTest from './BaseState.test';
 import llmProviderTest from './LlmProvider.test';
 import openAiCompatServiceTest from './OpenAiCompatService.test';
+import llmServiceFactoryTest from './LlmServiceFactory.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -92,4 +93,5 @@ export default function testsuite() {
   baseStateTest();
   llmProviderTest();
   openAiCompatServiceTest();
+  llmServiceFactoryTest();
 }

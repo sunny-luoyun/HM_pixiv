@@ -1,5 +1,6 @@
 import common from '@ohos.app.ability.common';
-import { getDeepSeekService } from './DeepSeekService';
+import { getLlmService } from './LlmServiceFactory';
+import { DeepSeekService } from './DeepSeekService';
 import { pixivCacheDB } from '../database/PixivCacheDB';
 import { PixivService } from './PixivService';
 import { parsePixivBlocks, ContentBlock } from '../common/utils/NovelParser';
@@ -34,10 +35,10 @@ export class TranslationController {
     novelId: string,
     title: string,
   ): Promise<TranslateTitleResult> {
-    const service = getDeepSeekService();
+    const service = getLlmService();
 
     if (!service.hasValidKey()) {
-      const r: TranslateTitleResult = { success: false, error: '请先在设置中填入 DeepSeek API 密钥' };
+      const r: TranslateTitleResult = { success: false, error: '请先在设置中配置翻译 API 密钥' };
       return r;
     }
 
@@ -55,17 +56,19 @@ export class TranslationController {
   static async prepareFullTranslation(
     novelId: string,
   ): Promise<PrepareFullTranslationSuccess | PrepareFullTranslationError> {
-    const service = getDeepSeekService();
+    const service = getLlmService();
 
     if (!service.hasValidKey()) {
-      const r: PrepareFullTranslationError = { error: '请先在设置中填入 DeepSeek API 密钥' };
+      const r: PrepareFullTranslationError = { error: '请先在设置中配置翻译 API 密钥' };
       return r;
     }
 
     const ctx = AppStorage.get<common.UIAbilityContext>('appContext');
     if (ctx) {
       await pixivCacheDB.init(ctx);
-      await service.initTokenizer(ctx);
+      if (service instanceof DeepSeekService) {
+        await service.initTokenizer(ctx);
+      }
     }
     const originalText = await pixivCacheDB.getFullText(novelId);
 
@@ -81,7 +84,7 @@ export class TranslationController {
     const fmtTime = min > 0
       ? (sec > 0 ? `约 ${min} 分 ${sec} 秒` : `约 ${min} 分`)
       : `约 ${sec} 秒`;
-    const estimatedCostYuan = service.estimateCost(inputTokens);
+    const estimatedCostYuan = service instanceof DeepSeekService ? service.estimateCost(inputTokens) : 0;
     const ratio = service.getAdaptiveRatio();
     const count = service.getRatioCount();
 
@@ -101,7 +104,7 @@ export class TranslationController {
     originalText: string,
     onProgress?: (current: number, total: number) => void,
   ): Promise<TranslateFullTextResult> {
-    const service = getDeepSeekService();
+    const service = getLlmService();
 
     await pixivCacheDB.updateTranslationProgress(novelId, 0, 'in_progress');
 

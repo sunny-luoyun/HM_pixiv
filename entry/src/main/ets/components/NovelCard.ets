@@ -5,7 +5,7 @@ import { NovelBookmark, BookmarkData } from '../models/PixivModels';
 import { PixivService } from '../services/PixivService';
 import { pixivCacheDB } from '../database/PixivCacheDB';
 import { CacheStatus, getCacheStatusDisplay, PixivTag } from '../models/PixivModels';
-import { getDeepSeekService } from '../services/DeepSeekService';
+import { getLlmService } from '../services/LlmServiceFactory';
 import { ImageComponent } from './ImageComponent';
 import { NovReaderParam, NovSeriesParam, UserProfileParam, NovCommentsParam } from '../common/constants/PageParamTypes';
 import { PageContext } from '../common/utils/PageContext';
@@ -129,9 +129,9 @@ export struct NovelCard {
       return;
     }
 
-    const service = getDeepSeekService();
+    const service = getLlmService();
     if (!service.hasValidKey()) {
-      promptAction.showToast({ message: '请先在设置中填入 DeepSeek API 密钥' });
+      promptAction.showToast({ message: '请先在设置中配置翻译 API 密钥' });
       return;
     }
 
