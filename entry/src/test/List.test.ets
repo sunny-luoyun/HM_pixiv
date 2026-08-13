@@ -45,6 +45,7 @@ import baseStateTest from './BaseState.test';
 import llmProviderTest from './LlmProvider.test';
 import openAiCompatServiceTest from './OpenAiCompatService.test';
 import llmServiceFactoryTest from './LlmServiceFactory.test';
+import translationControllerTest from './TranslationController.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -94,4 +95,5 @@ export default function testsuite() {
   llmProviderTest();
   openAiCompatServiceTest();
   llmServiceFactoryTest();
+  translationControllerTest();
 }

@@ -30,6 +30,35 @@ export interface NovelDetailResult {
   commentCount: number;
 }
 
+export function buildEstimateInfo(
+  originalText: string,
+  inputTokens: number,
+  estimatedMs: number,
+  estimatedCostYuan: number,
+  ratio: number,
+  count: number,
+  showCostInfo: boolean
+): string {
+  const totalSec = Math.round(estimatedMs / 1000);
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  const fmtTime = min > 0
+    ? (sec > 0 ? `约 ${min} 分 ${sec} 秒` : `约 ${min} 分`)
+    : `约 ${sec} 秒`;
+
+  if (!showCostInfo) {
+    return `预计翻译 ${originalText.length} 字符\n` +
+      `预计耗时 ${fmtTime}\n` +
+      `是否继续？`;
+  }
+
+  return `预计翻译 ${originalText.length} 字符 / ${inputTokens} tokens\n` +
+    `预计耗时 ${fmtTime}\n` +
+    `费用约 ¥${estimatedCostYuan.toFixed(4)}\n` +
+    `输出/输入比 ${ratio.toFixed(3)}（已校准 ${count} 次）\n` +
+    `是否继续？`;
+}
+
 export class TranslationController {
   static async translateTitle(
     novelId: string,
@@ -78,22 +107,19 @@ export class TranslationController {
     }
     const inputTokens = service.estimateTokens(originalText);
     const estimatedMs = service.estimateTime(inputTokens);
-    const totalSec = Math.round(estimatedMs / 1000);
-    const min = Math.floor(totalSec / 60);
-    const sec = totalSec % 60;
-    const fmtTime = min > 0
-      ? (sec > 0 ? `约 ${min} 分 ${sec} 秒` : `约 ${min} 分`)
-      : `约 ${sec} 秒`;
     const estimatedCostYuan = service instanceof DeepSeekService ? service.estimateCost(inputTokens) : 0;
     const ratio = service.getAdaptiveRatio();
     const count = service.getRatioCount();
 
-    const estimateInfo =
-      `预计翻译 ${originalText.length} 字符 / ${inputTokens} tokens\n` +
-      `预计耗时 ${fmtTime}\n` +
-      `费用约 ¥${estimatedCostYuan.toFixed(4)}\n` +
-      `输出/输入比 ${ratio.toFixed(3)}（已校准 ${count} 次）\n` +
-      `是否继续？`;
+    const estimateInfo = buildEstimateInfo(
+      originalText,
+      inputTokens,
+      estimatedMs,
+      estimatedCostYuan,
+      ratio,
+      count,
+      service.supportsCostEstimate
+    );
 
     const r: PrepareFullTranslationSuccess = { originalText, estimateInfo };
     return r;

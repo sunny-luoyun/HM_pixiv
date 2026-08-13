@@ -134,6 +134,9 @@
   - `LlmServiceFactory.ets` — `getLlmService()` 按 AppStorage `llmProvider` 返回 DeepSeekService/OpenAiCompatService 单例并同步 prompts；`resetLlmServiceInstance()` 清单例供切换 provider；每次调用都从 AppStorage 刷新 apiKey/自定义配置（updateConfig/updateApiKey），设置修改即时生效
   - `TranslationController.ets`、`NovelCard.ets` — 调用方从 `getDeepSeekService()` 迁移到 `getLlmService()`（DeepSeek 特有 tokenizer/费用估算以 instanceof 守卫保留），错误文案统一为「请先在设置中配置翻译 API 密钥」
   - **测试**：`entry/src/test/LlmServiceFactory.test.ets`
+- **扩展（2026-08-13）**：自定义模型模式隐藏费用/token 估算信息
+  - `TranslationController.ets` — 新增纯函数 `buildEstimateInfo(...)`，按 `service.supportsCostEstimate` 组装确认对话框估算文案：DeepSeek 模式显示 字符/tokens/费用/校准比；自定义模式仅显示字符数+预计耗时
+  - **测试**：`entry/src/test/TranslationController.test.ets`
 
 ---
 
@@ -482,7 +485,7 @@
 
 ---
 
-> 最后更新：F11 getLlmService 每次调用同步刷新 apiKey/自定义配置，基于 2026-08-13
+> 最后更新：F11 自定义模型模式隐藏费用/token 估算信息，基于 2026-08-13
 
 ---
 
