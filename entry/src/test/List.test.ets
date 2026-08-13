@@ -43,6 +43,7 @@ import timeUtilsTest from './TimeUtils.test';
 import breakpointManagerTest from './BreakpointManager.test';
 import baseStateTest from './BaseState.test';
 import llmProviderTest from './LlmProvider.test';
+import openAiCompatServiceTest from './OpenAiCompatService.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -90,4 +91,5 @@ export default function testsuite() {
   breakpointManagerTest();
   baseStateTest();
   llmProviderTest();
+  openAiCompatServiceTest();
 }

@@ -126,6 +126,10 @@
   - `StorageKeys.ets` — 新增 `LLM_PROVIDER`、`CUSTOM_LLM_API_BASE`、`CUSTOM_LLM_API_KEY`、`CUSTOM_LLM_MODEL`、`TITLE_PROMPT`、`FULL_PROMPT`、`UNIFIED_PROMPT`
   - `TranslationStorage.ets` — 新增 `saveLlmProvider/getLlmProvider`、`saveCustomApiBase/getCustomApiBase`、`saveCustomApiKey/getCustomApiKey/clearCustomApiKey`、`saveCustomModel/getCustomModel`、`saveTitlePrompt/getTitlePrompt`、`saveFullPrompt/getFullPrompt`、`saveUnifiedPrompt/getUnifiedPrompt`
   - **测试**：`entry/src/test/StorageKeys.test.ets`、`entry/src/test/TranslationStorage.test.ets`
+- **扩展（2026-08-13）**：抽象 LLM 基类 + 自定义 OpenAI 兼容模型服务
+  - `LlmProvider.ets` — 抽象基类 `BaseLlmService`（`LlmConfig` 配置、请求体构建、错误处理、并发控制）
+  - `OpenAiCompatService.ets` — 用户自定义 OpenAI 兼容端点的模型服务（`constructor(baseUrl, apiKey, model)`、`updateConfig`，无 thinking/费用估算，全文 max_tokens 8192）
+  - **测试**：`entry/src/test/LlmProvider.test.ets`、`entry/src/test/OpenAiCompatService.test.ets`
 
 ---
 
@@ -474,7 +478,7 @@
 
 ---
 
-> 最后更新：F11 自定义翻译提供商存储扩展，基于 2026-08-13
+> 最后更新：F11 自定义 OpenAI 兼容模型服务（BaseLlmService + OpenAiCompatService），基于 2026-08-13
 
 ---
 
