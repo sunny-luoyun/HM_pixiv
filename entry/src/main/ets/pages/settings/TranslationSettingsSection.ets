@@ -39,7 +39,7 @@ export struct TranslationSettingsSection {
     this.fullPrompt = AppStorage.get<string>('fullPrompt') ?? '';
     this.unifiedPrompt = AppStorage.get<boolean>('unifiedPrompt') ?? false;
     this.loadRatioInfo();
-    if (this.deepseekApiKey.length > 0) {
+    if (this.deepseekApiKey.length > 0 && this.llmProvider === 'deepseek') {
       this.fetchBalance();
     }
   }
@@ -131,96 +131,98 @@ export struct TranslationSettingsSection {
       .width('100%')
       .margin({ bottom: 14 })
 
-      Row() {
-        Row() {
-          Text('DeepSeek API 密钥')
-            .fontSize(16)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.user_name'))
-
-          if (this.apiKeyCheckState === 'ok') {
-            Text(' ●').fontSize(12).fontColor($r('app.color.success'))
-          } else if (this.apiKeyCheckState === 'fail') {
-            Text(' ●').fontSize(12).fontColor($r('app.color.danger'))
-          } else if (this.deepseekApiKey.length > 0 && this.apiKeyCheckState === 'idle') {
-            Text(' ●').fontSize(12).fontColor($r('app.color.warning'))
-          }
-        }.alignItems(VerticalAlign.Center)
-
-        Blank()
-
-        Text(this.showApiKeyText ? '隐藏' : '显示')
-          .fontSize(13)
-          .fontColor($r('app.color.tab_selected'))
-          .onClick(() => {
-            this.showApiKeyText = !this.showApiKeyText;
-          })
-      }
-      .width('100%')
-      .margin({ bottom: 10 })
-
-      TextInput({
-        text: this.deepseekApiKey,
-        placeholder: '粘贴 DeepSeek API 密钥...'
-      })
+      if (this.llmProvider === 'deepseek') {
+          Row() {
+            Row() {
+              Text('DeepSeek API 密钥')
+              .fontSize(16)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.user_name'))
+  
+            if (this.apiKeyCheckState === 'ok') {
+              Text(' ●').fontSize(12).fontColor($r('app.color.success'))
+            } else if (this.apiKeyCheckState === 'fail') {
+              Text(' ●').fontSize(12).fontColor($r('app.color.danger'))
+            } else if (this.deepseekApiKey.length > 0 && this.apiKeyCheckState === 'idle') {
+              Text(' ●').fontSize(12).fontColor($r('app.color.warning'))
+            }
+          }.alignItems(VerticalAlign.Center)
+  
+          Blank()
+  
+          Text(this.showApiKeyText ? '隐藏' : '显示')
+            .fontSize(13)
+            .fontColor($r('app.color.tab_selected'))
+            .onClick(() => {
+              this.showApiKeyText = !this.showApiKeyText;
+            })
+        }
         .width('100%')
-        .height(44)
-        .fontSize(13)
-        .fontColor($r('app.color.user_name'))
-        .placeholderColor($r('app.color.text_secondary'))
-        .backgroundColor($r('app.color.page_background'))
-        .borderRadius(8)
-        .padding({ left: 12, right: 12 })
-        .border({
-          width: 1,
-          color: this.deepseekApiKey.length === 0
-            ? $r('app.color.divider')
-              : this.apiKeyCheckState === 'ok'
-                ? $r('app.color.success')
-                : this.apiKeyCheckState === 'fail'
-                  ? $r('app.color.danger')
-                : $r('app.color.tab_selected'),
-          radius: 8
+        .margin({ bottom: 10 })
+  
+        TextInput({
+          text: this.deepseekApiKey,
+          placeholder: '粘贴 DeepSeek API 密钥...'
         })
-        .type(this.showApiKeyText ? InputType.Normal : InputType.Password)
-        .enableAutoFill(false)
-        .onChange((val: string): void => {
-          this.deepseekApiKey = val;
-          this.apiKeyCheckState = 'idle';
-          AppStorage.setOrCreate('deepseekApiKey', val);
-          TranslationStorage.saveDeepSeekApiKey(val);
-        })
-
-      Row() {
-        Button(this.apiKeyCheckState === 'checking' ? '验证中...' : '验证密钥')
+          .width('100%')
+          .height(44)
           .fontSize(13)
-          .height(36)
-          .layoutWeight(1)
-          .fontColor(Color.White)
-          .backgroundColor($r('app.color.tab_selected'))
+          .fontColor($r('app.color.user_name'))
+          .placeholderColor($r('app.color.text_secondary'))
+          .backgroundColor($r('app.color.page_background'))
           .borderRadius(8)
-          .enabled(this.apiKeyCheckState !== 'checking' && this.deepseekApiKey.length > 0)
-          .onClick(() => { this.checkApiKeyValidity(); })
-
-        if (this.deepseekApiKey.length > 0) {
-          Button('清除')
+          .padding({ left: 12, right: 12 })
+          .border({
+            width: 1,
+            color: this.deepseekApiKey.length === 0
+              ? $r('app.color.divider')
+                : this.apiKeyCheckState === 'ok'
+                  ? $r('app.color.success')
+                  : this.apiKeyCheckState === 'fail'
+                    ? $r('app.color.danger')
+                  : $r('app.color.tab_selected'),
+            radius: 8
+          })
+          .type(this.showApiKeyText ? InputType.Normal : InputType.Password)
+          .enableAutoFill(false)
+          .onChange((val: string): void => {
+            this.deepseekApiKey = val;
+            this.apiKeyCheckState = 'idle';
+            AppStorage.setOrCreate('deepseekApiKey', val);
+            TranslationStorage.saveDeepSeekApiKey(val);
+          })
+  
+        Row() {
+          Button(this.apiKeyCheckState === 'checking' ? '验证中...' : '验证密钥')
             .fontSize(13)
             .height(36)
-            .fontColor($r('app.color.danger'))
-            .backgroundColor(Color.Transparent)
+            .layoutWeight(1)
+            .fontColor(Color.White)
+            .backgroundColor($r('app.color.tab_selected'))
             .borderRadius(8)
-            .margin({ left: 8 })
-            .onClick(() => { this.clearApiKey(); })
+            .enabled(this.apiKeyCheckState !== 'checking' && this.deepseekApiKey.length > 0)
+            .onClick(() => { this.checkApiKeyValidity(); })
+  
+          if (this.deepseekApiKey.length > 0) {
+            Button('清除')
+              .fontSize(13)
+              .height(36)
+              .fontColor($r('app.color.danger'))
+              .backgroundColor(Color.Transparent)
+              .borderRadius(8)
+              .margin({ left: 8 })
+              .onClick(() => { this.clearApiKey(); })
+          }
         }
+        .width('100%')
+        .margin({ top: 12 })
+  
+        Text('前往 deepseek.com 注册获取 API 密钥，用于翻译日文小说标题和内容')
+          .fontSize(11)
+          .fontColor($r('app.color.text_secondary'))
+          .margin({ top: 10 })
+          .lineHeight(18)
       }
-      .width('100%')
-      .margin({ top: 12 })
-
-      Text('前往 deepseek.com 注册获取 API 密钥，用于翻译日文小说标题和内容')
-        .fontSize(11)
-        .fontColor($r('app.color.text_secondary'))
-        .margin({ top: 10 })
-        .lineHeight(18)
 
       if (this.deepseekApiKey.length > 0 && this.llmProvider === 'deepseek') {
         Divider()
