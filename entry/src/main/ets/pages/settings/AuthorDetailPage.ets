@@ -224,32 +224,34 @@ export struct AuthorDetailPage {
               .width('100%')
             }
 
-            // Standalone novels section
-            if (this.authorGroup.standaloneNovels.length > 0) {
-              Text('📄 独立小说')
-                .fontSize(13)
-                .fontColor($r('app.color.text_secondary'))
-                .fontWeight(FontWeight.Medium)
-                .padding({ left: 4, bottom: 8, top: this.authorGroup.seriesMap.size > 0 ? 12 : 4 })
-                .width('100%')
+              // Standalone novels section
+              if (this.authorGroup.standaloneNovels.length > 0) {
+                Text('📄 独立小说')
+                  .fontSize(13)
+                  .fontColor($r('app.color.text_secondary'))
+                  .fontWeight(FontWeight.Medium)
+                  .padding({ left: 4, bottom: 8, top: this.authorGroup.seriesMap.size > 0 ? 12 : 4 })
+                  .width('100%')
 
-              Column({ space: 8 }) {
-                ForEach(
-                  this.authorGroup.standaloneNovels,
-                  (novel: PixivNovel) => {
-                    this.NovelCard(novel)
-                  },
-                  (novel: PixivNovel): string => novel.id
-                )
+                Column({ space: 8 }) {
+                  ForEach(
+                    this.authorGroup.standaloneNovels,
+                    (novel: PixivNovel) => {
+                      this.NovelCard(novel)
+                    },
+                    (novel: PixivNovel): string => novel.id
+                  )
+                }
+                .width('100%')
               }
-              .width('100%')
             }
+            .width('100%')
+            .height('100%')
+            .justifyContent(FlexAlign.Start)
+            .padding({ left: 16, right: 16, top: 8, bottom: 120 })
           }
-          .width('100%')
-          .padding({ left: 16, right: 16, top: 8, bottom: 120 })
-        }
-        .edgeEffect(EdgeEffect.Spring)
-        .layoutWeight(1)
+          .edgeEffect(EdgeEffect.Spring)
+          .layoutWeight(1)
       }
     }
     .width('100%')
