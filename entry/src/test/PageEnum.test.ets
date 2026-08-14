@@ -70,5 +70,25 @@ export default function pageEnumTest() {
     it('BROWSE_HISTORY 应为 "BrowseHistory"', 0, () => {
       expect(PageEnum.BROWSE_HISTORY).assertEqual('BrowseHistory');
     });
+
+    it('SETTINGS_TRANSLATION 应为 "SettingsTranslation"', 0, () => {
+      expect(PageEnum.SETTINGS_TRANSLATION).assertEqual('SettingsTranslation');
+    });
+
+    it('SETTINGS_PROXY 应为 "SettingsProxy"', 0, () => {
+      expect(PageEnum.SETTINGS_PROXY).assertEqual('SettingsProxy');
+    });
+
+    it('SETTINGS_CACHE 应为 "SettingsCache"', 0, () => {
+      expect(PageEnum.SETTINGS_CACHE).assertEqual('SettingsCache');
+    });
+
+    it('SETTINGS_FILTER 应为 "SettingsFilter"', 0, () => {
+      expect(PageEnum.SETTINGS_FILTER).assertEqual('SettingsFilter');
+    });
+
+    it('SETTINGS_READER 应为 "SettingsReader"', 0, () => {
+      expect(PageEnum.SETTINGS_READER).assertEqual('SettingsReader');
+    });
   });
 }

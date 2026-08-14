@@ -159,8 +159,9 @@
 
 ## F13 - 设置与屏蔽管理
 
-- **描述**：应用设置（代理、翻译、主题）、关注列表、屏蔽标签/用户
+- **描述**：应用设置（代理、翻译、主题）、关注列表、屏蔽标签/用户；设置页改为菜单入口，各模块独立二级页面
 - **页面**：`entry/src/main/ets/pages/setting/SettingPage.ets`、`entry/src/main/ets/pages/setting/FollowingPage.ets`、`entry/src/main/ets/pages/setting/BlockedContentPage.ets`、`entry/src/main/ets/pages/settings/SettingsPage.ets`
+- **二级页面（2026-08-13）**：翻译服务 `SettingsTranslationPage.ets`、代理设置 `SettingsProxyPage.ets`、缓存管理 `SettingsCachePage.ets`、过滤设置 `SettingsFilterPage.ets`、阅读器设置 `SettingsReaderPage.ets`
 - **数据库**：`entry/src/main/ets/database/PixivCacheDB.ets`（屏蔽数据存储）
 
 ---
@@ -327,6 +328,7 @@
 | 53 | 自定义提示词 | 自定义标题/全文提示词后翻译风格随之变化 → 恢复默认后回到内置模板 | ☐ |
 | 54 | 统一提示词 | 统一提示词开关开启后 → 标题与全文翻译使用同一提示词 | ☐ |
 | 55 | 切回 DeepSeek | 切换回 DeepSeek 后 → 余额/校准/费用显示恢复 | ☐ |
+| 56 | 设置二级页面 | 设置页显示 5 个菜单项 → 点击分别进入翻译/代理/缓存/过滤/阅读器页面 → 返回正常 | ☐ |
 
 ---
 
@@ -499,7 +501,7 @@
 
 ---
 
-> 最后更新：F11 长文翻译分段阈值与输出上限挂钩 + 工厂复用 DeepSeek 单例 + 删除 ViewModel 死代码，基于 2026-08-14
+> 最后更新：F13 设置页拆分二级页面（翻译/代理/缓存/过滤/阅读器），基于 2026-08-14
 
 ---
 

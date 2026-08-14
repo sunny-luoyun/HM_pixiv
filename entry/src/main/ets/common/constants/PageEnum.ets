@@ -19,4 +19,9 @@ export class PageEnum {
   static readonly SERIES_DETAIL = 'SeriesDetail';
   static readonly MAIN_TABS = 'mainTabs';
   static readonly BROWSE_HISTORY = 'BrowseHistory';
+  static readonly SETTINGS_TRANSLATION = 'SettingsTranslation';
+  static readonly SETTINGS_PROXY = 'SettingsProxy';
+  static readonly SETTINGS_CACHE = 'SettingsCache';
+  static readonly SETTINGS_FILTER = 'SettingsFilter';
+  static readonly SETTINGS_READER = 'SettingsReader';
 }

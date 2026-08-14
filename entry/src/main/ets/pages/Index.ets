@@ -17,6 +17,11 @@ import { CachedNovelsBuilder } from './settings/CachedNovelsPage';
 import { CachedNovelsSimpleBuilder } from './settings/CachedNovelsSimplePage';
 import { SeriesDetailBuilder } from './settings/SeriesDetailPage';
 import { BrowseHistoryBuilder } from './settings/BrowseHistoryPage';
+import { SettingsTranslationBuilder } from './settings/SettingsTranslationPage';
+import { SettingsProxyBuilder } from './settings/SettingsProxyPage';
+import { SettingsCacheBuilder } from './settings/SettingsCachePage';
+import { SettingsFilterBuilder } from './settings/SettingsFilterPage';
+import { SettingsReaderBuilder } from './settings/SettingsReaderPage';
 import { MainTabsBuilder } from './TabsPage';
 import { AnimateCallback, CustomTransition } from '../common/utils/CustomTransitionUtils';
 
@@ -76,6 +81,16 @@ struct Index {
       SeriesDetailBuilder()
     } else if (name === PageEnum.BROWSE_HISTORY) {
       BrowseHistoryBuilder()
+    } else if (name === PageEnum.SETTINGS_TRANSLATION) {
+      SettingsTranslationBuilder()
+    } else if (name === PageEnum.SETTINGS_PROXY) {
+      SettingsProxyBuilder()
+    } else if (name === PageEnum.SETTINGS_CACHE) {
+      SettingsCacheBuilder()
+    } else if (name === PageEnum.SETTINGS_FILTER) {
+      SettingsFilterBuilder()
+    } else if (name === PageEnum.SETTINGS_READER) {
+      SettingsReaderBuilder()
     }
   }
 
