@@ -274,6 +274,7 @@ export struct ProxySettingsSection {
     }
     .width('100%')
     .padding(16)
+    .alignItems(HorizontalAlign.Start)
     .backgroundColor($r('app.color.card_bg'))
     .borderRadius(14)
     .shadow({ radius: 4, color: $r('app.color.card_shadow'), offsetY: 1 })
@@ -325,13 +326,13 @@ export struct ProxySettingsSection {
         .lineHeight(18)
     }
     .width('100%')
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   buildSubscriptionForm() {
     Column() {
-      TextInput({ text: this.proxySubscriptionUrl, placeholder: '机场订阅链接 (Clash 格式)' })
-        .width('100%')
+      TextInput({ text: this.proxySubscriptionUrl, placeholder: '机场订阅链接 (Clash 格式)' })        .width('100%')
         .height(44)
         .fontSize(13)
         .fontColor($r('app.color.user_name'))
@@ -447,6 +448,7 @@ export struct ProxySettingsSection {
             .fontSize(11)
             .fontColor($r('app.color.text_secondary'))
             .margin({ top: 4 })
+            .width('100%')
         }
       } else {
         if (ProxyService.nativeErrorMessage) {
@@ -455,15 +457,18 @@ export struct ProxySettingsSection {
             .fontColor($r('app.color.danger'))
             .margin({ top: 6 })
             .lineHeight(18)
+            .width('100%')
         } else {
           Text('原生内核未加载')
             .fontSize(11)
             .fontColor($r('app.color.text_secondary'))
             .margin({ top: 6 })
             .lineHeight(18)
+            .width('100%')
         }
       }
     }
     .width('100%')
+    .alignItems(HorizontalAlign.Start)
   }
 }

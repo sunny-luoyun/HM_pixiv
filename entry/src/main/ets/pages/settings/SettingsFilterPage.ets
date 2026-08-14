@@ -41,6 +41,8 @@ export struct SettingsFilterPage {
           Blank()
         }
         .width('100%')
+        .justifyContent(FlexAlign.Start)
+        .alignItems(VerticalAlign.Center)
         .padding({ left: 16, right: 24, top: 16 })
 
         Scroll() {
@@ -107,6 +109,7 @@ export struct SettingsFilterPage {
             .margin({ bottom: 12 })
           }
           .width('100%')
+          .alignItems(HorizontalAlign.Start)
           .padding({ top: 12 })
         }
         .width('100%')
@@ -114,6 +117,7 @@ export struct SettingsFilterPage {
       }
       .width('100%')
       .height('100%')
+      .alignItems(HorizontalAlign.Start)
       .backgroundColor($r('app.color.page_background'))
     }
     .onBackPressed(() => {

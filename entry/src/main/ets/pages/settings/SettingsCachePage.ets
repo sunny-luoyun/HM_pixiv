@@ -30,6 +30,8 @@ export struct SettingsCachePage {
           Blank()
         }
         .width('100%')
+        .justifyContent(FlexAlign.Start)
+        .alignItems(VerticalAlign.Center)
         .padding({ left: 16, right: 24, top: 16 })
 
         Scroll() {
@@ -37,6 +39,7 @@ export struct SettingsCachePage {
             CacheSettingsSection()
           }
           .width('100%')
+          .alignItems(HorizontalAlign.Start)
           .padding({ top: 12, left: 16, right: 16 })
         }
         .width('100%')
@@ -44,6 +47,7 @@ export struct SettingsCachePage {
       }
       .width('100%')
       .height('100%')
+      .alignItems(HorizontalAlign.Start)
       .backgroundColor($r('app.color.page_background'))
     }
     .onBackPressed(() => {

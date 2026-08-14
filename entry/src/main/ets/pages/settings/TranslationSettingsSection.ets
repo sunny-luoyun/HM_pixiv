@@ -128,7 +128,6 @@ export struct TranslationSettingsSection {
         .fontWeight(FontWeight.Medium)
         .fontColor($r('app.color.user_name'))
         .margin({ bottom: 10 })
-
       Row() {
         Radio({ value: 'deepseek', group: 'llmProvider' })
           .checked(this.llmProvider === 'deepseek')
@@ -564,6 +563,7 @@ export struct TranslationSettingsSection {
     }
     .width('100%')
     .padding(16)
+    .alignItems(HorizontalAlign.Start)
     .backgroundColor($r('app.color.card_bg'))
     .borderRadius(14)
     .shadow({ radius: 4, color: $r('app.color.card_shadow'), offsetY: 1 })
