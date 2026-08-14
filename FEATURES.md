@@ -138,7 +138,7 @@
   - `TranslationController.ets` — 新增纯函数 `buildEstimateInfo(...)`，按 `service.supportsCostEstimate` 组装确认对话框估算文案：DeepSeek 模式显示 字符/tokens/费用/校准比；自定义模式仅显示字符数+预计耗时
   - **测试**：`entry/src/test/TranslationController.test.ets`
 - **扩展（2026-08-13）**：设置页翻译服务切换、自定义模型配置与翻译提示词编辑
-  - `TranslationSettingsSection.ets` — 顶部新增「翻译服务」Radio 组（DeepSeek 预设/自定义模型）；自定义模式显示 API 地址/模型名称/API Key 输入区；余额/校准区域仅 DeepSeek 模式且有密钥时显示；新增「翻译提示词」卡片（统一提示词 Toggle + 标题/全文 TextArea + 恢复默认确认对话框），两种 provider 均显示
+  - `TranslationSettingsSection.ets` — 顶部新增「翻译服务」Radio 组（DeepSeek 预设/自定义模型）；自定义模式显示 API 地址/模型名称/API Key 输入区；余额/校准区域仅 DeepSeek 模式且有密钥时显示；DeepSeek 密钥输入区仅 DeepSeek 模式显示；新增「翻译提示词」卡片（统一提示词 Toggle + 标题/全文 TextArea + 恢复默认确认对话框），两种 provider 均显示
   - **测试**：无（`pages/settings/` 属 AGENTS.md 例外清单，不可测）
 - **修复（2026-08-14）**：长文翻译截断、DeepSeek 双实例状态分叉
   - `LlmProvider.ets` — `translateLongText` 分段阈值由硬编码 100000 改为 `getMaxSafeTokens()`（`min(100000, maxTokensFull * 2)`），自定义模式（8192）单次调用输出上限不会超过响应 max_tokens
@@ -323,7 +323,7 @@
 | 49 | 动图卡片标识 | 动图作品卡片左上角显示「动图」徽标（白点+文字） | ☐ |
 | 50 | 动图下载 | 动图详情页点击下载按钮 → 弹出"正在生成动图" → 生成完成后保存到相册 | ☐ |
 | 51 | 自定义模型翻译 | 设置页切换到「自定义模型」→ 填入 API 地址/模型名/Key → 小说标题与全文翻译可用 | ☐ |
-| 52 | 自定义模型隐藏费用 | 自定义模型下不显示账户余额/校准比例 → 全文翻译确认框无 token/费用行 | ☐ |
+| 52 | 自定义模型隐藏费用 | 自定义模型下不显示账户余额/校准比例/DeepSeek 密钥输入 → 全文翻译确认框无 token/费用行 | ☐ |
 | 53 | 自定义提示词 | 自定义标题/全文提示词后翻译风格随之变化 → 恢复默认后回到内置模板 | ☐ |
 | 54 | 统一提示词 | 统一提示词开关开启后 → 标题与全文翻译使用同一提示词 | ☐ |
 | 55 | 切回 DeepSeek | 切换回 DeepSeek 后 → 余额/校准/费用显示恢复 | ☐ |
