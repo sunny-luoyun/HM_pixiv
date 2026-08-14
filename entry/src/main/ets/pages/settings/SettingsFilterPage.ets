@@ -109,6 +109,8 @@ export struct SettingsFilterPage {
             .margin({ bottom: 12 })
           }
           .width('100%')
+          .height('100%')
+          .justifyContent(FlexAlign.Start)
           .alignItems(HorizontalAlign.Start)
           .padding({ top: 12 })
         }
