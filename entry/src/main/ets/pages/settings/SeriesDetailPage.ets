@@ -134,9 +134,9 @@ export struct SeriesDetailPage {
             .width('100%')
           }
           .width('100%')
-          .height('100%')
+          .constraintSize({ minHeight: '100%' })
           .justifyContent(FlexAlign.Start)
-          .padding({ left: 16, right: 16, top: 8, bottom: 120 })
+          .padding({ left: 16, right: 16, top: 8, bottom: 16 })
         }
         .edgeEffect(EdgeEffect.Spring)
         .layoutWeight(1)

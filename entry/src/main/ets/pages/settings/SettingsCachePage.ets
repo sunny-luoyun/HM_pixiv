@@ -39,7 +39,7 @@ export struct SettingsCachePage {
             CacheSettingsSection()
           }
           .width('100%')
-          .height('100%')
+          .constraintSize({ minHeight: '100%' })
           .justifyContent(FlexAlign.Start)
           .alignItems(HorizontalAlign.Start)
           .padding({ top: 12, left: 16, right: 16 })
