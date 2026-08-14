@@ -1,6 +1,7 @@
 import promptAction from '@ohos.promptAction';
 import common from '@ohos.app.ability.common';
 import { getDeepSeekService } from '../../services/DeepSeekService';
+import { DEFAULT_TITLE_PROMPT, DEFAULT_FULL_PROMPT } from '../../services/LlmProvider';
 import { TranslationStorage } from '../../common/utils/TranslationStorage';
 import { AppState, appState } from '../../store/AppState';
 
@@ -36,7 +37,13 @@ export struct TranslationSettingsSection {
     this.customModel = AppStorage.get<string>('customLlmModel') ?? '';
     this.customApiKey = AppStorage.get<string>('customLlmApiKey') ?? '';
     this.titlePrompt = AppStorage.get<string>('titlePrompt') ?? '';
+    if (this.titlePrompt.length === 0) {
+      this.titlePrompt = DEFAULT_TITLE_PROMPT;
+    }
     this.fullPrompt = AppStorage.get<string>('fullPrompt') ?? '';
+    if (this.fullPrompt.length === 0) {
+      this.fullPrompt = DEFAULT_FULL_PROMPT;
+    }
     this.unifiedPrompt = AppStorage.get<boolean>('unifiedPrompt') ?? false;
     this.loadRatioInfo();
     if (this.deepseekApiKey.length > 0 && this.llmProvider === 'deepseek') {
@@ -98,6 +105,20 @@ export struct TranslationSettingsSection {
     if (provider === 'deepseek' && this.deepseekApiKey.length > 0) {
       this.fetchBalance();
     }
+  }
+
+  private onTitlePromptChange(val: string): void {
+    this.titlePrompt = val;
+    const stored = val === DEFAULT_TITLE_PROMPT ? '' : val;
+    AppStorage.setOrCreate('titlePrompt', stored);
+    TranslationStorage.saveTitlePrompt(stored);
+  }
+
+  private onFullPromptChange(val: string): void {
+    this.fullPrompt = val;
+    const stored = val === DEFAULT_FULL_PROMPT ? '' : val;
+    AppStorage.setOrCreate('fullPrompt', stored);
+    TranslationStorage.saveFullPrompt(stored);
   }
 
   build() {
@@ -447,8 +468,8 @@ export struct TranslationSettingsSection {
                 value: '恢复默认',
                 fontColor: '#FF4D4F',
                 action: () => {
-                  this.titlePrompt = '';
-                  this.fullPrompt = '';
+                  this.titlePrompt = DEFAULT_TITLE_PROMPT;
+                  this.fullPrompt = DEFAULT_FULL_PROMPT;
                   AppStorage.setOrCreate('titlePrompt', '');
                   AppStorage.setOrCreate('fullPrompt', '');
                   TranslationStorage.saveTitlePrompt('');
@@ -481,7 +502,10 @@ export struct TranslationSettingsSection {
           .fontSize(12)
           .fontColor($r('app.color.text_secondary'))
           .margin({ bottom: 6 })
-        TextArea({ text: this.titlePrompt, placeholder: '留空则使用内置默认模板' })
+        TextArea({
+          text: $$this.titlePrompt,
+          placeholder: '默认模板已填入，直接修改即可'
+        })
           .width('100%')
           .height(120)
           .fontSize(13)
@@ -490,16 +514,17 @@ export struct TranslationSettingsSection {
           .padding({ left: 12, right: 12 })
           .border({ width: 1, color: $r('app.color.divider'), radius: 8 })
           .onChange((val: string): void => {
-            this.titlePrompt = val;
-            AppStorage.setOrCreate('titlePrompt', val);
-            TranslationStorage.saveTitlePrompt(val);
+            this.onTitlePromptChange(val);
           })
       } else {
         Text('标题翻译提示词')
           .fontSize(12)
           .fontColor($r('app.color.text_secondary'))
           .margin({ bottom: 6 })
-        TextArea({ text: this.titlePrompt, placeholder: '留空则使用内置默认模板' })
+        TextArea({
+          text: $$this.titlePrompt,
+          placeholder: '默认模板已填入，直接修改即可'
+        })
           .width('100%')
           .height(100)
           .fontSize(13)
@@ -508,9 +533,7 @@ export struct TranslationSettingsSection {
           .padding({ left: 12, right: 12 })
           .border({ width: 1, color: $r('app.color.divider'), radius: 8 })
           .onChange((val: string): void => {
-            this.titlePrompt = val;
-            AppStorage.setOrCreate('titlePrompt', val);
-            TranslationStorage.saveTitlePrompt(val);
+            this.onTitlePromptChange(val);
           })
           .margin({ bottom: 12 })
 
@@ -518,7 +541,10 @@ export struct TranslationSettingsSection {
           .fontSize(12)
           .fontColor($r('app.color.text_secondary'))
           .margin({ bottom: 6 })
-        TextArea({ text: this.fullPrompt, placeholder: '留空则使用内置默认模板' })
+        TextArea({
+          text: $$this.fullPrompt,
+          placeholder: '默认模板已填入，直接修改即可'
+        })
           .width('100%')
           .height(120)
           .fontSize(13)
@@ -527,13 +553,11 @@ export struct TranslationSettingsSection {
           .padding({ left: 12, right: 12 })
           .border({ width: 1, color: $r('app.color.divider'), radius: 8 })
           .onChange((val: string): void => {
-            this.fullPrompt = val;
-            AppStorage.setOrCreate('fullPrompt', val);
-            TranslationStorage.saveFullPrompt(val);
+            this.onFullPromptChange(val);
           })
       }
 
-      Text('提示词为空时使用内置默认模板；自定义模型不发送 thinking 参数')
+      Text('默认模板已填入输入框，可直接修改；「恢复默认」将回到内置模板')
         .fontSize(10)
         .fontColor($r('app.color.text_secondary'))
         .margin({ top: 8 })
