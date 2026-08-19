@@ -1,7 +1,7 @@
 import promptAction from '@ohos.promptAction';
 import common from '@ohos.app.ability.common';
 import { curves } from '@kit.ArkUI';
-import { NovelBookmark, BookmarkData } from '../models/PixivModels';
+import { NovelBookmark, BookmarkData, formatTextLength } from '../models/PixivModels';
 import { PixivService } from '../services/PixivService';
 import { pixivCacheDB } from '../database/PixivCacheDB';
 import { CacheStatus, getCacheStatusDisplay, PixivTag } from '../models/PixivModels';
@@ -558,7 +558,7 @@ export struct NovelCard {
 
         Blank()
 
-        Text(`${this.item.wordCount}字`)
+        Text(formatTextLength(this.item.useWordCount ? (this.item.wordCount || this.item.textCount || 0) : (this.item.textCount || this.item.wordCount || 0)))
           .fontSize(10)
           .fontColor($r('app.color.text_secondary'))
 
