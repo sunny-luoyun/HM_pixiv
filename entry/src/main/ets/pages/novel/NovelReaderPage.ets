@@ -47,7 +47,6 @@ struct NovelReaderPage {
   @State private autoReadSpeedIndex: number = 5;
   @State private showFloatingMenu: boolean = false;
   @State private activeSubMenuIndex: number = -1;
-  @State private commentCount: number = 0;
   private touchStartY: number = 0;
   private touchStartTime: number = 0;
 
@@ -91,11 +90,6 @@ struct NovelReaderPage {
     if (this.saveProgressTimer !== -1) {
       clearTimeout(this.saveProgressTimer);
     }
-  }
-
-  private async fetchCommentCount(): Promise<void> {
-    const result = await TranslationController.fetchNovelDetail(this.params!.novelId);
-    this.commentCount = result.commentCount;
   }
 
   private async loadOfflineContent(novelId: string): Promise<void> {
@@ -393,6 +387,18 @@ struct NovelReaderPage {
     }
   }
 
+  private openNovelComments(): void {
+    if (!this.params?.novelId) return;
+    this.stopAutoRead();
+    const pageCtx = AppStorage.get<PageContext>('rootPageContext');
+    if (pageCtx) {
+      const params: NovCommentsParam = {
+        novelId: this.params.novelId
+      };
+      pageCtx.openPage(PageEnum.NOVEL_COMMENTS, params as Object);
+    }
+  }
+
   private async toggleTranslationView(showTranslated: boolean): Promise<void> {
     if (!this.params?.novelId) return;
 
@@ -466,24 +472,6 @@ struct NovelReaderPage {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
       .padding({ left: 12, right: 12 })
-
-      Button({ type: ButtonType.Capsule }) {
-        Text(this.commentCount > 0 ? `评论 ${this.commentCount}` : '评论')
-          .fontSize(12)
-          .fontColor(this.getColors().accentText)
-      }
-      .height(28)
-      .backgroundColor(this.getColors().iconBtnBg)
-      .onClick(() => {
-        this.stopAutoRead();
-        const pageCtx = AppStorage.get<PageContext>('rootPageContext');
-        if (pageCtx) {
-          const params: NovCommentsParam = {
-            novelId: this.params?.novelId ?? ''
-          };
-          pageCtx.openPage(PageEnum.NOVEL_COMMENTS, params as Object);
-        }
-      })
     }
     .width('100%')
     .padding({ left: 16, right: 16, top: 12, bottom: 12 })
@@ -648,10 +636,11 @@ struct NovelReaderPage {
       this.FloatingTabItem('外观', 0)
       this.FloatingTabItem('翻译', 1)
       this.FloatingTabItem('自动阅读', 2)
+      this.FloatingTabItem('简介/评论', 3)
     }
     .height(50)
     .padding({ left: 4, right: 4 })
-    .width('85%')
+    .width('92%')
     .backgroundColor(this.getColors().menuBg)
     .borderRadius(25)
   }
@@ -700,7 +689,8 @@ struct NovelReaderPage {
 
         Text(this.activeSubMenuIndex === 0 ? '外观'
           : this.activeSubMenuIndex === 1 ? '翻译'
-          : '自动阅读')
+          : this.activeSubMenuIndex === 2 ? '自动阅读'
+          : '简介/评论')
           .fontSize(17)
           .fontWeight(FontWeight.Bold)
           .fontColor(this.getColors().primaryText)
@@ -831,6 +821,21 @@ struct NovelReaderPage {
         }
         .width('100%')
         .height(44)
+      } else if (this.activeSubMenuIndex === 3) {
+        Row() {
+          Button('查看简介/评论')
+            .fontSize(15)
+            .fontColor(Color.White)
+            .backgroundColor(this.getColors().accentText)
+            .borderRadius(8)
+            .height(44)
+            .width('100%')
+            .onClick(() => {
+              this.dismissFloatingMenu();
+              this.openNovelComments();
+            })
+        }
+        .width('100%')
       }
     }
     .width('85%')
@@ -898,7 +903,6 @@ struct NovelReaderPage {
         AppStorage.setOrCreate('bgNovelId', this.params.novelId);
         AppStorage.setOrCreate('bgIsTranslated', !this.showOriginal);
         this.loadOfflineContent(this.params.novelId);
-        this.fetchCommentCount();
         this.startAutoSave();
       } else if (this.params?.novelId) {
         promptAction.showToast({ message: '小说尚未缓存，请先缓存' });

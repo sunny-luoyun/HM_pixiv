@@ -13,7 +13,9 @@ interface ReplyTarget {
 
 @Component
 export struct CommentsComponent {
-  private entityId: string = '';
+  @Prop @Watch('onEntityIdChanged') entityId: string = '';
+  @Prop introTitle: string = '';
+  @Prop introText: string = '';
   private titleLabel: string = '评论';
   private emptyHint: string = '还没有人评论';
   private fetchComments: (id: string, offset: number) => Promise<AjaxCommentsResponse> = () => Promise.reject(new Error('not set'));
@@ -44,6 +46,13 @@ export struct CommentsComponent {
     } else {
       this.errorMsg = '缺少ID';
       this.isLoading = false;
+    }
+  }
+
+  onEntityIdChanged() {
+    // 页面在 onReady 中才拿到 ID，@Prop 更新后在此兜底触发评论加载
+    if (this.entityId && (this.errorMsg === '缺少ID' || this.isLoading)) {
+      this.loadComments();
     }
   }
 
@@ -214,67 +223,78 @@ export struct CommentsComponent {
         .padding({ left: 16, right: 16 })
         .alignItems(VerticalAlign.Center)
 
-        if (this.isLoading) {
-          Column() {
-            LoadingProgress().width(36).height(36).color($r('app.color.text_secondary'))
-          }
-          .width('100%')
-          .layoutWeight(1)
-          .justifyContent(FlexAlign.Center)
-        } else if (this.errorMsg) {
-          Column() {
-            Text(this.errorMsg).fontSize(14).fontColor($r('app.color.text_secondary'))
-            Button('重试').margin({ top: 12 }).onClick(() => this.loadComments())
-          }
-          .width('100%')
-          .layoutWeight(1)
-          .justifyContent(FlexAlign.Center)
-        } else if (this.commentSource.totalCount() === 0) {
-          Column() {
-            Text('暂无评论').fontSize(14).fontColor($r('app.color.text_secondary'))
-            Text(this.emptyHint).fontSize(12).fontColor($r('app.color.text_secondary')).margin({ top: 4 })
-          }
-          .width('100%')
-          .layoutWeight(1)
-          .justifyContent(FlexAlign.Center)
-        } else {
+        if (this.introText) {
           List() {
-            ListItemGroup() {
-              LazyForEach(this.commentSource, (comment: AjaxComment) => {
-                ListItem() {
-                  Column() {
-                    this.commentItem(comment)
-                  }
-                  .width('100%')
-                  .padding({ left: 16, right: 16, top: 12, bottom: 8 })
-                }
-              }, (comment: AjaxComment) => `comment_${comment.id}`)
+            ListItem() {
+              this.introSection()
+            }
 
+            if (this.isLoading) {
               ListItem() {
-                Row() {
-                  if (this.isLoadingMore) {
-                    LoadingProgress().width(20).height(20).color($r('app.color.text_secondary'))
-                  } else if (this.hasMore) {
-                    Text('加载更多')
-                      .fontSize(12)
-                      .fontColor($r('app.color.text_secondary'))
-                      .onClick(() => this.loadMore())
-                  } else {
-                    Text('— 没有更多了 —')
-                      .fontSize(12)
-                      .fontColor($r('app.color.text_secondary'))
-                  }
+                Column() {
+                  this.loadingContent()
                 }
                 .width('100%')
+                .height(160)
                 .justifyContent(FlexAlign.Center)
-                .padding({ top: 12, bottom: 20 })
               }
+            } else if (this.errorMsg) {
+              ListItem() {
+                Column() {
+                  this.errorContent()
+                }
+                .width('100%')
+                .height(160)
+                .justifyContent(FlexAlign.Center)
+              }
+            } else if (this.commentSource.totalCount() === 0) {
+              ListItem() {
+                Column() {
+                  this.emptyContent()
+                }
+                .width('100%')
+                .height(160)
+                .justifyContent(FlexAlign.Center)
+              }
+            } else {
+              this.commentItems()
             }
           }
           .width('100%')
           .layoutWeight(1)
           .scrollBar(BarState.Off)
           .onReachEnd(() => this.loadMore())
+        } else {
+          if (this.isLoading) {
+            Column() {
+              this.loadingContent()
+            }
+            .width('100%')
+            .layoutWeight(1)
+            .justifyContent(FlexAlign.Center)
+          } else if (this.errorMsg) {
+            Column() {
+              this.errorContent()
+            }
+            .width('100%')
+            .layoutWeight(1)
+            .justifyContent(FlexAlign.Center)
+          } else if (this.commentSource.totalCount() === 0) {
+            Column() {
+              this.emptyContent()
+            }
+            .width('100%')
+            .layoutWeight(1)
+            .justifyContent(FlexAlign.Center)
+          } else {
+            List() {
+              this.commentItems()
+            }
+            .width('100%')
+            .layoutWeight(1)
+            .scrollBar(BarState.Off)
+            .onReachEnd(() => this.loadMore())
+          }
         }
       }
       .width('100%')
@@ -338,6 +358,88 @@ export struct CommentsComponent {
     .width('100%')
     .height('100%')
     .backgroundColor('#0f0f14')
+  }
+
+  @Builder
+  introSection() {
+    Column() {
+      if (this.introTitle) {
+        Text(this.introTitle)
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.brand_accent'))
+          .width('100%')
+      }
+      if (this.introText) {
+        Text(this.introText)
+          .fontSize(13)
+          .fontColor('#CCCCCC')
+          .lineHeight(20)
+          .width('100%')
+          .margin({ top: this.introTitle ? 8 : 0 })
+      }
+    }
+    .width('100%')
+    .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+    .backgroundColor('#14141c')
+    .borderRadius(12)
+    .margin({ left: 12, right: 12, top: 12, bottom: 4 })
+  }
+
+  @Builder
+  loadingContent() {
+    LoadingProgress().width(36).height(36).color($r('app.color.text_secondary'))
+  }
+
+  @Builder
+  errorContent() {
+    Column() {
+      Text(this.errorMsg).fontSize(14).fontColor($r('app.color.text_secondary'))
+      Button('重试').margin({ top: 12 }).onClick(() => this.loadComments())
+    }
+  }
+
+  @Builder
+  emptyContent() {
+    Column() {
+      Text('暂无评论').fontSize(14).fontColor($r('app.color.text_secondary'))
+      Text(this.emptyHint).fontSize(12).fontColor($r('app.color.text_secondary')).margin({ top: 4 })
+    }
+  }
+
+  @Builder
+  commentItems() {
+    ListItemGroup() {
+      LazyForEach(this.commentSource, (comment: AjaxComment) => {
+        ListItem() {
+          Column() {
+            this.commentItem(comment)
+          }
+          .width('100%')
+          .padding({ left: 16, right: 16, top: 12, bottom: 8 })
+        }
+      }, (comment: AjaxComment) => `comment_${comment.id}`)
+
+      ListItem() {
+        Row() {
+          if (this.isLoadingMore) {
+            LoadingProgress().width(20).height(20).color($r('app.color.text_secondary'))
+          } else if (this.hasMore) {
+            Text('加载更多')
+              .fontSize(12)
+              .fontColor($r('app.color.text_secondary'))
+              .onClick(() => this.loadMore())
+          } else {
+            Text('— 没有更多了 —')
+              .fontSize(12)
+              .fontColor($r('app.color.text_secondary'))
+          }
+        }
+        .width('100%')
+        .justifyContent(FlexAlign.Center)
+        .padding({ top: 12, bottom: 20 })
+      }
+    }
   }
 
   @Builder

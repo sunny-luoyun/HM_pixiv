@@ -329,6 +329,9 @@
 | 54 | 统一提示词 | 统一提示词开关开启后 → 标题与全文翻译使用同一提示词 | ☐ |
 | 55 | 切回 DeepSeek | 切换回 DeepSeek 后 → 余额/校准/费用显示恢复 | ☐ |
 | 56 | 设置二级页面 | 设置页显示 5 个菜单项 → 点击分别进入翻译/代理/缓存/过滤/阅读器页面 → 返回正常 | ☐ |
+| 57 | 阅读器简介/评论入口 | 小说阅读器点击屏幕呼出菜单栏 → 切到「简介/评论」子面板 → 点击「查看简介/评论」→ 进入小说评论页 | ☐ |
+| 58 | 小说简介显示 | 评论页顶部显示该小说的「作品简介」（作者写的本作简介，非系列简介）→ 下方自然衔接评论列表 | ☐ |
+| 59 | 阅读器顶栏去评论按钮 | 小说阅读器最上栏不再显示「评论」按钮（入口已移入呼出菜单） | ☐ |
 
 ---
 
@@ -501,7 +504,7 @@
 
 ---
 
-> 最后更新：F13 设置页拆分二级页面（翻译/代理/缓存/过滤/阅读器），基于 2026-08-14
+> 最后更新：F36 阅读器「简介/评论」入口 + 小说评论页展示本作简介，基于 2026-08-19
 
 ---
 
@@ -635,3 +638,15 @@
 ### 修复
 - **EntryAbility.ets**：AppStorage.SetOrCreate → setOrCreate（API 大小写修正）
 - **CMake 缓存清理**：删除 entry/.cxx 确保原生构建通过
+
+---
+
+## F36 - 阅读器「简介/评论」入口 + 小说评论页展示本作简介
+
+- **描述**：小说阅读器顶栏的「评论」按钮移入点击呼出的菜单栏（新增「简介/评论」子面板），评论页顶部新增该小说作者写的本作简介（非系列简介），简介下方自然衔接评论列表
+- **页面**：
+  - `entry/src/main/ets/pages/novel/NovelReaderPage.ets` — 顶栏移除评论按钮；呼出菜单栏新增「简介/评论」Tab；子面板提供「查看简介/评论」按钮并跳转评论页
+  - `entry/src/main/ets/pages/novel/NovelCommentsPage.ets` — 读取本作简介（优先离线缓存 caption，缺失时网络 fetchNovelDetail）并传入评论组件
+- **组件**：`entry/src/main/ets/components/CommentsComponent.ets` — 新增可选 `introTitle`/`introText`（@Prop，随父组件异步加载后刷新）；`entityId` 改为 `@Prop @Watch`，修复页面在 onReady 才拿到 ID 时评论不自动加载的问题；简介以列表首项渲染、随评论自然滚动
+- **简介来源**：`PixivNovel.caption`（缓存库 `NovelCacheDao` 的 caption 字段 / `PixivApiService.fetchNovelDetail` 的 `b.description`）
+- **验证项**：见「手工验证清单」第 57-59 项
