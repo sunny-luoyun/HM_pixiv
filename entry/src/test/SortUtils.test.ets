@@ -101,6 +101,11 @@ export default function sortUtilsTest() {
         expect(result[0].id).assertEqual('2');
         expect(result[1].id).assertEqual('1');
       });
+
+      it('空数组返回空数组', 0, () => {
+        const result = sortNovels([], 'title', true);
+        expect(result.length).assertEqual(0);
+      });
     });
 
     describe('sortAuthorGroups', () => {
@@ -136,6 +141,21 @@ export default function sortUtilsTest() {
         const result = sortAuthorGroups([g1, g2], 'cachedAt', false);
         expect(result[0].authorId).assertEqual('u2');
         expect(result[1].authorId).assertEqual('u1');
+      });
+
+      it('按最后阅读时间排序（通过 lastReadMap）', 0, () => {
+        const groups = [
+          makeGroup({ authorId: 'a1', authorName: 'Alice', totalCount: 1,
+            standaloneNovels: [makeNovel({ id: 'n1' })] }),
+          makeGroup({ authorId: 'a2', authorName: 'Bob', totalCount: 1,
+            standaloneNovels: [makeNovel({ id: 'n2' })] }),
+        ];
+        const lastReadMap = new Map<string, string>();
+        lastReadMap.set('n1', '2025-06-01');
+        lastReadMap.set('n2', '2025-01-01');
+        const result = sortAuthorGroups(groups, 'lastReadAt', false, lastReadMap);
+        expect(result[0].authorId).assertEqual('a1'); // newer read first
+        expect(result[1].authorId).assertEqual('a2');
       });
     });
   });
