@@ -258,4 +258,29 @@ export class NovelCacheDao {
       console.error(`[NovelCacheDao] 删除进度失败: ${JSON.stringify(err)}`);
     }
   }
+
+  static async getLastReadTimes(novelIds: string[]): Promise<Map<string, string>> {
+    const map = new Map<string, string>();
+    if (!DatabaseCore.isReady() || novelIds.length === 0) return map;
+    const store = DatabaseCore.getStore()!;
+    try {
+      // 一次查出所有有阅读记录的小说的 last_read_at
+      const placeholders = novelIds.map(() => '?').join(',');
+      const sql = `SELECT novel_id, last_read_at FROM ${DatabaseCore.TableProgress}
+                   WHERE novel_id IN (${placeholders})
+                   AND is_translated = 0`;
+      const result = await store.querySql(sql, novelIds);
+      while (result.goToNextRow()) {
+        const nid = result.getString(result.getColumnIndex('novel_id'));
+        const lra = result.getString(result.getColumnIndex('last_read_at'));
+        if (nid && lra) {
+          map.set(nid, lra);
+        }
+      }
+      result.close();
+    } catch (err) {
+      console.error(`[NovelCacheDao] getLastReadTimes 失败: ${JSON.stringify(err)}`);
+    }
+    return map;
+  }
 }

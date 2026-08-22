@@ -73,6 +73,10 @@ export class PixivCacheDB {
     return NovelCacheDao.deleteReadingProgress(novelId, isTranslated);
   }
 
+  async getLastReadTimes(novelIds: string[]): Promise<Map<string, string>> {
+    return NovelCacheDao.getLastReadTimes(novelIds);
+  }
+
   async addBlockedAuthor(authorId: string, authorName: string): Promise<void> {
     return BlockListDao.addBlockedAuthor(authorId, authorName);
   }
