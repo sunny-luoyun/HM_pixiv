@@ -2,6 +2,17 @@ import { PixivNovel } from '../../models/PixivModels';
 
 export type SortField = 'cachedAt' | 'title' | 'authorName' | 'lastReadAt' | 'seriesOrder' | 'novelCount';
 
+export interface SortPreference {
+  field: SortField;
+  ascending: boolean;
+}
+
+export interface SortableSeriesGroup {
+  seriesId: string;
+  seriesTitle: string;
+  novels: PixivNovel[];
+}
+
 /**
  * 按 lastReadAt 排序的比较函数：空值（未阅读）排最前面
  */
@@ -47,7 +58,7 @@ export interface SortableAuthorGroup {
   authorId: string;
   authorName: string;
   standaloneNovels: PixivNovel[];
-  seriesMap: Map<string, { seriesId: string; seriesTitle: string; novels: PixivNovel[] }>;
+  seriesMap: Map<string, SortableSeriesGroup>;
   totalCount: number;
 }
 

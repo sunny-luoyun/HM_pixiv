@@ -7,7 +7,7 @@ import { PageContext } from '../../common/utils/PageContext';
 import { PageEnum } from '../../common/constants/PageEnum';
 import { AuthorDetailParam } from '../../common/constants/PageParamTypes';
 import { SortPopupMenu, SortOption } from '../../components/SortPopupMenu';
-import { sortNovels, sortAuthorGroups, SortField } from '../../common/utils/SortUtils';
+import { sortNovels, sortAuthorGroups, SortField, SortPreference } from '../../common/utils/SortUtils';
 
 const AUTHOR_GROUP_SORT_OPTIONS: SortOption[] = [
   { label: '作者名', value: 'authorName' },
@@ -173,19 +173,19 @@ export struct CachedNovelsPage {
       const pref = await preferences.getPreferences(ctx, PREFS_NAME);
       const agp = await pref.get(PREFS_KEY_AGP, '') as string;
       if (agp) {
-        const parsed = JSON.parse(agp) as { field: SortField; ascending: boolean };
+        const parsed = JSON.parse(agp) as SortPreference;
         this.authorGroupSortField = parsed.field;
         this.authorGroupSortAsc = parsed.ascending;
       }
       const anp = await pref.get(PREFS_KEY_ANP, '') as string;
       if (anp) {
-        const parsed = JSON.parse(anp) as { field: SortField; ascending: boolean };
+        const parsed = JSON.parse(anp) as SortPreference;
         this.authorNovelSortField = parsed.field;
         this.authorNovelSortAsc = parsed.ascending;
       }
       const ssp = await pref.get(PREFS_KEY_SSP, '') as string;
       if (ssp) {
-        const parsed = JSON.parse(ssp) as { field: SortField; ascending: boolean };
+        const parsed = JSON.parse(ssp) as SortPreference;
         this.seriesSortField = parsed.field;
         this.seriesSortAsc = parsed.ascending;
       }
@@ -285,11 +285,13 @@ export struct CachedNovelsPage {
   }
 
   getSortLabel(field: SortField): string {
-    const map: Record<string, string> = {
-      authorName: '作者名', cachedAt: '缓存时间', novelCount: '数量',
-      lastReadAt: '最后阅读', title: '小说名', seriesOrder: '章节',
-    };
-    return map[field] ?? field;
+    if (field === 'authorName') return '作者名';
+    if (field === 'cachedAt') return '缓存时间';
+    if (field === 'novelCount') return '数量';
+    if (field === 'lastReadAt') return '最后阅读';
+    if (field === 'title') return '小说名';
+    if (field === 'seriesOrder') return '章节';
+    return field;
   }
 
   async deleteAuthorCache(ag: AuthorGroup) {
