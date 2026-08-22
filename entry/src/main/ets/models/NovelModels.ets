@@ -28,6 +28,8 @@ export interface PixivNovel {
   cachedAt?: string;
   fullText?: string;
 
+  lastReadAt?: string;
+
   titleTranslated?: string;
   hasTitleTranslation?: boolean;
   fullTextTranslated?: string;
