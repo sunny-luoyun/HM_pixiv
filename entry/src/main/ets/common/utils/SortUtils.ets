@@ -38,7 +38,7 @@ export function sortNovels(novels: PixivNovel[], field: SortField, ascending: bo
         return ascending ? cmp : -cmp;
       }
       case 'title': {
-        const cmp = a.title.localeCompare(b.title);
+        const cmp = a.title.localeCompare(b.title, 'zh-CN');
         return ascending ? cmp : -cmp;
       }
       case 'lastReadAt':
@@ -76,7 +76,7 @@ export function sortAuthorGroups(
   sorted.sort((a, b) => {
     switch (field) {
       case 'authorName': {
-        const cmp = a.authorName.localeCompare(b.authorName);
+        const cmp = a.authorName.localeCompare(b.authorName, 'zh-CN');
         return ascending ? cmp : -cmp;
       }
       case 'novelCount': {
