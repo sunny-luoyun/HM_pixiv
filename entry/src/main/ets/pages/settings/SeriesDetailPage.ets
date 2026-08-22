@@ -1,9 +1,22 @@
 import common from '@ohos.app.ability.common';
+import preferences from '@ohos.data.preferences';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { PixivNovel, formatTextLength, formatPixivDate } from '../../models/PixivModels';
 import { PageContext } from '../../common/utils/PageContext';
 import { PageEnum } from '../../common/constants/PageEnum';
 import { NovReaderParam, NovSeriesParam } from '../../common/constants/PageParamTypes';
+import { SortPopupMenu, SortOption } from '../../components/SortPopupMenu';
+import { sortNovels, SortField, SortPreference } from '../../common/utils/SortUtils';
+
+const SERIES_SORT_OPTIONS: SortOption[] = [
+  { label: '章节顺序', value: 'seriesOrder' },
+  { label: '小说名', value: 'title' },
+  { label: '缓存时间', value: 'cachedAt' },
+  { label: '最后阅读', value: 'lastReadAt' },
+];
+
+const PREFS_NAME = 'cached_novels_sort';
+const PREFS_KEY_SSP = 'series_sort';
 
 @Component
 export struct SeriesDetailPage {
@@ -13,6 +26,16 @@ export struct SeriesDetailPage {
   private authorName: string = '';
   @State novels: PixivNovel[] = [];
   @State isLoading: boolean = true;
+
+  // 排序状态
+  @State seriesSortField: SortField = 'seriesOrder';
+  @State seriesSortAsc: boolean = true;
+  @State lastReadMap: Map<string, string> = new Map();
+
+  // 菜单状态
+  @State showSortMenu: boolean = false;
+  @State sortMenuCurrentSort: string = '';
+  @State sortMenuSortAsc: boolean = true;
 
   aboutToAppear() {
     // 参数由 onReady 获取
@@ -24,12 +47,84 @@ export struct SeriesDetailPage {
       const ctx = AppStorage.get<common.UIAbilityContext>('appContext');
       if (ctx) {
         await pixivCacheDB.init(ctx);
+        await this.loadSortPreferences(ctx);
       }
       this.novels = await pixivCacheDB.getNovelsBySeriesId(this.seriesId);
+      // 批量获取 lastReadAt
+      const ids = this.novels.map(n => n.id);
+      this.lastReadMap = await pixivCacheDB.getLastReadTimes(ids);
+      for (const n of this.novels) {
+        const lra = this.lastReadMap.get(n.id);
+        if (lra) n.lastReadAt = lra;
+      }
+      this.applySorting();
     } catch (err) {
       console.error('获取系列小说失败:', err);
     }
     this.isLoading = false;
+  }
+
+  applySorting() {
+    this.novels = sortNovels(this.novels, this.seriesSortField, this.seriesSortAsc);
+  }
+
+  async loadSortPreferences(ctx: common.UIAbilityContext) {
+    try {
+      const pref = await preferences.getPreferences(ctx, PREFS_NAME);
+      const ssp = await pref.get(PREFS_KEY_SSP, '') as string;
+      if (ssp) {
+        const parsed = JSON.parse(ssp) as SortPreference;
+        this.seriesSortField = parsed.field;
+        this.seriesSortAsc = parsed.ascending;
+      }
+    } catch (err) {
+      console.error('加载排序偏好失败:', err);
+    }
+  }
+
+  async saveSortPreference(field: SortField, ascending: boolean) {
+    try {
+      const ctx = AppStorage.get<common.UIAbilityContext>('appContext');
+      if (!ctx) return;
+      const pref = await preferences.getPreferences(ctx, PREFS_NAME);
+      await pref.put(PREFS_KEY_SSP, JSON.stringify({ field, ascending }));
+      await pref.flush();
+    } catch (err) {
+      console.error('保存排序偏好失败:', err);
+    }
+  }
+
+  openSortMenu() {
+    this.sortMenuCurrentSort = this.seriesSortField;
+    this.sortMenuSortAsc = this.seriesSortAsc;
+    this.showSortMenu = true;
+  }
+
+  onSortSelect(value: string) {
+    const field = value as SortField;
+    if (this.seriesSortField === field) {
+      this.seriesSortAsc = !this.seriesSortAsc;
+    } else {
+      this.seriesSortField = field;
+      this.seriesSortAsc = (field === 'seriesOrder' || field === 'title');
+    }
+    this.saveSortPreference(this.seriesSortField, this.seriesSortAsc);
+    this.applySorting();
+  }
+
+  onSortToggleDirection() {
+    this.seriesSortAsc = !this.seriesSortAsc;
+    this.sortMenuSortAsc = this.seriesSortAsc;
+    this.saveSortPreference(this.seriesSortField, this.seriesSortAsc);
+    this.applySorting();
+  }
+
+  getSortLabel(field: SortField): string {
+    if (field === 'seriesOrder') return '章节';
+    if (field === 'title') return '小说名';
+    if (field === 'cachedAt') return '缓存时间';
+    if (field === 'lastReadAt') return '最后阅读';
+    return field;
   }
 
   openReader(novel: PixivNovel) {
@@ -49,6 +144,7 @@ export struct SeriesDetailPage {
 
   build() {
     NavDestination() {
+      Stack() {
     Column() {
       if (this.isLoading) {
         Column() {
@@ -82,6 +178,13 @@ export struct SeriesDetailPage {
                 .fontColor($r('app.color.user_name'))
                 .margin({ left: 12 })
               Blank()
+              Text(`↕ ${this.getSortLabel(this.seriesSortField)}`)
+                .fontSize(12)
+                .fontColor($r('app.color.text_secondary'))
+                .backgroundColor($r('app.color.loading_card'))
+                .borderRadius(6)
+                .padding({ left: 6, right: 6, top: 3, bottom: 3 })
+                .onClick(() => { this.openSortMenu(); })
             }
             .width('100%')
             .padding({ left: 16, right: 24, top: 16 })
@@ -145,6 +248,19 @@ export struct SeriesDetailPage {
     .width('100%')
     .height('100%')
     .backgroundColor($r('app.color.page_background'))
+
+        SortPopupMenu({
+          visible: this.showSortMenu,
+          sortOptions: SERIES_SORT_OPTIONS,
+          currentSort: this.sortMenuCurrentSort,
+          sortAscending: this.sortMenuSortAsc,
+          onSelect: (value: string) => { this.onSortSelect(value); },
+          onToggleDirection: () => { this.onSortToggleDirection(); },
+          onDismiss: () => { this.showSortMenu = false; },
+        })
+      }
+      .width('100%')
+      .height('100%')
     }
     .onReady((ctx: NavDestinationContext) => {
       this.navParams = ctx.pathInfo.param as Record<string, Object> ?? {};

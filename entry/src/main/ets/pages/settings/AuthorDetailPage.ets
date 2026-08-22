@@ -1,9 +1,29 @@
 import common from '@ohos.app.ability.common';
+import preferences from '@ohos.data.preferences';
 import { pixivCacheDB } from '../../database/PixivCacheDB';
 import { PixivNovel, formatTextLength, formatPixivDate } from '../../models/PixivModels';
 import { PageContext } from '../../common/utils/PageContext';
 import { PageEnum } from '../../common/constants/PageEnum';
 import { NovReaderParam, SeriesDetailParam, UserProfileParam } from '../../common/constants/PageParamTypes';
+import { SortPopupMenu, SortOption } from '../../components/SortPopupMenu';
+import { sortNovels, SortField, SortPreference } from '../../common/utils/SortUtils';
+
+const AUTHOR_NOVEL_SORT_OPTIONS: SortOption[] = [
+  { label: '小说名', value: 'title' },
+  { label: '缓存时间', value: 'cachedAt' },
+  { label: '最后阅读', value: 'lastReadAt' },
+];
+
+const SERIES_SORT_OPTIONS: SortOption[] = [
+  { label: '章节顺序', value: 'seriesOrder' },
+  { label: '小说名', value: 'title' },
+  { label: '缓存时间', value: 'cachedAt' },
+  { label: '最后阅读', value: 'lastReadAt' },
+];
+
+const PREFS_NAME = 'cached_novels_sort';
+const PREFS_KEY_ANP = 'author_novel_sort';
+const PREFS_KEY_SSP = 'series_sort';
 
 interface SeriesGroup {
   seriesId: string;
@@ -64,6 +84,20 @@ export struct AuthorDetailPage {
   @State authorGroup: AuthorGroup | null = null;
   @State isLoading: boolean = true;
 
+  // 排序状态
+  @State authorNovelSortField: SortField = 'title';
+  @State authorNovelSortAsc: boolean = true;
+  @State seriesSortField: SortField = 'seriesOrder';
+  @State seriesSortAsc: boolean = true;
+  @State lastReadMap: Map<string, string> = new Map();
+
+  // 菜单状态
+  @State showSortMenu: boolean = false;
+  @State sortMenuTarget: string = '';
+  @State sortMenuOptions: SortOption[] = [];
+  @State sortMenuCurrentSort: string = '';
+  @State sortMenuSortAsc: boolean = true;
+
   aboutToAppear() {
     // 参数由 onReady 获取
   }
@@ -74,15 +108,125 @@ export struct AuthorDetailPage {
       const ctx = AppStorage.get<common.UIAbilityContext>('appContext');
       if (ctx) {
         await pixivCacheDB.init(ctx);
+        await this.loadSortPreferences(ctx);
       }
       const novels = await pixivCacheDB.getAllCachedNovels();
       const filtered = novels.filter(n => n.authorId === this.authorId && n.cacheStatus === 'cached');
+      // 批量获取 lastReadAt
+      const ids = filtered.map(n => n.id);
+      this.lastReadMap = await pixivCacheDB.getLastReadTimes(ids);
+      for (const n of filtered) {
+        const lra = this.lastReadMap.get(n.id);
+        if (lra) n.lastReadAt = lra;
+      }
       const groups = groupNovels(filtered);
       this.authorGroup = groups.length > 0 ? groups[0] : null;
+      this.applySorting();
     } catch (err) {
       console.error('获取作者缓存失败:', err);
     }
     this.isLoading = false;
+  }
+
+  applySorting() {
+    if (!this.authorGroup) return;
+    // 排序系列内小说
+    for (const sg of this.authorGroup.seriesMap.values()) {
+      sg.novels = sortNovels(sg.novels, this.seriesSortField, this.seriesSortAsc);
+    }
+    // 排序独立小说
+    this.authorGroup.standaloneNovels = sortNovels(
+      this.authorGroup.standaloneNovels, this.authorNovelSortField, this.authorNovelSortAsc
+    );
+  }
+
+  async loadSortPreferences(ctx: common.UIAbilityContext) {
+    try {
+      const pref = await preferences.getPreferences(ctx, PREFS_NAME);
+      const anp = await pref.get(PREFS_KEY_ANP, '') as string;
+      if (anp) {
+        const parsed = JSON.parse(anp) as SortPreference;
+        this.authorNovelSortField = parsed.field;
+        this.authorNovelSortAsc = parsed.ascending;
+      }
+      const ssp = await pref.get(PREFS_KEY_SSP, '') as string;
+      if (ssp) {
+        const parsed = JSON.parse(ssp) as SortPreference;
+        this.seriesSortField = parsed.field;
+        this.seriesSortAsc = parsed.ascending;
+      }
+    } catch (err) {
+      console.error('加载排序偏好失败:', err);
+    }
+  }
+
+  async saveSortPreference(key: string, field: SortField, ascending: boolean) {
+    try {
+      const ctx = AppStorage.get<common.UIAbilityContext>('appContext');
+      if (!ctx) return;
+      const pref = await preferences.getPreferences(ctx, PREFS_NAME);
+      await pref.put(key, JSON.stringify({ field, ascending }));
+      await pref.flush();
+    } catch (err) {
+      console.error('保存排序偏好失败:', err);
+    }
+  }
+
+  openSortMenu(target: string) {
+    this.sortMenuTarget = target;
+    if (target === 'authorNovel') {
+      this.sortMenuOptions = AUTHOR_NOVEL_SORT_OPTIONS;
+      this.sortMenuCurrentSort = this.authorNovelSortField;
+      this.sortMenuSortAsc = this.authorNovelSortAsc;
+    } else if (target === 'series') {
+      this.sortMenuOptions = SERIES_SORT_OPTIONS;
+      this.sortMenuCurrentSort = this.seriesSortField;
+      this.sortMenuSortAsc = this.seriesSortAsc;
+    }
+    this.showSortMenu = true;
+  }
+
+  onSortSelect(value: string) {
+    const field = value as SortField;
+    if (this.sortMenuTarget === 'authorNovel') {
+      if (this.authorNovelSortField === field) {
+        this.authorNovelSortAsc = !this.authorNovelSortAsc;
+      } else {
+        this.authorNovelSortField = field;
+        this.authorNovelSortAsc = (field === 'title');
+      }
+      this.saveSortPreference(PREFS_KEY_ANP, this.authorNovelSortField, this.authorNovelSortAsc);
+    } else if (this.sortMenuTarget === 'series') {
+      if (this.seriesSortField === field) {
+        this.seriesSortAsc = !this.seriesSortAsc;
+      } else {
+        this.seriesSortField = field;
+        this.seriesSortAsc = (field === 'seriesOrder' || field === 'title');
+      }
+      this.saveSortPreference(PREFS_KEY_SSP, this.seriesSortField, this.seriesSortAsc);
+    }
+    this.applySorting();
+  }
+
+  onSortToggleDirection() {
+    if (this.sortMenuTarget === 'authorNovel') {
+      this.authorNovelSortAsc = !this.authorNovelSortAsc;
+      this.sortMenuSortAsc = this.authorNovelSortAsc;
+      this.saveSortPreference(PREFS_KEY_ANP, this.authorNovelSortField, this.authorNovelSortAsc);
+    } else if (this.sortMenuTarget === 'series') {
+      this.seriesSortAsc = !this.seriesSortAsc;
+      this.sortMenuSortAsc = this.seriesSortAsc;
+      this.saveSortPreference(PREFS_KEY_SSP, this.seriesSortField, this.seriesSortAsc);
+    }
+    this.applySorting();
+  }
+
+  getSortLabel(field: SortField): string {
+    if (field === 'title') return '小说名';
+    if (field === 'cachedAt') return '缓存时间';
+    if (field === 'lastReadAt') return '最后阅读';
+    if (field === 'seriesOrder') return '章节';
+    return field;
   }
 
   openReader(novel: PixivNovel) {
@@ -114,6 +258,7 @@ export struct AuthorDetailPage {
 
   build() {
     NavDestination() {
+      Stack() {
     Column() {
       Row() {
         Text('‹')
@@ -204,13 +349,23 @@ export struct AuthorDetailPage {
 
             // Series section
             if (this.authorGroup.seriesMap.size > 0) {
-              Text('📚 系列')
-                .fontSize(13)
-                .fontColor($r('app.color.text_secondary'))
-                .fontWeight(FontWeight.Medium)
-                .padding({ left: 4, bottom: 8 })
-                .width('100%')
-                .margin({ top: 4 })
+              Row() {
+                Text('📚 系列')
+                  .fontSize(13)
+                  .fontColor($r('app.color.text_secondary'))
+                  .fontWeight(FontWeight.Medium)
+                Blank()
+                Text(`↕ ${this.getSortLabel(this.seriesSortField)}`)
+                  .fontSize(11)
+                  .fontColor($r('app.color.text_secondary'))
+                  .backgroundColor($r('app.color.loading_card'))
+                  .borderRadius(4)
+                  .padding({ left: 4, right: 4, top: 2, bottom: 2 })
+                  .onClick(() => { this.openSortMenu('series'); })
+              }
+              .width('100%')
+              .padding({ left: 4, bottom: 8 })
+              .margin({ top: 4 })
 
               Column({ space: 8 }) {
                 ForEach(
@@ -226,12 +381,22 @@ export struct AuthorDetailPage {
 
               // Standalone novels section
               if (this.authorGroup.standaloneNovels.length > 0) {
-                Text('📄 独立小说')
-                  .fontSize(13)
-                  .fontColor($r('app.color.text_secondary'))
-                  .fontWeight(FontWeight.Medium)
-                  .padding({ left: 4, bottom: 8, top: this.authorGroup.seriesMap.size > 0 ? 12 : 4 })
-                  .width('100%')
+                Row() {
+                  Text('📄 独立小说')
+                    .fontSize(13)
+                    .fontColor($r('app.color.text_secondary'))
+                    .fontWeight(FontWeight.Medium)
+                  Blank()
+                  Text(`↕ ${this.getSortLabel(this.authorNovelSortField)}`)
+                    .fontSize(11)
+                    .fontColor($r('app.color.text_secondary'))
+                    .backgroundColor($r('app.color.loading_card'))
+                    .borderRadius(4)
+                    .padding({ left: 4, right: 4, top: 2, bottom: 2 })
+                    .onClick(() => { this.openSortMenu('authorNovel'); })
+                }
+                .width('100%')
+                .padding({ left: 4, bottom: 8, top: this.authorGroup.seriesMap.size > 0 ? 12 : 4 })
 
                 Column({ space: 8 }) {
                   ForEach(
@@ -257,6 +422,19 @@ export struct AuthorDetailPage {
     .width('100%')
     .height('100%')
     .backgroundColor($r('app.color.page_background'))
+
+        SortPopupMenu({
+          visible: this.showSortMenu,
+          sortOptions: this.sortMenuOptions,
+          currentSort: this.sortMenuCurrentSort,
+          sortAscending: this.sortMenuSortAsc,
+          onSelect: (value: string) => { this.onSortSelect(value); },
+          onToggleDirection: () => { this.onSortToggleDirection(); },
+          onDismiss: () => { this.showSortMenu = false; },
+        })
+      }
+      .width('100%')
+      .height('100%')
     }
     .onReady((ctx: NavDestinationContext) => {
       this.navParams = ctx.pathInfo.param as Record<string, Object> ?? {};

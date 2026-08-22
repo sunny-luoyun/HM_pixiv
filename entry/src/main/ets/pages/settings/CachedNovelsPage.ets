@@ -341,6 +341,7 @@ export struct CachedNovelsPage {
 
   build() {
     NavDestination() {
+      Stack() {
       Column() {
         Row() {
           Text('‹')
@@ -427,6 +428,9 @@ export struct CachedNovelsPage {
           onToggleDirection: () => { this.onSortToggleDirection(); },
           onDismiss: () => { this.showSortMenu = false; },
         })
+      }
+      .width('100%')
+      .height('100%')
     }
     .onBackPressed(() => {
       const pageCtx = AppStorage.get<PageContext>('rootPageContext');
