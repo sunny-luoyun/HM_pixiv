@@ -335,9 +335,11 @@
 | 60 | 缓存小说作者组排序 | 缓存小说页标题栏右侧显示排序图标（如 `↕ 作者名`）→ 点击弹出菜单 → 选择「缓存时间」→ 作者组按最新缓存时间重排 | ☐ |
 | 61 | 缓存小说作者内排序 | 作者卡片内显示排序图标 → 点击选择「小说名」→ 该作者下独立小说按名字重排 | ☐ |
 | 62 | 缓存小说系列内排序 | 作者卡片内显示系列排序图标 → 点击选择「章节顺序」→ 系列内章节按序号重排 | ☐ |
-| 63 | 排序升降序切换 | 排序菜单标题栏右侧显示「↑ 升序/↓ 降序」→ 点击切换方向 → 列表顺序反转 | ☐ |
-| 64 | 排序偏好持久化 | 设置排序后退出页面 → 重新进入 → 排序方式和方向保持上次设置 | ☐ |
-| 65 | 未阅读小说排序 | 按「最后阅读」排序时 → 从未打开过的小说排在最前面 | ☐ |
+| 63 | 作者详情页排序 | 进入作者详情页 → 系列/独立小说区域有排序图标 → 点击可排序 | ☐ |
+| 64 | 系列详情页排序 | 进入系列详情页 → 标题栏有排序图标 → 点击可按章节顺序/小说名/缓存时间/最后阅读排序 | ☐ |
+| 65 | 排序升降序切换 | 排序菜单标题栏右侧显示「↑ 升序/↓ 降序」→ 点击切换方向 → 列表顺序反转 | ☐ |
+| 66 | 排序偏好持久化 | 设置排序后退出页面 → 重新进入 → 排序方式和方向保持上次设置 | ☐ |
+| 67 | 未阅读小说排序 | 按「最后阅读」排序时 → 从未打开过的小说排在最前面 | ☐ |
 
 ---
 
@@ -661,8 +663,11 @@
 
 ## F37 - 缓存小说排序
 
-- **描述**：缓存小说页面（CachedNovelsPage）支持按多种字段排序，三个层级独立控制：作者组（作者名/缓存时间/小说数量/最后阅读）、作者内独立小说（小说名/缓存时间/最后阅读）、系列内章节（章节顺序/小说名/缓存时间/最后阅读），每种支持升降序切换，偏好通过 Preferences 持久化
-- **页面**：`entry/src/main/ets/pages/settings/CachedNovelsPage.ets`
+- **描述**：缓存小说页面（CachedNovelsPage、AuthorDetailPage、SeriesDetailPage）支持按多种字段排序，三个层级独立控制：作者组（作者名/缓存时间/小说数量/最后阅读）、作者内独立小说（小说名/缓存时间/最后阅读）、系列内章节（章节顺序/小说名/缓存时间/最后阅读），每种支持升降序切换，偏好通过 Preferences 持久化
+- **页面**：
+  - `entry/src/main/ets/pages/settings/CachedNovelsPage.ets` — 作者组排序
+  - `entry/src/main/ets/pages/settings/AuthorDetailPage.ets` — 作者内独立小说 + 系列排序
+  - `entry/src/main/ets/pages/settings/SeriesDetailPage.ets` — 系列内章节排序
 - **组件**：`entry/src/main/ets/components/SortPopupMenu.ets`（通用排序弹出菜单）
 - **工具**：`entry/src/main/ets/common/utils/SortUtils.ets`（排序纯函数）
 - **数据**：`entry/src/main/ets/models/NovelModels.ets`（PixivNovel.lastReadAt 字段）、`entry/src/main/ets/database/NovelCacheDao.ets`（getLastReadTimes 批量查询）
