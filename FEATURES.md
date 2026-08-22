@@ -504,7 +504,7 @@
 
 ---
 
-> 最后更新：F36 阅读器「简介/评论」入口 + 小说评论页展示本作简介，基于 2026-08-19
+> 最后更新：F37 缓存小说排序（三级排序+升降序+偏好持久化），基于 2026-08-17
 
 ---
 
@@ -650,3 +650,14 @@
 - **组件**：`entry/src/main/ets/components/CommentsComponent.ets` — 新增可选 `introTitle`/`introText`（@Prop，随父组件异步加载后刷新）；`entityId` 改为 `@Prop @Watch`，修复页面在 onReady 才拿到 ID 时评论不自动加载的问题；简介以列表首项渲染、随评论自然滚动
 - **简介来源**：`PixivNovel.caption`（缓存库 `NovelCacheDao` 的 caption 字段 / `PixivApiService.fetchNovelDetail` 的 `b.description`）
 - **验证项**：见「手工验证清单」第 57-59 项
+
+---
+
+## F37 - 缓存小说排序
+
+- **描述**：缓存小说页面（CachedNovelsPage）支持按多种字段排序，三个层级独立控制：作者组（作者名/缓存时间/小说数量/最后阅读）、作者内独立小说（小说名/缓存时间/最后阅读）、系列内章节（章节顺序/小说名/缓存时间/最后阅读），每种支持升降序切换，偏好通过 Preferences 持久化
+- **页面**：`entry/src/main/ets/pages/settings/CachedNovelsPage.ets`
+- **组件**：`entry/src/main/ets/components/SortPopupMenu.ets`（通用排序弹出菜单）
+- **工具**：`entry/src/main/ets/common/utils/SortUtils.ets`（排序纯函数）
+- **数据**：`entry/src/main/ets/models/NovelModels.ets`（PixivNovel.lastReadAt 字段）、`entry/src/main/ets/database/NovelCacheDao.ets`（getLastReadTimes 批量查询）
+- **测试**：`entry/src/test/SortUtils.test.ets`
