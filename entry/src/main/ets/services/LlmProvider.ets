@@ -1,5 +1,6 @@
 import http from '@ohos.net.http';
 import { BusinessError } from '@ohos.base';
+import { ProxyService } from './ProxyService';
 
 export interface LlmConfig {
   baseUrl: string;
@@ -240,8 +241,21 @@ export abstract class BaseLlmService {
     const httpRequest = http.createHttp();
     const startTime = Date.now();
 
+    // 仅当用户为自定义模型开启了「走应用内代理」时解析代理；
+    // 代理关闭或内核未就绪时 getRequestProxyConfig 返回 null → 自动直连。
+    let usingProxy: http.HttpProxy | null = null;
+    if (this.useInAppProxy) {
+      const proxyConfig = await ProxyService.getRequestProxyConfig();
+      usingProxy = resolveRequestProxy(true, proxyConfig);
+      if (usingProxy) {
+        console.info(`[Translation] 经应用内代理 ${usingProxy.host}:${usingProxy.port} 请求翻译服务`);
+      } else {
+        console.warn('[Translation] 应用内代理未就绪，翻译请求直连');
+      }
+    }
+
     try {
-      const response = await httpRequest.request(this.baseUrl, {
+      const requestOptions: http.HttpRequestOptions = {
         method: http.RequestMethod.POST,
         header: {
           'Content-Type': 'application/json',
@@ -250,7 +264,11 @@ export abstract class BaseLlmService {
         extraData: JSON.stringify(this.buildRequestBody(text, isTitle)),
         connectTimeout: 30000,
         readTimeout: 300000
-      });
+      };
+      if (usingProxy) {
+        requestOptions.usingProxy = usingProxy;
+      }
+      const response = await httpRequest.request(this.baseUrl, requestOptions);
 
       const code = response.responseCode;
 
