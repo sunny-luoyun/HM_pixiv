@@ -1,5 +1,5 @@
 import { describe, it, expect } from '@ohos/hypium';
-import { getLlmService, resetLlmServiceInstance } from '../main/ets/services/LlmServiceFactory';
+import { getLlmService, resetLlmServiceInstance, shouldUseInAppProxy } from '../main/ets/services/LlmServiceFactory';
 import { DeepSeekService } from '../main/ets/services/DeepSeekService';
 import { OpenAiCompatService } from '../main/ets/services/OpenAiCompatService';
 
@@ -73,6 +73,62 @@ export default function llmServiceFactoryTest() {
         AppStorage.setOrCreate('deepseekApiKey', 'sk-deep');
         getLlmService();
         expect(svc.hasValidKey()).assertTrue();
+      });
+    });
+
+    describe('shouldUseInAppProxy', () => {
+      it('custom 且开关开 → true', 0, () => {
+        expect(shouldUseInAppProxy('custom', true)).assertTrue();
+      });
+
+      it('custom 且开关关 → false', 0, () => {
+        expect(shouldUseInAppProxy('custom', false)).assertFalse();
+      });
+
+      it('custom 且开关未设置(undefined) → false', 0, () => {
+        expect(shouldUseInAppProxy('custom', undefined)).assertFalse();
+      });
+
+      it('deepseek 且开关开 → false（DeepSeek 恒直连）', 0, () => {
+        expect(shouldUseInAppProxy('deepseek', true)).assertFalse();
+      });
+    });
+
+    describe('useInAppProxy 工厂同步', () => {
+      it('provider=custom 且开关开 → 实例启用代理', 0, () => {
+        AppStorage.setOrCreate('llmProvider', 'custom');
+        AppStorage.setOrCreate('customLlmApiBase', 'https://example.com/v1');
+        AppStorage.setOrCreate('customLlmApiKey', 'sk-custom');
+        AppStorage.setOrCreate('customLlmModel', 'my-model');
+        AppStorage.setOrCreate('customLlmUseProxy', true);
+        resetLlmServiceInstance();
+        expect(getLlmService().getUseInAppProxy()).assertTrue();
+      });
+
+      it('provider=deepseek 即使开关开也不启用', 0, () => {
+        AppStorage.setOrCreate('llmProvider', 'deepseek');
+        AppStorage.setOrCreate('customLlmUseProxy', true);
+        resetLlmServiceInstance();
+        expect(getLlmService().getUseInAppProxy()).assertFalse();
+      });
+
+      it('开关关 → 实例不启用', 0, () => {
+        AppStorage.setOrCreate('llmProvider', 'custom');
+        AppStorage.setOrCreate('customLlmApiBase', 'https://example.com/v1');
+        AppStorage.setOrCreate('customLlmApiKey', 'sk-custom');
+        AppStorage.setOrCreate('customLlmModel', 'my-model');
+        AppStorage.setOrCreate('customLlmUseProxy', false);
+        resetLlmServiceInstance();
+        expect(getLlmService().getUseInAppProxy()).assertFalse();
+      });
+
+      it('开关未设置(undefined) → 实例不启用', 0, () => {
+        AppStorage.setOrCreate('llmProvider', 'custom');
+        AppStorage.setOrCreate('customLlmApiBase', 'https://example.com/v1');
+        AppStorage.setOrCreate('customLlmApiKey', 'sk-custom');
+        AppStorage.setOrCreate('customLlmModel', 'my-model');
+        resetLlmServiceInstance();
+        expect(getLlmService().getUseInAppProxy()).assertFalse();
       });
     });
   });

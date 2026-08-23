@@ -38,7 +38,16 @@ export function getLlmService(): BaseLlmService {
     AppStorage.get<boolean>(StorageKeys.UNIFIED_PROMPT) ?? false
   );
 
+  _llmInstance.updateUseInAppProxy(
+    shouldUseInAppProxy(provider, AppStorage.get<boolean>(StorageKeys.CUSTOM_LLM_USE_PROXY))
+  );
+
   return _llmInstance;
+}
+
+/** 仅 custom 提供方允许启用应用内代理；DeepSeek 恒直连。 */
+export function shouldUseInAppProxy(provider: string, toggle: boolean | undefined): boolean {
+  return provider === 'custom' && (toggle ?? false);
 }
 
 export function resetLlmServiceInstance(): void {
