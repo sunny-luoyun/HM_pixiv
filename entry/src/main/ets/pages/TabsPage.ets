@@ -1,4 +1,4 @@
-import { SymbolGlyphModifier, display } from '@kit.ArkUI';
+import { SymbolGlyphModifier } from '@kit.ArkUI';
 import { window } from '@kit.ArkUI';
 import promptAction from '@ohos.promptAction';
 import { common } from '@kit.AbilityKit';
@@ -85,11 +85,18 @@ export struct MainTabsPage {
   }
 
   private initBreakpoint(): void {
-    const dd = display.getDefaultDisplaySync();
-    const widthVp = px2vp(dd.width);
-    const bp = resolveBreakpoint(widthVp);
-    publishBreakpoint(bp);
-    console.info(`📐 断点初始: ${bp} (${widthVp}vp, ${dd.width}px)`);
+    // 断点基于「应用窗口宽度」而非物理屏幕宽度：
+    // 小窗/分屏/横屏场景下屏幕宽度 ≠ 窗口宽度，按屏幕宽度会误判成平板布局
+    const uiCtx = this.getUIContext();
+    const hostCtx = uiCtx.getHostContext();
+    if (!hostCtx) { return; }
+    window.getLastWindow(hostCtx).then((lastWindow: window.Window) => {
+      const rect = lastWindow.getWindowProperties().windowRect;
+      const widthVp = uiCtx.px2vp(rect.width);
+      const bp = resolveBreakpoint(widthVp);
+      publishBreakpoint(bp);
+      console.info(`📐 断点初始(窗口): ${bp} (${widthVp}vp, ${rect.width}px)`);
+    });
   }
 
   onNotificationNavigateTabChange(): void {

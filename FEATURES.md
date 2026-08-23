@@ -687,3 +687,19 @@
   2. 开关开 + 代理设置页代理模式 off → 用海外 API 地址翻译应能直连成功或报网络错误（不挂起）
   3. 开关开 + 订阅模式内核就绪 → hilog 中可见「[Translation] 经应用内代理 …」日志
   4. 切回「DeepSeek（预设）」翻译 → 行为与此前完全一致（无代理日志）
+
+---
+
+## F39 - 断点判定改为跟随应用窗口尺寸（修复小窗/分屏误入平板布局）
+
+- **描述**：修复手机处于横屏（游戏/视频全屏）时以小窗打开应用、应用内部误用平板布局（4 列网格/双栏小说）的问题。原实现用物理屏幕宽度（display.getDefaultDisplaySync().width）计算断点，横屏时屏幕长边（约 750-810vp）≥600vp 被误判为 md/lg；且全工程无 windowSizeChange 监听，错误值无法自愈。现断点一律基于主窗口宽度：初始值取 windowRect，并订阅 window.on('windowSizeChange') 实时更新（带去重发布），小窗拖拽、分屏、平板全屏等窗口模式变化均正确响应
+- **修改**：
+  - `entry/src/main/ets/entryability/EntryAbility.ets` — onWindowStageCreate 新增 setupBreakpointWatcher（窗口初始断点 + windowSizeChange 订阅）；onConfigurationUpdate 移除按屏幕宽度的断点重算
+  - `entry/src/main/ets/pages/TabsPage.ets` — initBreakpoint 改为 getLastWindow + UIContext.px2vp(windowRect.width)，移除 display 导入
+- **未改动**：`BreakpointManager.ets` 纯函数（resolveBreakpoint 阈值映射本身正确）
+- **测试**：改动文件均属例外清单（entryability/、pages/ 生命周期与 @Component，不可 hypium 实例化），已确认无需更新测试；BreakpointManager.test.ets 保持通过
+- **手工验证项**：
+  1. 手机竖屏正常打开应用 → 手机布局不变（sm，2 列网格）
+  2. 横屏进入游戏或视频 → 以小窗打开本应用 → 小窗内应为手机布局（2 列网格），而非平板布局
+  3. 小窗拖大超过约 600vp 宽度 → 布局应实时切换为 md（4 列）；拖回应恢复
+  4. 分屏模式左右宽度变化 → 两列数随窗口宽度正确切换

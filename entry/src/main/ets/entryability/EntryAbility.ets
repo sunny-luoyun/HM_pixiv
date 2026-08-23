@@ -19,6 +19,8 @@ import { resolveBreakpoint, publishBreakpoint } from '../common/utils/Breakpoint
 const WORK_ID_LATEST_CHECK = 1001;
 
 export default class EntryAbility extends UIAbility {
+  private lastPublishedBp: string = '';
+
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     CookieStorage.init(this.context);
     TranslationStorage.init(this.context);
@@ -111,12 +113,8 @@ export default class EntryAbility extends UIAbility {
         navigationBarContentColor: contentColor,
       });
     });
-
-    const dd = display.getDefaultDisplaySync();
-    const widthVp = px2vp(dd.width);
-    const bp = resolveBreakpoint(widthVp);
-    publishBreakpoint(bp);
-    console.info(`📐 config更新: ${bp} (${widthVp}vp, ${dd.width}px)`);
+    // 注意：断点不在这里按屏幕尺寸重算 —— 断点必须跟随应用窗口尺寸，
+    // 由 onWindowStageCreate 注册的 windowSizeChange 监听负责更新。
   }
 
   onWindowStageCreate(windowStage: window.WindowStage): void {
@@ -129,11 +127,37 @@ export default class EntryAbility extends UIAbility {
       console.info('✅ 沉浸式系统栏已启用');
     });
 
+    this.setupBreakpointWatcher(windowStage);
+
     windowStage.loadContent('pages/Index', (err) => {
       if (err) {
         console.error(`Failed to load content, error: ${JSON.stringify(err)}`);
         return;
       }
+    });
+  }
+
+  /**
+   * 断点必须基于「应用窗口宽度」而非「物理屏幕宽度」：
+   * 手机横屏（游戏/视频全屏）时屏幕长边会被误判为 md/lg 平板布局，
+   * 而此时以小窗/分屏打开应用，窗口实际很窄。跟随窗口尺寸才能正确响应
+   * 小窗拖拽、分屏、平板全屏等所有窗口模式变化。
+   */
+  private setupBreakpointWatcher(windowStage: window.WindowStage): void {
+    const mainWindow = windowStage.getMainWindowSync();
+    // px → vp 换算系数：densityDPI / 160（与全局 px2vp 一致，不依赖 UIContext）
+    const density = display.getDefaultDisplaySync().densityDPI / 160;
+    const publishFromPx = (widthPx: number, source: string): void => {
+      const widthVp = widthPx / density;
+      const bp = resolveBreakpoint(widthVp);
+      if (bp === this.lastPublishedBp) { return; }
+      this.lastPublishedBp = bp;
+      publishBreakpoint(bp);
+      console.info(`📐 断点更新(${source}): ${bp} (${widthVp}vp, ${widthPx}px)`);
+    };
+    publishFromPx(mainWindow.getWindowProperties().windowRect.width, '初始');
+    mainWindow.on('windowSizeChange', (size: window.Size) => {
+      publishFromPx(size.width, '窗口变化');
     });
   }
 
