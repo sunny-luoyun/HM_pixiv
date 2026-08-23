@@ -510,7 +510,7 @@
 
 ---
 
-> 最后更新：F37 缓存小说排序（三级排序+升降序+偏好持久化），基于 2026-08-17
+> 最后更新：2026-08-23
 
 ---
 
@@ -670,3 +670,20 @@
 - **工具**：`entry/src/main/ets/common/utils/SortUtils.ets`（排序纯函数）
 - **数据**：`entry/src/main/ets/models/NovelModels.ets`（PixivNovel.lastReadAt 字段）、`entry/src/main/ets/database/NovelCacheDao.ets`（getLastReadTimes 批量查询）
 - **测试**：`entry/src/test/SortUtils.test.ets`
+
+---
+
+## F38 - 自定义模型翻译「走应用内代理」开关
+
+- **描述**：翻译服务设置的「自定义模型」区块新增开关；开启后自定义模型的翻译请求在应用内代理（mihomo）处于运行状态时经其转发，代理关闭或未就绪时自动直连并记录日志；DeepSeek 预设路径恒直连不受影响；开关改动即时生效（工厂每次翻译重读 AppStorage）
+- **常量**：`entry/src/main/ets/common/constants/StorageKeys.ets`（`CUSTOM_LLM_USE_PROXY`）
+- **存储**：`entry/src/main/ets/common/utils/TranslationStorage.ets`（`saveCustomUseProxy/getCustomUseProxy`，preferences 键 `custom_use_proxy`）
+- **服务**：`entry/src/main/ets/services/LlmProvider.ets`（`useInAppProxy` 标志、`updateUseInAppProxy/getUseInAppProxy`、`resolveRequestProxy` 纯函数、translateText 注入 `usingProxy`）、`entry/src/main/ets/services/LlmServiceFactory.ets`（`shouldUseInAppProxy` 纯函数 + 同步接线）
+- **页面**：`entry/src/main/ets/pages/settings/TranslationSettingsSection.ets`（自定义模型区块 Switch + 说明文字）
+- **测试**：`entry/src/test/StorageKeys.test.ets`、`entry/src/test/TranslationStorage.test.ets`、`entry/src/test/LlmProvider.test.ets`、`entry/src/test/LlmServiceFactory.test.ets`
+- **设计文档**：`docs/superpowers/specs/2026-08-23-custom-llm-in-app-proxy-design.md`
+- **手工验证项**：
+  1. 设置 → 翻译服务 → 切到「自定义模型」，确认出现「走应用内代理」开关，默认关
+  2. 开关开 + 代理设置页代理模式 off → 用海外 API 地址翻译应能直连成功或报网络错误（不挂起）
+  3. 开关开 + 订阅模式内核就绪 → hilog 中可见「[Translation] 经应用内代理 …」日志
+  4. 切回「DeepSeek（预设）」翻译 → 行为与此前完全一致（无代理日志）
