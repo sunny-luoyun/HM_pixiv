@@ -20,6 +20,7 @@ export struct TranslationSettingsSection {
   @State customApiBase: string = '';
   @State customModel: string = '';
   @State customApiKey: string = '';
+  @State customUseProxy: boolean = false;
   @State titlePrompt: string = '';
   @State fullPrompt: string = '';
   @State unifiedPrompt: boolean = false;
@@ -36,6 +37,7 @@ export struct TranslationSettingsSection {
     this.customApiBase = AppStorage.get<string>('customLlmApiBase') ?? '';
     this.customModel = AppStorage.get<string>('customLlmModel') ?? '';
     this.customApiKey = AppStorage.get<string>('customLlmApiKey') ?? '';
+    this.customUseProxy = AppStorage.get<boolean>('customLlmUseProxy') ?? false;
     this.titlePrompt = AppStorage.get<string>('titlePrompt') ?? '';
     if (this.titlePrompt.length === 0) {
       this.titlePrompt = DEFAULT_TITLE_PROMPT;
@@ -105,6 +107,12 @@ export struct TranslationSettingsSection {
     if (provider === 'deepseek' && this.deepseekApiKey.length > 0) {
       this.fetchBalance();
     }
+  }
+
+  private onCustomUseProxyChange(enabled: boolean): void {
+    this.customUseProxy = enabled;
+    AppStorage.setOrCreate('customLlmUseProxy', enabled);
+    TranslationStorage.saveCustomUseProxy(enabled);
   }
 
   private onTitlePromptChange(val: string): void {
@@ -427,6 +435,24 @@ export struct TranslationSettingsSection {
             AppStorage.setOrCreate('customLlmApiKey', val);
             TranslationStorage.saveCustomApiKey(val);
           })
+
+        Row() {
+          Toggle({ type: ToggleType.Switch, isOn: this.customUseProxy })
+            .onChange((isOn: boolean) => {
+              this.onCustomUseProxyChange(isOn);
+            })
+          Text('走应用内代理')
+            .fontSize(13)
+            .fontColor($r('app.color.user_name'))
+            .margin({ left: 8 })
+        }
+        .width('100%')
+        .margin({ top: 12 })
+
+        Text('开启后自定义模型请求经应用内代理转发；代理关闭或未运行时自动直连')
+          .fontSize(11)
+          .fontColor($r('app.color.text_secondary'))
+          .margin({ top: 6 })
 
         Text('自定义模型仅显示字符数与耗时估算，不显示费用/余额')
           .fontSize(11)
