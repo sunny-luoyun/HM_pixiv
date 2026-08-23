@@ -88,11 +88,10 @@ _llmInstance.updateUseInAppProxy(
 ## 5. 测试计划（AGENTS.md 步骤 A–D）
 
 1. 扩展 `entry/src/test/TranslationStorage.test.ets`：`saveCustomUseProxy/getCustomUseProxy` 存取往返用例 + 未初始化 context 时默认 `false` 用例。
-2. 新建 `entry/src/test/LlmProvider.test.ets`：
+2. 扩展既有 `entry/src/test/LlmProvider.test.ets`（已注册于 List.test.ets，无需新增注册）：
    - `updateUseInAppProxy(true/false)` 后经 `getUseInAppProxy()` 断言状态正确切换；
    - `resolveRequestProxy` 三分支：`(true, config) → config`、`(true, null) → null`、`(false, config) → null`。
-3. 新建 `entry/src/test/LlmServiceFactory.test.ets`：`shouldUseInAppProxy` 用例——`('custom', true) → true`、`('custom', false/undefined) → false`、`('deepseek', true) → false`；在 `List.test.ets` 注册。
-4. `List.test.ets` 注册 `LlmProvider.test`。
+3. 扩展既有 `entry/src/test/LlmServiceFactory.test.ets`：`shouldUseInAppProxy` 用例——`('custom', true) → true`、`('custom', false/undefined) → false`、`('deepseek', true) → false`。
 5. `arkts_check` 全部改动 `.ets` 文件。
 6. 测试覆盖自动检查（步骤 B 脚本）；源文件修改对应测试文件需同步更新。
 7. `hvigorw test` 与 `hvigorw assembleHap` 均须 BUILD SUCCESSFUL。
