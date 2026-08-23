@@ -703,3 +703,17 @@
   2. 横屏进入游戏或视频 → 以小窗打开本应用 → 小窗内应为手机布局（2 列网格），而非平板布局
   3. 小窗拖大超过约 600vp 宽度 → 布局应实时切换为 md（4 列）；拖回应恢复
   4. 分屏模式左右宽度变化 → 两列数随窗口宽度正确切换
+
+---
+
+## F40 - 插画详情页图片适配跟随窗口尺寸
+
+- **描述**：修复插画详情页在非全屏窗口模式下图片适配偏差的问题。原实现 aboutToAppear 时一次性快照物理屏幕尺寸（display.getDefaultDisplaySync().width/height）且永不更新，小窗打开时图片按全屏大小计算渲染尺寸导致过大/比例选错、缩放拖动边界错误、长图转场几何错位；横屏打开后转回竖屏也停留在旧快照。现改为初始取主窗口 windowRect 并订阅 windowSizeChange 实时刷新（离开页面取消订阅），窗口尺寸变化时清除旧渲染尺寸让 Image 回退 '100%'+Contain 自适应兜底
+- **影响点**：多图 Swiper 渲染尺寸计算（onComplete 容器比判定）、双指缩放 clampTranslate 边界、LongTakeAnimationProperties 转场动画几何
+- **页面**：`entry/src/main/ets/pages/illust/IllustDetailPage.ets` — watchWindowSize/applyWindowSize 替代 display 快照；aboutToDisappear 取消订阅
+- **测试**：pages/ 下 @Component 属例外清单，已确认无需更新测试
+- **手工验证项**：
+  1. 竖屏全屏打开插画详情 → 图片适配与此前一致
+  2. 横屏游戏/视频中小窗打开插画详情 → 图片按小窗实际大小正确适配，无溢出
+  3. 详情页打开状态下拖动小窗大小 → 图片适配随之刷新
+  4. 双指放大后拖动边界正常，不超出可视范围

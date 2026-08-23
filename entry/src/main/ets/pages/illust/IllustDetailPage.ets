@@ -1,7 +1,7 @@
 import abilityAccessCtrl, { Permissions } from '@ohos.abilityAccessCtrl';
 import promptAction from '@ohos.promptAction';
 import { common } from '@kit.AbilityKit';
-import { curves, display } from '@kit.ArkUI';
+import { curves, window } from '@kit.ArkUI';
 import { image } from '@kit.ImageKit';
 import { PixivService } from '../../services/PixivService';
 import { IllustDetailBody, BrowseHistoryRecord, UgoiraMetaBody, UgoiraFrame } from '../../models/PixivModels';
@@ -68,6 +68,8 @@ struct IllustDetailPage {
   private swiperController: SwiperController = new SwiperController();
   private bookmarkAnimTimer: number = -1;
   private bgTransitionTimer: number = -1;
+  private watchedWindow: window.Window | null = null;
+  private sizeChangeCb: ((size: window.Size) => void) | null = null;
 
   get pageCount(): number {
     return this.detail?.pageCount ?? 1;
@@ -75,13 +77,44 @@ struct IllustDetailPage {
 
   async aboutToAppear() {
     this.isActive = true;
-    const defaultDisplay = display.getDefaultDisplaySync();
-    this.screenWidth = px2vp(defaultDisplay.width);
-    this.screenHeight = px2vp(defaultDisplay.height);
+    this.watchWindowSize();
+  }
+
+  /**
+   * 图片适配尺寸必须跟随「应用窗口」而非物理屏幕：
+   * 小窗/分屏/旋转场景下屏幕尺寸 ≠ 窗口尺寸，且窗口尺寸可动态变化，
+   * 故初始取 windowRect 并订阅 windowSizeChange 实时刷新，离开页面时取消订阅。
+   */
+  private watchWindowSize(): void {
+    const uiCtx = this.getUIContext();
+    const hostCtx = uiCtx.getHostContext();
+    if (!hostCtx) { return; }
+    window.getLastWindow(hostCtx).then((lastWindow: window.Window) => {
+      const rect = lastWindow.getWindowProperties().windowRect;
+      this.applyWindowSize(rect.width, rect.height);
+      if (this.sizeChangeCb !== null) { return; } // 防重复订阅
+      this.watchedWindow = lastWindow;
+      this.sizeChangeCb = (size: window.Size) => {
+        this.applyWindowSize(size.width, size.height);
+        // 尺寸变化后清除旧渲染尺寸，Image 回退到 '100%'+Contain 的自适应兜底
+        this.imageRenderSizes = [];
+      };
+      lastWindow.on('windowSizeChange', this.sizeChangeCb);
+    });
+  }
+
+  private applyWindowSize(widthPx: number, heightPx: number): void {
+    this.screenWidth = this.getUIContext().px2vp(widthPx);
+    this.screenHeight = this.getUIContext().px2vp(heightPx);
   }
 
   aboutToDisappear() {
     this.isActive = false;
+    if (this.watchedWindow !== null && this.sizeChangeCb !== null) {
+      this.watchedWindow.off('windowSizeChange', this.sizeChangeCb);
+    }
+    this.watchedWindow = null;
+    this.sizeChangeCb = null;
     PixivService.cancelDownloadGroup(`detail_${this.illustId}`);
     if (this.navDestId) {
       CustomTransition.getInstance().unRegisterNavParam(this.navDestId);
