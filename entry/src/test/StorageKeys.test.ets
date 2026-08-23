@@ -43,6 +43,10 @@ export default function storageKeysTest() {
       expect(StorageKeys.CUSTOM_LLM_MODEL).assertEqual('customLlmModel');
     });
 
+    it('CUSTOM_LLM_USE_PROXY 为 "customLlmUseProxy"', 0, () => {
+      expect(StorageKeys.CUSTOM_LLM_USE_PROXY).assertEqual('customLlmUseProxy');
+    });
+
     it('TITLE_PROMPT 为 "titlePrompt"', 0, () => {
       expect(StorageKeys.TITLE_PROMPT).assertEqual('titlePrompt');
     });

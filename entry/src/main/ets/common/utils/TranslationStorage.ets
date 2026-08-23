@@ -112,6 +112,21 @@ export class TranslationStorage {
     return await pref.get(TranslationStorage.KEY_CUSTOM_MODEL, '') as string;
   }
 
+  private static KEY_CUSTOM_USE_PROXY = 'custom_use_proxy';
+
+  static async saveCustomUseProxy(enabled: boolean): Promise<void> {
+    if (!TranslationStorage.context) return;
+    const pref = await preferences.getPreferences(TranslationStorage.context, TranslationStorage.PREFERENCES_NAME);
+    await pref.put(TranslationStorage.KEY_CUSTOM_USE_PROXY, enabled);
+    await pref.flush();
+  }
+
+  static async getCustomUseProxy(): Promise<boolean> {
+    if (!TranslationStorage.context) return false;
+    const pref = await preferences.getPreferences(TranslationStorage.context, TranslationStorage.PREFERENCES_NAME);
+    return await pref.get(TranslationStorage.KEY_CUSTOM_USE_PROXY, false) as boolean;
+  }
+
   private static KEY_TITLE_PROMPT = 'title_prompt';
 
   static async saveTitlePrompt(prompt: string): Promise<void> {

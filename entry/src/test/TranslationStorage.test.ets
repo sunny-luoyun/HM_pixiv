@@ -17,6 +17,11 @@ export default function translationStorageTest() {
         const v = await TranslationStorage.getUnifiedPrompt();
         expect(v).assertFalse();
       });
+
+      it('getCustomUseProxy 默认 false', 0, async () => {
+        const v = await TranslationStorage.getCustomUseProxy();
+        expect(v).assertFalse();
+      });
     });
 
     describe('Preferences 名称', () => {
@@ -114,6 +119,11 @@ export default function translationStorageTest() {
 
       it('应定义 saveCustomModel/getCustomModel 方法', 0, () => {
         expect(true).assertTrue();
+      });
+
+      it('应定义 saveCustomUseProxy/getCustomUseProxy 方法', 0, () => {
+        expect(typeof TranslationStorage.saveCustomUseProxy === 'function').assertTrue();
+        expect(typeof TranslationStorage.getCustomUseProxy === 'function').assertTrue();
       });
 
       it('应定义 saveTitlePrompt/getTitlePrompt 方法', 0, () => {

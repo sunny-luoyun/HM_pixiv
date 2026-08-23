@@ -11,6 +11,7 @@ export class StorageKeys {
   static readonly CUSTOM_LLM_API_BASE = 'customLlmApiBase';
   static readonly CUSTOM_LLM_API_KEY = 'customLlmApiKey';
   static readonly CUSTOM_LLM_MODEL = 'customLlmModel';
+  static readonly CUSTOM_LLM_USE_PROXY = 'customLlmUseProxy';
   static readonly TITLE_PROMPT = 'titlePrompt';
   static readonly FULL_PROMPT = 'fullPrompt';
   static readonly UNIFIED_PROMPT = 'unifiedPrompt';
