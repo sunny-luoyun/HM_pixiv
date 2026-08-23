@@ -1,5 +1,6 @@
 import { describe, it, expect } from '@ohos/hypium';
-import { BaseLlmService, LlmConfig, TranslationResult } from '../main/ets/services/LlmProvider';
+import { BaseLlmService, LlmConfig, TranslationResult, resolveRequestProxy } from '../main/ets/services/LlmProvider';
+import http from '@ohos.net.http';
 
 class TestLlmService extends BaseLlmService {
   constructor(config: LlmConfig) {
@@ -180,6 +181,42 @@ export default function llmProviderTest() {
         const svc = makeService();
         const r: TranslationResult = await svc.translateText('', true);
         expect(r.success).assertFalse();
+      });
+    });
+
+    describe('updateUseInAppProxy / getUseInAppProxy', () => {
+      it('默认关闭', 0, () => {
+        expect(makeService().getUseInAppProxy()).assertFalse();
+      });
+
+      it('开启后读取为 true', 0, () => {
+        const svc = makeService();
+        svc.updateUseInAppProxy(true);
+        expect(svc.getUseInAppProxy()).assertTrue();
+      });
+
+      it('再次调用可关闭', 0, () => {
+        const svc = makeService();
+        svc.updateUseInAppProxy(true);
+        svc.updateUseInAppProxy(false);
+        expect(svc.getUseInAppProxy()).assertFalse();
+      });
+    });
+
+    describe('resolveRequestProxy', () => {
+      const proxy: http.HttpProxy = { host: '127.0.0.1', port: 7890, exclusionList: [] };
+
+      it('开启且有配置 → 返回该配置', 0, () => {
+        const r = resolveRequestProxy(true, proxy);
+        expect(r !== null && r.host === '127.0.0.1' && r.port === 7890).assertTrue();
+      });
+
+      it('开启但配置为 null → 返回 null（直连）', 0, () => {
+        expect(resolveRequestProxy(true, null) === null).assertTrue();
+      });
+
+      it('关闭 → 即使有配置也返回 null（直连）', 0, () => {
+        expect(resolveRequestProxy(false, proxy) === null).assertTrue();
       });
     });
   });

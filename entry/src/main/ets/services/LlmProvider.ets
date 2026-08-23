@@ -45,6 +45,13 @@ export const DEFAULT_TITLE_PROMPT = `你是一个专业的日文翻译。请将�
 
 export const DEFAULT_FULL_PROMPT = `你是专业日文小说翻译。将以下日文准确、流畅地译成中文，严格保留原文段落与标点格式，不生硬直译。只输出译文，不附加解释。`;
 
+/**
+ * 代理附加决策：仅当开关开启且拿到了代理配置时才返回配置，其余情况直连。
+ */
+export function resolveRequestProxy(enabled: boolean, proxyConfig: http.HttpProxy | null): http.HttpProxy | null {
+  return enabled ? proxyConfig : null;
+}
+
 interface LlmMessage {
   role: string;
   content: string;
@@ -116,6 +123,7 @@ export abstract class BaseLlmService {
   protected titlePrompt: string = '';
   protected fullPrompt: string = '';
   protected unifiedPrompt: boolean = false;
+  protected useInAppProxy: boolean = false;
 
   private totalTranslatedChars: number = 0;
   private totalRequests: number = 0;
@@ -149,6 +157,14 @@ export abstract class BaseLlmService {
     this.titlePrompt = titlePrompt ?? '';
     this.fullPrompt = fullPrompt ?? '';
     this.unifiedPrompt = unifiedPrompt ?? false;
+  }
+
+  updateUseInAppProxy(enabled: boolean): void {
+    this.useInAppProxy = enabled ?? false;
+  }
+
+  getUseInAppProxy(): boolean {
+    return this.useInAppProxy;
   }
 
   estimateTokens(text: string): number {
