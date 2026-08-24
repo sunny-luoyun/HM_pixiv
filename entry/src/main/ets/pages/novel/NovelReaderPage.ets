@@ -335,7 +335,7 @@ struct NovelReaderPage {
   }
 
   private getSpeedMultiplier(): number {
-    return 0.5 + this.autoReadSpeedIndex * 0.15;
+    return 0.5 + this.autoReadSpeedIndex * 0.175;
   }
 
   private startAutoRead(): void {
@@ -802,7 +802,7 @@ struct NovelReaderPage {
           Slider({
             value: this.autoReadSpeedIndex,
             min: 0,
-            max: 10,
+            max: 20,
             step: 1,
             style: SliderStyle.InSet
           })
