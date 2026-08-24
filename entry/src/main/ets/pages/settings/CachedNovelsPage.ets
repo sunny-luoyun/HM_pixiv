@@ -196,7 +196,7 @@ export struct CachedNovelsPage {
     return field;
   }
 
-  async deleteAuthorCache(ag: AuthorGroup) {
+  showDeleteConfirm(ag: AuthorGroup) {
     AlertDialog.show({
       title: '删除作者缓存',
       message: `确定删除「${ag.authorName}」的全部 ${ag.totalCount} 本缓存吗？`,
@@ -384,6 +384,13 @@ export struct CachedNovelsPage {
     .borderRadius(12)
     .shadow({ radius: 4, color: $r('app.color.card_shadow'), offsetY: 1 })
     .alignItems(HorizontalAlign.Center)
+    .justifyContent(FlexAlign.Center)
+    .gesture(
+      LongPressGesture()
+        .onAction(() => {
+          this.showDeleteConfirm(ag);
+        })
+    )
     .onClick(() => {
       this.openAuthorDetail(ag);
     })
