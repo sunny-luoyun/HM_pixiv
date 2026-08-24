@@ -146,6 +146,11 @@
   - `TranslationSettingsViewModel.ets` — 删除无消费者的 `updateLlmProvider`/`updateCustomConfig`/`updateTitlePrompt`/`updateFullPrompt`/`updateUnifiedPrompt`/`resetPrompts` 与 7 个对应状态字段（设置页沿用内联 @State + AppStorage + TranslationStorage 模式）
   - `DeepSeekService.ets` — 移除未使用的 `StatsResult` 接口；`NovelReaderPage.ets` — 移除未使用的 `getDeepSeekService` 导入
   - **测试**：`entry/src/test/LlmProvider.test.ets`（getMaxSafeTokens × 2）、`entry/src/test/TranslationStorage.test.ets`（默认值断言 × 2）
+- **扩展（2026-08-17）**：DeepSeek V4 Flash 峰谷分时计费 + 动态 prompt 开销计算
+  - `DeepSeekService.ets` — 移除硬编码 `PRICE_INPUT`/`PRICE_OUTPUT`，新增 `isPeakHour()`（北京时间高峰判断）和 `getCurrentPrice()`（动态返回闲时/高峰价格）；`estimateCost()` 改为根据实际 prompt 内容（system prompt + user 前缀）动态计算开销，替代硬编码 `PROMPT_OVERHEAD=55`
+  - `TranslationController.ets` — `buildEstimateInfo()` 新增 `isPeak` 参数，费用行显示「（高峰时段）」或「（闲时段）」
+  - `TranslationSettingsSection.ets` — 余额换算系数从 53.63 更新为 `isPeakHour() ? 1.7 : 3.3`（1元约可翻译 1.7~3.3 万字），新增时段提示文本
+  - **测试**：`entry/src/test/DeepSeekService.test.ets`（estimateCost 接口向后兼容，无需修改）
 
 ---
 
