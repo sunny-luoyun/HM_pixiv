@@ -384,7 +384,6 @@ export struct CachedNovelsPage {
     .borderRadius(12)
     .shadow({ radius: 4, color: $r('app.color.card_shadow'), offsetY: 1 })
     .alignItems(HorizontalAlign.Center)
-    .justifyContent(FlexAlign.Center)
     .gesture(
       LongPressGesture()
         .onAction(() => {
