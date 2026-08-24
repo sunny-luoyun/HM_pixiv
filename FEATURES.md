@@ -79,6 +79,9 @@
 - **缓存**：`entry/src/main/ets/database/PixivCacheDB.ets`、`entry/src/main/ets/database/NovelCacheDao.ets`
 - **翻译**：`entry/src/main/ets/services/TranslationController.ets`
 - **回调**：`EntryAbility`（后台保存阅读进度）
+- **修复（2026-08-25）**：翻译完成后退出再进入显示原文的问题
+  - `NovelReaderPage.ets` — `performFullTranslation` 翻译成功后新增 `saveViewPreference(true)` 调用，持久化用户"显示译文"的偏好设置
+  - **根因**：翻译完成后仅设置 `showOriginal = false` 但未持久化偏好，导致下次进入时 `getViewPreference()` 返回默认值 `false` 显示原文
 
 ---
 
@@ -515,7 +518,7 @@
 
 ---
 
-> 最后更新：F12 缓存小说页面卡片化重构，基于 2026-08-24
+> 最后更新：F06 翻译偏好持久化修复，基于 2026-08-25
 
 ---
 

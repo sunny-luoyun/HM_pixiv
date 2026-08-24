@@ -298,6 +298,7 @@ struct NovelReaderPage {
     this.translatedBlocks = result.translatedBlocks!;
     this.showOriginal = false;
     this.renderBlocks = this.translatedBlocks;
+    this.saveViewPreference(true);
 
     this.isTranslating = false;
     promptAction.showToast({ message: '全文翻译完成' });
