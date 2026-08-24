@@ -153,7 +153,7 @@
 
 - **描述**：小说内容和翻译结果 SQLite 离线缓存，支持离线阅读
 - **数据库**：`entry/src/main/ets/database/PixivCacheDB.ets`
-- **页面**：`entry/src/main/ets/pages/settings/CachedNovelsPage.ets`、`entry/src/main/ets/pages/settings/CachedNovelsSimplePage.ets`
+- **页面**：`entry/src/main/ets/pages/settings/CachedNovelsPage.ets`（三列网格卡片布局，长按删除）、`entry/src/main/ets/pages/settings/CachedNovelsSimplePage.ets`
 
 ---
 
@@ -510,7 +510,7 @@
 
 ---
 
-> 最后更新：F38 自定义模型翻译走应用内代理开关，基于 2026-08-23
+> 最后更新：F12 缓存小说页面卡片化重构，基于 2026-08-24
 
 ---
 
