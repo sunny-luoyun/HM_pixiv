@@ -1,6 +1,6 @@
 import promptAction from '@ohos.promptAction';
 import common from '@ohos.app.ability.common';
-import { getDeepSeekService } from '../../services/DeepSeekService';
+import { getDeepSeekService, isPeakHour } from '../../services/DeepSeekService';
 import { DEFAULT_TITLE_PROMPT, DEFAULT_FULL_PROMPT } from '../../services/LlmProvider';
 import { TranslationStorage } from '../../common/utils/TranslationStorage';
 import { AppState, appState } from '../../store/AppState';
@@ -276,10 +276,13 @@ export struct TranslationSettingsSection {
                 .fontWeight(FontWeight.Bold)
                 .fontColor($r('app.color.brand_accent'))
                 .margin({ top: 4 })
-              Text('约可翻译 ' + (Math.floor(parseFloat(this.balanceAmount) * 53.63 * 10) / 10).toString() + ' 万字小说')
+              Text('约可翻译 ' + (Math.floor(parseFloat(this.balanceAmount) * (isPeakHour() ? 1.7 : 3.3) * 10) / 10).toString() + ' 万字小说')
                 .fontSize(11)
                 .fontColor($r('app.color.text_secondary'))
                 .margin({ top: 4 })
+              Text(isPeakHour() ? '当前高峰时段，闲时可翻译约2倍' : '当前闲时段，高峰时段翻译量减半')
+                .fontSize(10)
+                .fontColor($r('app.color.text_secondary'))
             } else if (this.balanceFetchState === 'fail') {
               Text('获取失败，请重试')
                 .fontSize(12)

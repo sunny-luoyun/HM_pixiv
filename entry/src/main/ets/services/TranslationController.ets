@@ -1,6 +1,6 @@
 import common from '@ohos.app.ability.common';
 import { getLlmService } from './LlmServiceFactory';
-import { DeepSeekService } from './DeepSeekService';
+import { DeepSeekService, isPeakHour } from './DeepSeekService';
 import { pixivCacheDB } from '../database/PixivCacheDB';
 import { PixivService } from './PixivService';
 import { parsePixivBlocks, ContentBlock } from '../common/utils/NovelParser';
@@ -37,7 +37,8 @@ export function buildEstimateInfo(
   estimatedCostYuan: number,
   ratio: number,
   count: number,
-  showCostInfo: boolean
+  showCostInfo: boolean,
+  isPeak: boolean = false
 ): string {
   const totalSec = Math.round(estimatedMs / 1000);
   const min = Math.floor(totalSec / 60);
@@ -52,9 +53,11 @@ export function buildEstimateInfo(
       `是否继续？`;
   }
 
+  const periodLabel = isPeak ? '（高峰时段）' : '（闲时段）';
+
   return `预计翻译 ${originalText.length} 字符 / ${inputTokens} tokens\n` +
     `预计耗时 ${fmtTime}\n` +
-    `费用约 ¥${estimatedCostYuan.toFixed(4)}\n` +
+    `费用约 ¥${estimatedCostYuan.toFixed(4)}${periodLabel}\n` +
     `输出/输入比 ${ratio.toFixed(3)}（已校准 ${count} 次）\n` +
     `是否继续？`;
 }
@@ -118,7 +121,8 @@ export class TranslationController {
       estimatedCostYuan,
       ratio,
       count,
-      service.supportsCostEstimate
+      service.supportsCostEstimate,
+      isPeakHour()
     );
 
     const r: PrepareFullTranslationSuccess = { originalText, estimateInfo };

@@ -5,9 +5,43 @@ import { DeepSeekTokenizer, getDeepSeekTokenizer } from './DeepSeekTokenizer';
 import { ApiConfig } from '../common/constants/ApiConfig';
 import { BaseLlmService, LlmConfig, TranslationResult, TranslationUsage } from './LlmProvider';
 
-const PRICE_INPUT = 1.0;
-const PRICE_OUTPUT = 2.0;
-const PROMPT_OVERHEAD = 55;
+const PROMPT_OVERHEAD_FALLBACK = 55; // tokenizer 不可用时的兜底值
+
+/**
+ * 判断当前北京时间是否为 DeepSeek 高峰时段。
+ * 高峰：北京时间周一至周五 09:00-12:00、14:00-18:00
+ */
+export function isPeakHour(): boolean {
+  const now = new Date();
+  // 转换为北京时间 UTC+8
+  const bjHour = (now.getUTCHours() + 8) % 24;
+  const bjMin = now.getUTCMinutes();
+  const bjTime = bjHour * 60 + bjMin; // 当前北京时间的分钟数
+  const day = now.getUTCDay(); // 0=Sun, 6=Sat
+
+  // 周末全天闲时
+  if (day === 0 || day === 6) return false;
+
+  // 高峰1: 09:00-12:00 → 540~720 分钟
+  if (bjTime >= 540 && bjTime < 720) return true;
+  // 高峰2: 14:00-18:00 → 840~1080 分钟
+  if (bjTime >= 840 && bjTime < 1080) return true;
+
+  return false;
+}
+
+interface PricePair {
+  input: number;
+  output: number;
+}
+
+/** DeepSeek V4 Flash 最新定价（2026-08-17 起）：元 / 百万 tokens */
+function getCurrentPrice(): PricePair {
+  if (isPeakHour()) {
+    return { input: 3.0, output: 9.0 } as PricePair;
+  }
+  return { input: 1.5, output: 4.5 } as PricePair;
+}
 
 interface DeepSeekBalanceInfo {
   currency: string;
@@ -136,11 +170,18 @@ export class DeepSeekService extends BaseLlmService {
     await this.saveRatioToStorage();
   }
 
-  estimateCost(inputTokens: number): number {
-    const estimatedInput = inputTokens + PROMPT_OVERHEAD;
+  estimateCost(inputTokens: number, isTitle: boolean = false): number {
+    // 根据实际 prompt 内容动态计算开销，而非硬编码
+    const systemPrompt = this.getSystemPrompt(isTitle);
+    const userPrefix = '请将以下日文翻译成中文：\n';
+    const promptOverhead = this.tokenizer
+      ? this.tokenizer.countTokens(systemPrompt + userPrefix)
+      : Math.round((systemPrompt.length + userPrefix.length) * 0.68) || PROMPT_OVERHEAD_FALLBACK;
+    const estimatedInput = inputTokens + promptOverhead;
     const estimatedOutput = Math.round(estimatedInput * this.adaptiveRatio);
-    const inputCost = estimatedInput * PRICE_INPUT / 1000000;
-    const outputCost = estimatedOutput * PRICE_OUTPUT / 1000000;
+    const price = getCurrentPrice();
+    const inputCost = estimatedInput * price.input / 1000000;
+    const outputCost = estimatedOutput * price.output / 1000000;
     return inputCost + outputCost;
   }
 
