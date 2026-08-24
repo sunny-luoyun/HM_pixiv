@@ -304,13 +304,16 @@ export struct CachedNovelsPage {
           .layoutWeight(1)
           .alignItems(HorizontalAlign.Center)
         } else {
-          List({ space: 10 }) {
+          Grid() {
             ForEach(this.authorGroups, (ag: AuthorGroup) => {
-              ListItem() {
+              GridItem() {
                 this.AuthorCard(ag)
               }
             }, (ag: AuthorGroup): string => ag.authorId)
           }
+          .columnsTemplate('1fr 1fr 1fr')
+          .columnsGap(10)
+          .rowsGap(10)
           .width('100%')
           .layoutWeight(1)
           .edgeEffect(EdgeEffect.Spring)
