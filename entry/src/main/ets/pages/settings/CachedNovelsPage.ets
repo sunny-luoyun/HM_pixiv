@@ -347,7 +347,8 @@ export struct CachedNovelsPage {
 
   @Builder
   AuthorCard(ag: AuthorGroup) {
-    Row() {
+    Column() {
+      // 圆形头像
       Column() {
         Text(ag.authorName.charAt(0).toUpperCase())
           .fontSize(18)
@@ -359,63 +360,30 @@ export struct CachedNovelsPage {
       .backgroundColor($r('app.color.tab_selected'))
       .justifyContent(FlexAlign.Center)
       .alignItems(HorizontalAlign.Center)
-      .margin({ right: 12 })
 
-      Column() {
-        Text(ag.authorName)
-          .fontSize(16)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('app.color.user_name'))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width('100%')
-
-        Row({ space: 6 }) {
-          if (ag.seriesMap.size > 0) {
-            Text(`📚 ${ag.seriesMap.size} 系列`)
-              .fontSize(11)
-              .fontColor($r('app.color.success'))
-              .backgroundColor($r('app.color.success_bg'))
-              .borderRadius(4)
-              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-          }
-          if (ag.standaloneNovels.length > 0) {
-            Text(`📄 ${ag.standaloneNovels.length} 独立`)
-              .fontSize(11)
-              .fontColor($r('app.color.tab_selected'))
-              .backgroundColor($r('app.color.info_bg'))
-              .borderRadius(4)
-              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-          }
-          Text(`共 ${ag.totalCount} 本`)
-            .fontSize(11)
-            .fontColor($r('app.color.text_secondary'))
-        }
+      // 作者名
+      Text(ag.authorName)
+        .fontSize(14)
+        .fontWeight(FontWeight.Medium)
+        .fontColor($r('app.color.user_name'))
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
-        .margin({ top: 6 })
-      }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
+        .textAlign(TextAlign.Center)
+        .margin({ top: 8 })
 
-      Row({ space: 8 }) {
-        Button() {
-          Text('🗑').fontSize(15)
-        }
-        .width(34).height(34)
-        .backgroundColor($r('app.color.danger_bg'))
-        .borderRadius(17)
-        .onClick(() => { this.deleteAuthorCache(ag) })
-
-        Text('›')
-          .fontSize(24)
-          .fontColor($r('app.color.text_secondary'))
-      }
+      // 小说数量
+      Text(`${ag.totalCount} 本`)
+        .fontSize(12)
+        .fontColor($r('app.color.text_secondary'))
+        .margin({ top: 4 })
     }
     .width('100%')
-    .padding(14)
+    .padding(12)
     .backgroundColor($r('app.color.card_bg'))
-    .borderRadius(14)
+    .borderRadius(12)
     .shadow({ radius: 4, color: $r('app.color.card_shadow'), offsetY: 1 })
+    .alignItems(HorizontalAlign.Center)
     .onClick(() => {
       this.openAuthorDetail(ag);
     })
